@@ -1,0 +1,80 @@
+{
+    "symbol": "BTC/USD",
+    "timeframe": "1m",
+    "min_volume": 1000000,
+    "min_volatility": 0.001,
+    "signal_strength_threshold": 2,
+    "rsi_period": 2,
+    "rsi_overbought": 71,
+    "rsi_oversold": 10,
+    "macd_fast": 12,
+    "macd_slow": 26,
+    "macd_signal": 9,
+    "bb_period": 20,
+    "bb_std": 2.0,
+    "atr_period": 14,
+    "atr_multiplier": 2.0,
+    "trading_hours": {
+        "start": "00:00",
+        "end": "23:59",
+        "timezone": "UTC"
+    },
+    "platform": "mt5",
+    "credentials": {
+        "login": "101490774",
+        "password": "MatLB356&",
+        "server": "Ava-Demo 1-MT5"
+    },
+    "backtest_mode": false,
+    "log_level": "INFO",
+    "log_file": "logs/scalper_bot.log",
+    "report_dir": "reports",
+    "symbols": [
+        "BTCUSD"
+    ],
+    "indicators": {
+        "ema_short_period": 5,
+        "ema_long_period": 13,
+        "rsi_period": 14,
+        "macd_fast": 12,
+        "macd_slow": 26,
+        "macd_signal": 9,
+        "stoch_k": 14,
+        "stoch_d": 3,
+        "stoch_smooth": 3,
+        "atr_period": 14
+    },
+    "strategy": {
+        "rsi_overbought": 65,
+        "rsi_oversold": 35,
+        "volume_threshold": 1.2,
+        "min_volatility": 5e-05,
+        "trend_confirmation": true,
+        "signal_strength_threshold": 1,
+        "consecutive_loss_max": 3,
+        "auto_adjust": true,
+        "atr_multiplier": 1.5,
+        "take_profit_atr": 2.0,
+        "stop_loss_atr": 1.0
+    },
+    "risk_management": {
+        "max_risk_per_trade": 0.02,
+        "max_daily_risk": 0.05,
+        "max_open_positions": 3,
+        "max_drawdown": 0.1,
+        "trailing_stop_activation": 0.01,
+        "trailing_stop_distance": 1.5,
+        "disable_on_volatility": false,
+        "high_volatility_threshold": 2.0,
+        "min_risk_reward": 1.5
+    },
+    "trading": {
+        "symbol": "BTC/USDT",
+        "position_size": 1.0,
+        "stop_loss": 2.0,
+        "take_profit": 4.0,
+        "max_risk": 1.0,
+        "max_positions": 3
+    },
+    "interval": 5
+}
