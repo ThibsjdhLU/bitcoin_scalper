@@ -1,21 +1,65 @@
 """
-Configuration par défaut pour la stratégie de scalping Bitcoin.
+Configuration par défaut du bot de scalping
 """
 
-# Configuration par défaut
 DEFAULT_CONFIG = {
-    "symbol": "BTCUSD",
-    "volume": 0.01,
-    "stop_loss_pips": 50,
-    "take_profit_pips": 30,
-    "max_spread_pips": 10,
-    "timeframe": "M1",
-    "max_positions": 3,
-    "risk_per_trade": 0.02,  # 2% du capital
-    "max_daily_trades": 10,
-    "trading_hours": {
-        "start": "09:00",
-        "end": "17:00"
+    "platform": "mt5",
+    "credentials": {
+        "login": "101490774",
+        "password": "MatLB356&",
+        "server": "Ava-Demo 1-MT5"
+    },
+    "trading": {
+        "symbol": "BTCUSD",
+        "timeframe": "M1",
+        "volume": 0.01,
+        "max_spread_pips": 15,
+        "stop_loss_pips": 75,
+        "take_profit_pips": 150,
+        "max_positions": 2,
+        "risk_per_trade": 0.015,
+        "max_daily_trades": 8
+    },
+    "backtest_mode": False,
+    "log_level": "INFO",
+    "log_file": "logs/scalper_bot.log",
+    "report_dir": "reports",
+    "symbols": ["BTCUSD"],
+    "indicators": {
+        "ema_short_period": 8,
+        "ema_long_period": 21,
+        "rsi_period": 14,
+        "macd_fast": 12,
+        "macd_slow": 26,
+        "macd_signal": 9,
+        "stoch_k": 14,
+        "stoch_d": 3,
+        "stoch_smooth": 3,
+        "atr_period": 14
+    },
+    "strategy": {
+        "rsi_overbought": 70,
+        "rsi_oversold": 30,
+        "volume_threshold": 1.5,
+        "min_volatility": 0.00008,
+        "trend_confirmation": True,
+        "signal_strength_threshold": 1.2,
+        "consecutive_loss_max": 2,
+        "auto_adjust": True,
+        "atr_multiplier": 1.8,
+        "take_profit_atr": 2.5,
+        "stop_loss_atr": 1.2
+    },
+    "risk_management": {
+        "max_risk_per_trade": 0.015,
+        "max_daily_risk": 0.04,
+        "max_open_positions": 2,
+        "max_drawdown": 0.08,
+        "trailing_stop_activation": 0.015,
+        "trailing_stop_distance": 1.8,
+        "disable_on_volatility": True,
+        "high_volatility_threshold": 1.8,
+        "min_risk_reward": 1.8
     }
 }
 
@@ -67,4 +111,9 @@ LOGGING_CONFIG = {
             "propagate": True
         }
     }
-} 
+}
+
+# Création du fichier __init__.py
+import os
+with open(os.path.join(os.path.dirname(__file__), '__init__.py'), 'w') as f:
+    f.write('from .scalper_config import DEFAULT_CONFIG\n') 

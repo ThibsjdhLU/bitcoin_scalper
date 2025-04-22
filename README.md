@@ -1,78 +1,37 @@
 # Bitcoin Scalper
 
-Un bot de trading automatique pour le Bitcoin utilisant MetaTrader 5.
-
-## Fonctionnalités
-
-- Connexion automatique à MetaTrader 5
-- Analyse technique en temps réel
-- Trading automatique basé sur des stratégies personnalisables
-- Interface graphique pour le suivi des performances
-- Gestion des risques intégrée
-
-## Prérequis
-
-- Python 3.8 ou supérieur
-- MetaTrader 5 installé et configuré
-- Compte de trading actif
+Bot de trading algorithmique pour le scalping de Bitcoin sur MetaTrader 5.
 
 ## Installation
 
-1. Clonez le dépôt :
 ```bash
-git clone https://github.com/votre-username/bitcoin_scalper.git
-cd bitcoin_scalper
+pip install -e .
 ```
 
-2. Créez un environnement virtuel et activez-le :
-```bash
-python -m venv venv
-source venv/bin/activate  # Linux/Mac
-venv\Scripts\activate     # Windows
-```
+## Configuration
 
-3. Installez les dépendances :
-```bash
-pip install -r requirements.txt
-```
-
-4. Configurez vos variables d'environnement :
-Créez un fichier `.env` à la racine du projet avec les informations suivantes :
-```
-MT5_LOGIN=votre_login
-MT5_PASSWORD=votre_mot_de_passe
-MT5_SERVER=votre_serveur
-```
+1. Installer MetaTrader 5
+2. Configurer les variables d'environnement dans le fichier `.env`:
+   ```
+   MT5_LOGIN=votre_login
+   MT5_PASSWORD=votre_mot_de_passe
+   MT5_SERVER=votre_serveur
+   ```
 
 ## Utilisation
 
-1. Lancez le bot :
 ```bash
-python src/main.py
+python main.py
 ```
 
-2. L'interface graphique s'ouvrira automatiquement.
+## Fonctionnalités
 
-## Structure du projet
-
-```
-bitcoin_scalper/
-├── src/
-│   ├── main.py
-│   ├── config/
-│   ├── core/
-│   ├── strategies/
-│   └── ui/
-├── tests/
-├── requirements.txt
-├── .env
-└── README.md
-```
-
-## Contribution
-
-Les contributions sont les bienvenues ! N'hésitez pas à ouvrir une issue ou une pull request.
+- Interface graphique avec PySide6
+- Connexion à MetaTrader 5
+- Indicateurs techniques
+- Gestion des risques
+- Backtesting
 
 ## Licence
 
-Ce projet est sous licence MIT. Voir le fichier `LICENSE` pour plus de détails. 
+MIT License 
