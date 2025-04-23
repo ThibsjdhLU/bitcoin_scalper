@@ -88,14 +88,21 @@ class HMMRegimeDetector:
         Returns:
             np.ndarray: Caractéristiques préparées
         """
-        returns = np.log(data['close'] / data['close'].shift(1)).dropna()
-        volatility = returns.rolling(window=20).std().dropna()
-        momentum = returns.rolling(window=10).mean().dropna()
+        # Calculer les rendements logarithmiques
+        returns = np.log(data['close'] / data['close'].shift(1))
         
-        features = np.column_stack([
-            returns.values.reshape(-1, 1),
-            volatility.values.reshape(-1, 1),
-            momentum.values.reshape(-1, 1)
-        ])
+        # Utiliser une fenêtre de 20 périodes pour toutes les caractéristiques
+        window = 20
         
-        return features 
+        # Calculer les caractéristiques avec la même fenêtre
+        volatility = returns.rolling(window=window).std()
+        momentum = returns.rolling(window=window).mean()
+        
+        # Supprimer les valeurs NaN après le calcul des moyennes mobiles
+        features = pd.DataFrame({
+            'returns': returns,
+            'volatility': volatility,
+            'momentum': momentum
+        }).dropna()
+        
+        return features.values 
