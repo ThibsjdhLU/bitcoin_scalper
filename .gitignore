@@ -1,0 +1,54 @@
+# Fichiers de configuration avec credentials
+config/config.json
+config/risk_config.json
+.env
+*.env
+
+# Fichiers Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Logs et résultats
+logs/
+backtest_results/
+*.log
+*.csv
+*.xlsx
+
+# Environnements virtuels
+venv/
+env/
+ENV/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.project
+.pydevproject
+
+# Système
+.DS_Store
+Thumbs.db
+
+# Release
+release/v* 

@@ -1,0 +1,24 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+---
+description: Établit les normes de codage, y compris les conventions de nommage, le style de code et les bonnes pratiques
+globs:
+  - '**/*.py'
+alwaysApply: true
+---
+
+- Utiliser le PEP 8 pour les conventions de style de code Python.
+- Nommage des variables et fonctions : 
+  - Variables : `snake_case` (par exemple : `current_balance`).
+  - Fonctions : `snake_case` (par exemple : `calculate_position_size`).
+  - Classes : `CamelCase` (par exemple : `RiskManager`).
+  - Fichiers : `snake_case` pour les fichiers Python (par exemple : `order_execution.py`).
+- Commenter le code de manière claire et concise avec des docstrings pour chaque classe et fonction.
+- Éviter les lignes de code longues (max 80 caractères par ligne).
+- Respecter la logique de séparation des responsabilités entre les modules.
+- Pas de code dupliqué : réutiliser les fonctions et classes existantes.
+
+- Privilégier les structures de données Python standards (`list`, `dict`, `set`, etc.) plutôt que de réinventer des solutions.

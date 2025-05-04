@@ -1,0 +1,25 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+---
+description: Définit les pratiques de journalisation, les niveaux de log et les informations à inclure dans les logs
+globs:
+  - '**/*.py'
+alwaysApply: true
+---
+
+- Utiliser un module de journalisation comme `logging` ou `loguru` pour toutes les sorties de log.
+- Enregistrer les informations suivantes dans les logs :
+  - Timestamp de l'événement.
+  - Type d'événement (ex : "trade exécuté", "stratégie activée", "erreur").
+  - Détails sur l'ordre (prix d'entrée, volume, stratégie utilisée).
+  - Résultat de l'ordre (gains/pertes).
+  - État du bot (connexion, erreurs, performances).
+- Utiliser des niveaux de log :
+  - **DEBUG** : informations détaillées pour le débogage.
+  - **INFO** : informations générales sur l'état du bot.
+  - **WARNING** : avertissements, potentiels problèmes à surveiller.
+  - **ERROR** : erreurs qui empêchent le fonctionnement du bot.
+- S'assurer que les logs sont facilement consultables et compréhensibles.

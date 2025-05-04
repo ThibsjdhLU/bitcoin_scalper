@@ -1,0 +1,22 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+---
+description: Détaille les règles de gestion des risques, telles que le drawdown maximal, la taille des positions et les limites de pertes
+globs:
+  - '**/*.py'
+alwaysApply: true
+---
+
+- Implémenter un gestionnaire de risque global qui prend en compte :
+  - **Stop global journalier** : définir un seuil de perte maximal par jour.
+  - **Perte maximale par trade** : définir un montant ou un pourcentage à ne pas dépasser par trade.
+  - **Drawdown maximal autorisé** : définir un pourcentage maximal de drawdown toléré sur l'ensemble du capital.
+- La taille des positions doit être calculée en fonction du solde actuel et des règles de gestion des risques.
+- Implémenter un système de gestion des positions basé sur la taille des positions et la gestion du risque.
+- Vérifier que les positions ne dépassent jamais la taille maximale autorisée.
+- Utiliser des ordres stop-loss et take-profit pour limiter les pertes et maximiser les gains.
+
+- Les règles de gestion des risques doivent être clairement définies dans le fichier de configuration (`config.json`).

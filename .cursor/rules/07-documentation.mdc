@@ -1,0 +1,18 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+---
+description: Établit les attentes en matière de documentation, y compris les docstrings, les commentaires et la documentation externe
+globs:
+  - '**/*.py'
+alwaysApply: true
+---
+
+- Documenter chaque fonction et classe avec des docstrings conformes au format Python.
+- Expliquer la logique principale du code et les décisions prises dans les commentaires.
+- Fournir une documentation externe qui décrit l'architecture du bot, les stratégies et la configuration requise.
+- Utiliser un générateur de documentation (ex : Sphinx) pour créer une documentation lisible et à jour.
+
+- S'assurer que les développeurs ou utilisateurs futurs puissent comprendre rapidement le projet.

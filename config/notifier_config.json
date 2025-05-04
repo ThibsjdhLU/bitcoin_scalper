@@ -1,0 +1,24 @@
+{
+    "email": {
+        "smtp_server": "smtp.gmail.com",
+        "smtp_port": 587,
+        "sender_email": "matlb356@gmail.com",
+        "sender_password": "MatLB356*",
+        "recipient_email": "matlb356@gmail.com"
+    },
+    "alerts": {
+        "signal": {
+            "enabled": true,
+            "min_strength": 0.5
+        },
+        "order": {
+            "enabled": true,
+            "min_volume": 0.01
+        },
+        "risk": {
+            "enabled": true,
+            "drawdown_threshold": 10.0,
+            "daily_loss_threshold": 5.0
+        }
+    }
+} 
