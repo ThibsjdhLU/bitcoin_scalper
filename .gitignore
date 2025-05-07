@@ -1,10 +1,4 @@
-# Fichiers de configuration avec credentials
-config/config.json
-config/risk_config.json
-.env
-*.env
-
-# Fichiers Python
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
@@ -26,6 +20,12 @@ wheels/
 .installed.cfg
 *.egg
 
+# Configuration
+config/config.json
+config/risk_config.json
+.env
+*.env
+
 # Logs et résultats
 logs/
 backtest_results/
@@ -36,6 +36,7 @@ backtest_results/
 # Environnements virtuels
 venv/
 env/
+.venv
 ENV/
 
 # IDE
@@ -46,9 +47,15 @@ ENV/
 .project
 .pydevproject
 
+# MetaTrader
+*.ex4
+*.ex5
+*.mq4
+*.mq5
+
 # Système
 .DS_Store
 Thumbs.db
 
 # Release
-release/v* 
+release/v*
