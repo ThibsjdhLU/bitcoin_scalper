@@ -1,5 +1,5 @@
 # Core dependencies
-MetaTrader5==5.0.47
+# MetaTrader5==5.0.47  # Installer manuellement sur Windows uniquement
 numpy>=1.26.0
 pandas==2.0.3
 python-dotenv==1.0.0
