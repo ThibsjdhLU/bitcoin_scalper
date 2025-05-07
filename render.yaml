@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: bitcoin-scalper-dashboard
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: streamlit run dashboard/app.py
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.9.0 

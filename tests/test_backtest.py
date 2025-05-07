@@ -5,165 +5,188 @@ import unittest
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, patch, MagicMock
 
 from backtest.backtest_engine import BacktestEngine
-from strategies.base_strategy import BaseStrategy, Signal, SignalType
+from core.mt5_connector import MT5Connector
+from core.order_executor import OrderExecutor, OrderType, OrderSide
 
-class MockStrategy(BaseStrategy):
+class MockStrategy:
     """Stratégie mock pour les tests."""
     
-    def __init__(self, name: str = "Mock Strategy"):
-        super().__init__(
-            name=name,
-            description="Stratégie mock pour les tests",
-            data_fetcher=None,
-            order_executor=None,
-            params={},
-            symbols=[],
-            timeframe=None
-        )
+    def __init__(self):
+        self.name = "Mock Strategy"
         
-    def generate_signals(self, symbol: str, data: pd.DataFrame) -> list:
-        """Génère des signaux mock."""
-        signals = []
-        
+    def generate_signal(self, bar: pd.Series) -> dict:
+        """Génère un signal mock."""
         # Générer des signaux alternés
-        for i in range(len(data)):
-            if i % 10 == 0:  # Signal tous les 10 points
-                signal_type = SignalType.BUY if i % 20 == 0 else SignalType.SELL
-                signal = Signal(
-                    type=signal_type,
-                    symbol=symbol,
-                    timestamp=data.index[i],
-                    price=data['close'].iloc[i],
-                    strength=0.8,
-                    metadata={}
-                )
-                signals.append(signal)
-                
-        return signals
+        if bar.name.minute % 10 == 0:  # Signal tous les 10 minutes
+            side = OrderSide.BUY if bar.name.minute % 20 == 0 else OrderSide.SELL
+            return {
+                'type': 'MARKET',
+                'symbol': 'BTCUSD',
+                'side': side,
+                'volume': 0.1,
+                'sl': bar['close'] * 0.99 if side == OrderSide.BUY else bar['close'] * 1.01,
+                'tp': bar['close'] * 1.02 if side == OrderSide.BUY else bar['close'] * 0.98
+            }
+        return None
 
 class TestBacktestEngine(unittest.TestCase):
     """Tests pour le moteur de backtest."""
     
     def setUp(self):
         """Initialise les données de test."""
-        # Créer des données de test
-        dates = pd.date_range(
-            start='2023-01-01',
-            end='2023-01-10',
-            freq='1H'
-        )
+        # Créer des mocks pour MT5Connector et OrderExecutor
+        self.mock_connector = MagicMock(spec=MT5Connector)
+        self.mock_order_executor = MagicMock(spec=OrderExecutor)
         
-        self.data = {
-            'BTCUSD': pd.DataFrame({
-                'open': np.random.randn(len(dates)).cumsum() + 10000,
-                'high': np.random.randn(len(dates)).cumsum() + 10002,
-                'low': np.random.randn(len(dates)).cumsum() + 9998,
-                'close': np.random.randn(len(dates)).cumsum() + 10000,
-                'volume': np.random.randint(1000, 5000, len(dates))
-            }, index=dates)
-        }
+        # Configurer le mock du connecteur
+        self.mock_connector.get_rates.return_value = [
+            {
+                'time': int(datetime(2023, 1, 1, i).timestamp()),
+                'open': 10000 + i,
+                'high': 10002 + i,
+                'low': 9998 + i,
+                'close': 10000 + i,
+                'tick_volume': 1000 + i
+            }
+            for i in range(24)
+        ]
+        
+        # Configurer le mock de l'exécuteur d'ordres
+        self.mock_order_executor.execute_market_order.return_value = (True, 12345)
         
         # Créer une stratégie mock
         self.strategy = MockStrategy()
         
         # Créer le moteur de backtest
         self.engine = BacktestEngine(
-            data=self.data,
-            strategies=[self.strategy],
-            initial_capital=10000.0,
-            commission=0.001,
-            slippage=0.0005
+            connector=self.mock_connector,
+            order_executor=self.mock_order_executor,
+            initial_balance=10000.0
         )
         
-    def test_validate_data(self):
-        """Teste la validation des données."""
-        # Données valides
-        self.engine._validate_data()
-        
-        # Données invalides (colonne manquante)
-        invalid_data = self.data.copy()
-        invalid_data['BTCUSD'] = invalid_data['BTCUSD'].drop('close', axis=1)
-        
-        with self.assertRaises(ValueError):
-            engine = BacktestEngine(
-                data=invalid_data,
-                strategies=[self.strategy]
-            )
-            
-    def test_calculate_trade_pnl(self):
-        """Teste le calcul du P&L d'un trade."""
-        # Trade long gagnant
-        pnl_long = self.engine._calculate_trade_pnl(
-            entry_price=10000,
-            exit_price=10100,
-            position_size=1.0,
-            side='long'
+    def test_load_data(self):
+        """Teste le chargement des données."""
+        success = self.engine.load_data(
+            symbol='BTCUSD',
+            timeframe='1h',
+            start_date=datetime(2023, 1, 1),
+            end_date=datetime(2023, 1, 2)
         )
-        self.assertGreater(pnl_long, 0)
         
-        # Trade short gagnant
-        pnl_short = self.engine._calculate_trade_pnl(
-            entry_price=10100,
-            exit_price=10000,
-            position_size=1.0,
-            side='short'
-        )
-        self.assertGreater(pnl_short, 0)
+        self.assertTrue(success)
+        self.assertFalse(self.engine.data.empty)
+        self.assertEqual(len(self.engine.data), 24)
         
-    def test_calculate_position_size(self):
-        """Teste le calcul de la taille de position."""
-        size = self.engine._calculate_position_size(
-            capital=10000,
-            price=10000,
-            risk_per_trade=0.02
-        )
-        self.assertGreater(size, 0)
-        
-    def test_run(self):
+    def test_run_backtest(self):
         """Teste l'exécution du backtest."""
-        results = self.engine.run()
+        # Charger les données
+        self.engine.load_data(
+            symbol='BTCUSD',
+            timeframe='1h',
+            start_date=datetime(2023, 1, 1),
+            end_date=datetime(2023, 1, 2)
+        )
+        
+        # Exécuter le backtest
+        results = self.engine.run_backtest(self.strategy)
         
         # Vérifier les résultats
         self.assertIn('trades', results)
-        self.assertIn('equity_curve', results)
-        self.assertIn('metrics', results)
+        self.assertIn('balance', results)
+        self.assertIn('equity', results)
+        self.assertIn('drawdown', results)
+        self.assertIn('win_rate', results)
+        self.assertIn('profit_factor', results)
         
-        # Vérifier les métriques
-        metrics = results['metrics']
-        self.assertIn('total_trades', metrics)
-        self.assertIn('win_rate', metrics)
-        self.assertIn('total_pnl', metrics)
-        self.assertIn('sharpe_ratio', metrics)
+    def test_execute_signal(self):
+        """Teste l'exécution d'un signal."""
+        # Créer un signal mock
+        signal = {
+            'type': 'MARKET',
+            'symbol': 'BTCUSD',
+            'side': OrderSide.BUY,
+            'volume': 0.1,
+            'sl': 9900,
+            'tp': 10200
+        }
         
-    def test_plot_results(self):
-        """Teste l'affichage des résultats."""
-        # Exécuter le backtest
-        self.engine.run()
+        # Créer une barre mock
+        bar = pd.Series({
+            'open': 10000,
+            'high': 10002,
+            'low': 9998,
+            'close': 10000,
+            'tick_volume': 1000
+        }, name=datetime(2023, 1, 1))
         
-        # Tester l'affichage (ne devrait pas lever d'exception)
-        self.engine.plot_results()
+        # Exécuter le signal
+        success, order_id = self.engine._execute_signal(signal, bar)
         
-    def test_save_results(self):
-        """Teste la sauvegarde des résultats."""
-        # Exécuter le backtest
-        self.engine.run()
+        self.assertTrue(success)
+        self.assertEqual(order_id, 12345)
         
-        # Sauvegarder les résultats
-        self.engine.save_results('test_results')
+    def test_update_results(self):
+        """Teste la mise à jour des résultats."""
+        # Créer des résultats initiaux
+        results = {
+            'trades': [],
+            'balance': [10000],
+            'equity': [10000],
+            'drawdown': [0]
+        }
         
-        # Vérifier que les fichiers ont été créés
-        import os
-        self.assertTrue(os.path.exists('test_results_trades.csv'))
-        self.assertTrue(os.path.exists('test_results_equity.csv'))
-        self.assertTrue(os.path.exists('test_results_metrics.csv'))
+        # Créer un signal mock
+        signal = {
+            'type': 'MARKET',
+            'symbol': 'BTCUSD',
+            'side': OrderSide.BUY,
+            'volume': 0.1,
+            'sl': 9900,
+            'tp': 10200
+        }
         
-        # Nettoyer
-        os.remove('test_results_trades.csv')
-        os.remove('test_results_equity.csv')
-        os.remove('test_results_metrics.csv')
+        # Créer une barre mock
+        bar = pd.Series({
+            'open': 10000,
+            'high': 10002,
+            'low': 9998,
+            'close': 10000,
+            'tick_volume': 1000
+        }, name=datetime(2023, 1, 1))
+        
+        # Mettre à jour les résultats
+        self.engine._update_results(results, signal, bar)
+        
+        self.assertEqual(len(results['trades']), 1)
+        self.assertEqual(len(results['balance']), 2)
+        self.assertEqual(len(results['equity']), 2)
+        self.assertEqual(len(results['drawdown']), 2)
+        
+    def test_calculate_metrics(self):
+        """Teste le calcul des métriques."""
+        # Créer des résultats avec des trades
+        results = {
+            'trades': [
+                {'pnl': 100},  # Trade gagnant
+                {'pnl': -50},  # Trade perdant
+                {'pnl': 200},  # Trade gagnant
+                {'pnl': -30}   # Trade perdant
+            ],
+            'balance': [10000, 10100, 10050, 10250, 10220],
+            'equity': [10000, 10100, 10050, 10250, 10220],
+            'drawdown': [0, 0, 0.5, 0, 0]
+        }
+        
+        # Calculer les métriques
+        self.engine._calculate_metrics(results)
+        
+        self.assertEqual(results['win_rate'], 50.0)  # 2 trades gagnants sur 4
+        self.assertEqual(results['total_trades'], 4)
+        self.assertEqual(results['winning_trades'], 2)
+        self.assertEqual(results['losing_trades'], 2)
         
 if __name__ == '__main__':
     unittest.main() 

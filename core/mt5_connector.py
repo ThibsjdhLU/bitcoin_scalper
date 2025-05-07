@@ -5,10 +5,24 @@ Gère l'authentification, la vérification des symboles et la reconnection autom
 import json
 import time
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Union
+from enum import Enum
+import numpy as np
 
 import MetaTrader5 as mt5
 from loguru import logger
+
+class TimeFrame(Enum):
+    """Timeframes supportés."""
+    M1 = mt5.TIMEFRAME_M1
+    M5 = mt5.TIMEFRAME_M5
+    M15 = mt5.TIMEFRAME_M15
+    M30 = mt5.TIMEFRAME_M30
+    H1 = mt5.TIMEFRAME_H1
+    H4 = mt5.TIMEFRAME_H4
+    D1 = mt5.TIMEFRAME_D1
+    W1 = mt5.TIMEFRAME_W1
+    MN1 = mt5.TIMEFRAME_MN1
 
 class MT5Connector:
     """
@@ -37,6 +51,13 @@ class MT5Connector:
         self.symbols: List[str] = []
         self.connected = False
         
+        # Paramètres de reconnection
+        self.max_retries = 5
+        self.retry_delay = 5  # secondes
+        self.connection_timeout = 30  # secondes
+        self.last_connection_check = 0
+        self.connection_check_interval = 60  # secondes
+        
         # Charger la configuration
         self._load_config()
         
@@ -51,6 +72,14 @@ class MT5Connector:
             self.login = int(mt5_config['login'])
             self.password = mt5_config['password']
             self.symbols = mt5_config['symbols']
+            
+            # Charger les paramètres de reconnection si présents
+            if 'connection' in mt5_config:
+                conn_config = mt5_config['connection']
+                self.max_retries = conn_config.get('max_retries', self.max_retries)
+                self.retry_delay = conn_config.get('retry_delay', self.retry_delay)
+                self.connection_timeout = conn_config.get('timeout', self.connection_timeout)
+                self.connection_check_interval = conn_config.get('check_interval', self.connection_check_interval)
             
         except Exception as e:
             logger.error(f"Erreur lors du chargement de la configuration: {str(e)}")
@@ -184,6 +213,14 @@ class MT5Connector:
         Raises:
             ConnectionError: Si la reconnexion échoue après max_retries tentatives
         """
+        current_time = time.time()
+        
+        # Vérifier la connexion seulement si l'intervalle est dépassé
+        if (current_time - self.last_connection_check) < self.connection_check_interval:
+            return self.connected
+            
+        self.last_connection_check = current_time
+        
         if self.connected and mt5.terminal_info() is not None:
             return True
             
@@ -194,8 +231,8 @@ class MT5Connector:
                 if mt5.terminal_info() is not None:
                     mt5.shutdown()
                     
-                # Initialiser MT5
-                if not mt5.initialize():
+                # Initialiser MT5 avec timeout
+                if not mt5.initialize(timeout=self.connection_timeout):
                     raise ConnectionError(f"Échec d'initialisation MT5: {mt5.last_error()}")
                     
                 # Se connecter au compte
@@ -206,15 +243,27 @@ class MT5Connector:
                 ):
                     raise ConnectionError(f"Échec de connexion MT5: {mt5.last_error()}")
                     
+                # Vérifier les symboles
+                if not self._verify_symbols():
+                    raise ConnectionError("Échec de la vérification des symboles")
+                    
                 self.connected = True
                 logger.info("Connexion MT5 établie avec succès")
+                
+                # Afficher les symboles disponibles
+                symbols = mt5.symbols_get()
+                logger.info("Symboles disponibles sur MT5:")
+                for symbol in symbols:
+                    if "BTC" in symbol.name:
+                        logger.info(f"- {symbol.name}")
+                
                 return True
                 
             except Exception as e:
                 retries += 1
                 logger.warning(f"Tentative {retries}/{self.max_retries} échouée: {str(e)}")
                 if retries < self.max_retries:
-                    time.sleep(self.retry_delay)
+                    time.sleep(self.retry_delay * retries)  # Backoff exponentiel
                     
         self.connected = False
         raise ConnectionError(
@@ -235,46 +284,106 @@ class MT5Connector:
             
         Raises:
             ConnectionError: Si la requête échoue après reconnexion
+            MT5Error: Pour les erreurs spécifiques à MT5
         """
-        try:
-            # Vérifier la connexion avant chaque requête
-            self.ensure_connection()
-            return func(*args, **kwargs)
-        except Exception as e:
-            logger.error(f"Erreur lors de la requête MT5: {str(e)}")
-            raise
+        max_retries = 3
+        retries = 0
+        
+        while retries < max_retries:
+            try:
+                # Vérifier la connexion avant chaque requête
+                self.ensure_connection()
+                result = func(*args, **kwargs)
+                
+                # Vérifier si le résultat est valide
+                if result is None:
+                    error = mt5.last_error()
+                    if error[0] == mt5.TRADE_RETCODE_REQUOTE:
+                        retries += 1
+                        time.sleep(1)
+                        continue
+                    raise MT5Error(f"Erreur MT5: {error}")
+                    
+                return result
+                
+            except ConnectionError:
+                retries += 1
+                if retries < max_retries:
+                    time.sleep(self.retry_delay)
+                else:
+                    raise
+            except Exception as e:
+                logger.error(f"Erreur lors de la requête MT5: {str(e)}")
+                raise MT5Error(f"Erreur MT5: {str(e)}")
             
     def get_rates(
         self,
         symbol: str,
-        timeframe: mt5.TIMEFRAME,
-        start_pos: int,
-        count: int
-    ) -> Optional[Tuple]:
+        timeframe: TimeFrame,
+        start_pos: int = 0,
+        count: int = 1000
+    ) -> Optional[np.ndarray]:
         """
         Récupère les données historiques.
         
         Args:
-            symbol: Symbole
-            timeframe: Timeframe (ex: mt5.TIMEFRAME_M1)
+            symbol: Symbole à récupérer
+            timeframe: Timeframe des données
             start_pos: Position de départ
-            count: Nombre de barres
+            count: Nombre de périodes
             
         Returns:
-            Tuple: Données OHLCV ou None si erreur
+            Optional[np.ndarray]: Données OHLCV ou None si erreur
         """
-        return self._safe_request(
-            mt5.copy_rates_from_pos,
-            symbol,
-            timeframe,
-            start_pos,
-            count
-        )
+        if not self.connected:
+            logger.error("Non connecté à MT5")
+            return None
+            
+        try:
+            # Vérifier que le symbole existe
+            symbol_info = mt5.symbol_info(symbol)
+            if symbol_info is None:
+                logger.error(f"Symbole {symbol} non trouvé")
+                return None
+                
+            # Récupérer les données
+            rates = mt5.copy_rates_from_pos(symbol, timeframe.value, start_pos, count)
+            if rates is None:
+                logger.error(f"Échec de récupération des données pour {symbol}")
+                return None
+                
+            # Vérifier le format des données
+            if len(rates) == 0:
+                logger.error(f"Aucune donnée récupérée pour {symbol}")
+                return None
+                
+            # Convertir en numpy array
+            rates_array = np.array(rates, dtype=[
+                ('time', '<i8'),
+                ('open', '<f8'),
+                ('high', '<f8'),
+                ('low', '<f8'),
+                ('close', '<f8'),
+                ('tick_volume', '<i8'),
+                ('spread', '<i4'),
+                ('real_volume', '<i8')
+            ])
+            
+            # Vérifier que les données sont valides
+            if np.isnan(rates_array['close']).any():
+                logger.error(f"Données invalides: valeurs manquantes dans les données pour {symbol}")
+                return None
+                
+            return rates_array
+            
+        except Exception as e:
+            logger.error(f"Erreur lors de la récupération des données pour {symbol}: {str(e)}")
+            return None
         
     def place_order(
         self,
         symbol: str,
-        order_type: mt5.ORDER_TYPE,
+        order_type: int,
         volume: float,
         price: float,
         stop_loss: float = 0.0,
@@ -285,29 +394,49 @@ class MT5Connector:
         Place un ordre sur le marché.
         
         Args:
-            symbol: Symbole
-            order_type: Type d'ordre
-            volume: Volume
-            price: Prix
+            symbol: Symbole à trader
+            order_type: Type d'ordre (utiliser les constantes mt5.ORDER_TYPE_*)
+            volume: Volume de l'ordre
+            price: Prix de l'ordre
             stop_loss: Stop loss (optionnel)
             take_profit: Take profit (optionnel)
             comment: Commentaire (optionnel)
             
         Returns:
-            dict: Résultat de l'ordre ou None si erreur
+            Optional[dict]: Résultat de l'ordre ou None si erreur
         """
+        if not self.connected:
+            logger.error("Non connecté à MT5")
+            return None
+            
         request = {
             "action": mt5.TRADE_ACTION_DEAL,
             "symbol": symbol,
             "volume": volume,
             "type": order_type,
             "price": price,
-            "sl": stop_loss,
-            "tp": take_profit,
-            "comment": comment
+            "deviation": 20,
+            "magic": 234000,
+            "comment": comment,
+            "type_time": mt5.ORDER_TIME_GTC,
+            "type_filling": mt5.ORDER_FILLING_IOC,
         }
         
-        return self._safe_request(mt5.order_send, request)
+        if stop_loss > 0:
+            request["sl"] = stop_loss
+        if take_profit > 0:
+            request["tp"] = take_profit
+            
+        # Envoyer l'ordre
+        result = mt5.order_send(request)
+        if result.retcode != mt5.TRADE_RETCODE_DONE:
+            logger.error(f"Échec de l'ordre: {result.comment}")
+            return None
+            
+        return {
+            'order': result,
+            'request': request
+        }
         
     def __del__(self):
         """Nettoie la connexion à la destruction de l'objet."""

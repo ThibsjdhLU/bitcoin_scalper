@@ -230,47 +230,34 @@ class EMACrossoverStrategy(BaseStrategy):
                 return True, signal
         
         return False, None
-    
-    def generate_signals(
-        self,
-        symbol: str,
-        data: pd.DataFrame
-    ) -> List[Signal]:
+
+    def _generate_signals_impl(self, data: pd.DataFrame, signals: pd.Series) -> None:
         """
-        Génère les signaux de trading pour un symbole.
+        Implémente la logique de la stratégie EMA Crossover.
         
         Args:
-            symbol: Symbole à analyser
-            data: Données OHLCV
-            
-        Returns:
-            List[Signal]: Liste des signaux générés
+            data: DataFrame avec les données OHLCV
+            signals: Série des signaux à modifier
         """
-        signals = []
-        fast_ema, slow_ema = self._calculate_emas(data)
-        
-        # Vérifier le croisement
-        current_cross = fast_ema.iloc[-1] > slow_ema.iloc[-1]
-        previous_cross = fast_ema.iloc[-2] > slow_ema.iloc[-2]
-        
-        if current_cross != previous_cross:
-            strength = self._calculate_crossover_strength(fast_ema, slow_ema)
+        try:
+            # Calculer les EMAs
+            fast_ema = calculate_ema(data['close'], self.params['fast_period'])
+            slow_ema = calculate_ema(data['close'], self.params['slow_period'])
             
-            if strength >= self.params['min_crossover_strength']:
-                signal_type = SignalType.BUY if current_cross else SignalType.SELL
-                
-                signal = Signal(
-                    type=signal_type,
-                    symbol=symbol,
-                    timestamp=datetime.now(),
-                    price=data['close'].iloc[-1],
-                    strength=strength,
-                    metadata={
-                        'fast_ema': fast_ema.iloc[-1],
-                        'slow_ema': slow_ema.iloc[-1],
-                        'crossover_strength': strength
-                    }
-                )
-                signals.append(signal)
-        
-        return signals 
+            # Calculer la différence entre les EMAs
+            ema_diff = fast_ema - slow_ema
+            prev_ema_diff = ema_diff.shift(1)
+            
+            # Générer les signaux
+            # Signal d'achat: EMA rapide croise au-dessus de l'EMA lente
+            buy_signal = (ema_diff > 0) & (prev_ema_diff <= 0) & (ema_diff > self.params['min_crossover_strength'])
+            
+            # Signal de vente: EMA rapide croise en-dessous de l'EMA lente
+            sell_signal = (ema_diff < 0) & (prev_ema_diff >= 0) & (abs(ema_diff) > self.params['min_crossover_strength'])
+            
+            # Mettre à jour les signaux
+            signals[buy_signal] = 1
+            signals[sell_signal] = -1
+            
+        except Exception as e:
+            logger.error(f"Erreur lors de la génération des signaux EMA: {str(e)}") 

@@ -323,35 +323,51 @@ class BollingerBandsReversalStrategy(BaseStrategy):
         Returns:
             Tuple[pd.Series, pd.Series]: Signaux d'achat et de vente
         """
-        # Calcul des indicateurs
-        upper_band, middle_band, lower_band = calculate_bollinger_bands(
-            data['close'],
-            period=self.params['bb_period'],
-            num_std=self.params['bb_std']
-        )
-        
-        rsi = calculate_rsi(data['close'], period=self.params['rsi_period'])
-        
-        # Calcul des retournements de prix
-        price_change_pct = ((data['close'] - data['open']) / data['open']) * 100
-        is_bullish = price_change_pct > self.params['min_reversal_pct']
-        is_bearish = price_change_pct < -self.params['min_reversal_pct']
-        
-        # Signaux d'achat
-        buy_signals = (
-            (data['low'] <= lower_band) &  # Prix touche/dépasse la bande inférieure
-            (rsi < self.params['rsi_oversold']) &    # RSI en survente
-            is_bullish                      # Retournement haussier
-        )
-        
-        # Signaux de vente
-        sell_signals = (
-            (data['high'] >= upper_band) &  # Prix touche/dépasse la bande supérieure
-            (rsi > self.params['rsi_overbought']) &   # RSI en surachat
-            is_bearish                      # Retournement baissier
-        )
-        
-        return buy_signals, sell_signals
+        try:
+            # Calcul des indicateurs
+            upper_band, middle_band, lower_band = calculate_bollinger_bands(
+                data['close'],
+                period=self.params['bb_period'],
+                num_std=self.params['bb_std']
+            )
+            
+            rsi = calculate_rsi(data['close'], period=self.params['rsi_period'])
+            
+            # Calcul des retournements de prix
+            price_change_pct = ((data['close'] - data['open']) / data['open']) * 100
+            is_bullish = pd.Series(price_change_pct > self.params['min_reversal_pct'], index=data.index)
+            is_bearish = pd.Series(price_change_pct < -self.params['min_reversal_pct'], index=data.index)
+            
+            # Signaux d'achat
+            buy_signals = pd.Series(
+                (data['low'] <= lower_band) &  # Prix touche/dépasse la bande inférieure
+                (rsi < self.params['rsi_oversold']) &    # RSI en survente
+                is_bullish,                      # Retournement haussier
+                index=data.index
+            )
+            
+            # Signaux de vente
+            sell_signals = pd.Series(
+                (data['high'] >= upper_band) &  # Prix touche/dépasse la bande supérieure
+                (rsi > self.params['rsi_overbought']) &   # RSI en surachat
+                is_bearish,                      # Retournement baissier
+                index=data.index
+            )
+            
+            # Log uniquement si pas en optimisation et s'il y a un signal
+            if not self.is_optimizing and (buy_signals.iloc[-1] or sell_signals.iloc[-1]):
+                logger.info(f"Analyse BB - Prix: {data['close'].iloc[-1]:.2f}, RSI: {rsi.iloc[-1]:.2f}")
+                
+                if buy_signals.iloc[-1]:
+                    logger.info(f"Signal ACHAT - Conditions: Prix < BB_inf={data['low'].iloc[-1] <= lower_band.iloc[-1]}, RSI survendu={rsi.iloc[-1] < self.params['rsi_oversold']}, Retournement haussier={is_bullish.iloc[-1]}")
+                elif sell_signals.iloc[-1]:
+                    logger.info(f"Signal VENTE - Conditions: Prix > BB_sup={data['high'].iloc[-1] >= upper_band.iloc[-1]}, RSI suracheté={rsi.iloc[-1] > self.params['rsi_overbought']}, Retournement baissier={is_bearish.iloc[-1]}")
+            
+            return buy_signals, sell_signals
+            
+        except Exception as e:
+            logger.error(f"Erreur lors de l'analyse BB: {str(e)}")
+            return pd.Series(False, index=data.index), pd.Series(False, index=data.index)
     
     def generate_trade_metadata(
         self,
@@ -471,4 +487,50 @@ class BollingerBandsReversalStrategy(BaseStrategy):
             # Take profit à la bande inférieure
             take_profit = lower_band.iloc[index]
             
-        return take_profit 
+        return take_profit
+
+    def _generate_signals_impl(self, data: pd.DataFrame, signals: pd.Series) -> None:
+        """
+        Implémente la logique de la stratégie Bollinger Bands.
+        
+        Args:
+            data: DataFrame avec les données OHLCV
+            signals: Série des signaux à modifier
+        """
+        try:
+            # Calculer les bandes de Bollinger
+            bb_upper, bb_middle, bb_lower = calculate_bollinger_bands(
+                data['close'],
+                self.params['bb_period'],
+                self.params['bb_std']
+            )
+            
+            # Calculer le RSI
+            rsi = calculate_rsi(data['close'], self.params['rsi_period'])
+            
+            # Calculer la variation du prix
+            price_change = data['close'].pct_change()
+            
+            # Générer les signaux
+            # Signal d'achat: Prix touche la bande inférieure et rebondit
+            # avec un RSI en zone de survente
+            buy_signal = (
+                (data['close'] <= bb_lower) &
+                (price_change > self.params['min_reversal_pct']) &
+                (rsi < 30)
+            )
+            
+            # Signal de vente: Prix touche la bande supérieure et rebondit
+            # avec un RSI en zone de surachat
+            sell_signal = (
+                (data['close'] >= bb_upper) &
+                (price_change < -self.params['min_reversal_pct']) &
+                (rsi > 70)
+            )
+            
+            # Mettre à jour les signaux
+            signals[buy_signal] = 1
+            signals[sell_signal] = -1
+            
+        except Exception as e:
+            logger.error(f"Erreur lors de la génération des signaux Bollinger Bands: {str(e)}") 

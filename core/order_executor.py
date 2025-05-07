@@ -12,12 +12,58 @@ import MetaTrader5 as mt5
 from loguru import logger
 
 from core.mt5_connector import MT5Connector
+from core.risk_manager import RiskManager
+from models.order import Order, OrderSide, OrderStatus, OrderType
 
 class OrderType(Enum):
-    """Types d'ordres supportés."""
-    MARKET = "MARKET"
-    LIMIT = "LIMIT"
-    STOP = "STOP"
+    """Types d'ordres supportés avec mapping direct vers MT5."""
+    MARKET_BUY = 0  # mt5.ORDER_TYPE_BUY
+    MARKET_SELL = 1  # mt5.ORDER_TYPE_SELL
+    LIMIT_BUY = 2  # mt5.ORDER_TYPE_BUY_LIMIT
+    LIMIT_SELL = 3  # mt5.ORDER_TYPE_SELL_LIMIT
+    STOP_BUY = 4  # mt5.ORDER_TYPE_BUY_STOP
+    STOP_SELL = 5  # mt5.ORDER_TYPE_SELL_STOP
+
+    @classmethod
+    def from_string(cls, order_type: str, side: str) -> 'OrderType':
+        """
+        Convertit une chaîne de type d'ordre et un côté en OrderType.
+        
+        Args:
+            order_type: Type d'ordre ('MARKET', 'LIMIT', 'STOP')
+            side: Côté de l'ordre ('BUY', 'SELL')
+            
+        Returns:
+            OrderType correspondant
+        
+        Raises:
+            ValueError: Si la combinaison est invalide
+        """
+        key = f"{order_type}_{side}"
+        try:
+            return cls[key]
+        except KeyError:
+            raise ValueError(f"Invalid order type/side combination: {key}")
+    
+    @property
+    def is_limit(self) -> bool:
+        """Indique si c'est un ordre limite."""
+        return self in [OrderType.LIMIT_BUY, OrderType.LIMIT_SELL]
+    
+    @property
+    def is_stop(self) -> bool:
+        """Indique si c'est un ordre stop."""
+        return self in [OrderType.STOP_BUY, OrderType.STOP_SELL]
+    
+    @property
+    def is_market(self) -> bool:
+        """Indique si c'est un ordre au marché."""
+        return self in [OrderType.MARKET_BUY, OrderType.MARKET_SELL]
+    
+    @property
+    def is_buy(self) -> bool:
+        """Indique si c'est un ordre d'achat."""
+        return self in [OrderType.MARKET_BUY, OrderType.LIMIT_BUY, OrderType.STOP_BUY]
 
 class OrderSide(Enum):
     """Sens de l'ordre."""
@@ -42,30 +88,34 @@ class OrderStatus:
 
 class OrderExecutor:
     """
-    Gère l'exécution des ordres de trading.
+    Exécuteur d'ordres de trading.
     
-    Attributes:
-        connector (MT5Connector): Instance du connecteur MT5
-        config_path (str): Chemin vers le fichier de configuration
+    Cette classe gère l'exécution des ordres, le suivi des positions
+    et la mise à jour des ordres en attente.
     """
     
-    def __init__(self, connector: MT5Connector, config_path: str = "config/config.json"):
+    def __init__(
+        self,
+        mt5_connector: MT5Connector,
+        risk_manager: RiskManager
+    ):
         """
         Initialise l'exécuteur d'ordres.
         
         Args:
-            connector: Instance du connecteur MT5
-            config_path: Chemin vers le fichier de configuration
+            mt5_connector: Connecteur MT5
+            risk_manager: Gestionnaire de risques
         """
-        self.connector = connector
-        self.config_path = config_path
-        self._load_config()
-        self.pending_orders: Dict[int, OrderStatus] = {}
+        self.mt5_connector = mt5_connector
+        self.risk_manager = risk_manager
+        self.pending_orders = {}
+        
+        logger.info("OrderExecutor initialisé")
     
     def _load_config(self) -> None:
         """Charge la configuration depuis le fichier JSON."""
         try:
-            with open(self.config_path, 'r') as f:
+            with open("config/config.json", 'r') as f:
                 self.config = json.load(f)
         except Exception as e:
             logger.error(f"Erreur lors du chargement de la configuration: {str(e)}")
@@ -97,12 +147,12 @@ class OrderExecutor:
             bool: True si les paramètres sont valides, False sinon
         """
         # Vérifier la connexion
-        if not self.connector.connected:
+        if not self.mt5_connector.connected:
             logger.error("Non connecté à MT5")
             return False
         
         # Vérifier le symbole
-        symbol_info = self.connector.get_symbol_info(symbol)
+        symbol_info = self.mt5_connector.get_symbol_info(symbol)
         if symbol_info is None:
             return False
         
@@ -112,7 +162,7 @@ class OrderExecutor:
             return False
         
         # Vérifier le prix pour les ordres limit/stop
-        if order_type in [OrderType.LIMIT, OrderType.STOP] and price is None:
+        if (order_type.is_limit or order_type.is_stop) and price is None:
             logger.error("Prix requis pour les ordres limit/stop")
             return False
         
@@ -139,7 +189,8 @@ class OrderExecutor:
         Returns:
             Tuple[bool, Optional[int]]: (Succès, ID de l'ordre)
         """
-        if not self._validate_order_params(symbol, volume, OrderType.MARKET, side, sl=sl, tp=tp):
+        order_type = OrderType.MARKET_BUY if side == OrderSide.BUY else OrderType.MARKET_SELL
+        if not self._validate_order_params(symbol, volume, order_type, side, sl=sl, tp=tp):
             return False, None
         
         # Préparer la requête
@@ -147,12 +198,12 @@ class OrderExecutor:
             "action": mt5.TRADE_ACTION_DEAL,
             "symbol": symbol,
             "volume": volume,
-            "type": mt5.ORDER_TYPE_BUY if side == OrderSide.BUY else mt5.ORDER_TYPE_SELL,
+            "type": order_type.value,
             "deviation": 20,
             "magic": 234000,
             "comment": "python market order",
             "type_time": mt5.ORDER_TIME_GTC,
-            "type_filling": mt5.ORDER_FILLING_IOC,
+            "type_filling": mt5.ORDER_FILLING_FOK,
         }
         
         # Ajouter SL/TP si spécifiés
@@ -193,7 +244,8 @@ class OrderExecutor:
         Returns:
             Tuple[bool, Optional[int]]: (Succès, ID de l'ordre)
         """
-        if not self._validate_order_params(symbol, volume, OrderType.LIMIT, side, price, sl, tp):
+        order_type = OrderType.LIMIT_BUY if side == OrderSide.BUY else OrderType.LIMIT_SELL
+        if not self._validate_order_params(symbol, volume, order_type, side, price, sl, tp):
             return False, None
         
         # Préparer la requête
@@ -201,7 +253,7 @@ class OrderExecutor:
             "action": mt5.TRADE_ACTION_PENDING,
             "symbol": symbol,
             "volume": volume,
-            "type": mt5.ORDER_TYPE_BUY_LIMIT if side == OrderSide.BUY else mt5.ORDER_TYPE_SELL_LIMIT,
+            "type": order_type.value,
             "price": price,
             "deviation": 20,
             "magic": 234000,
@@ -248,7 +300,8 @@ class OrderExecutor:
         Returns:
             Tuple[bool, Optional[int]]: (Succès, ID de l'ordre)
         """
-        if not self._validate_order_params(symbol, volume, OrderType.STOP, side, price, sl, tp):
+        order_type = OrderType.STOP_BUY if side == OrderSide.BUY else OrderType.STOP_SELL
+        if not self._validate_order_params(symbol, volume, order_type, side, price, sl, tp):
             return False, None
         
         # Préparer la requête
@@ -256,7 +309,7 @@ class OrderExecutor:
             "action": mt5.TRADE_ACTION_PENDING,
             "symbol": symbol,
             "volume": volume,
-            "type": mt5.ORDER_TYPE_BUY_STOP if side == OrderSide.BUY else mt5.ORDER_TYPE_SELL_STOP,
+            "type": order_type.value,
             "price": price,
             "deviation": 20,
             "magic": 234000,
@@ -297,7 +350,7 @@ class OrderExecutor:
         Returns:
             bool: True si la modification est réussie, False sinon
         """
-        if not self.connector.connected:
+        if not self.mt5_connector.connected:
             logger.error("Non connecté à MT5")
             return False
         
@@ -339,7 +392,7 @@ class OrderExecutor:
         Returns:
             bool: True si l'annulation est réussie, False sinon
         """
-        if not self.connector.connected:
+        if not self.mt5_connector.connected:
             logger.error("Non connecté à MT5")
             return False
         
@@ -369,65 +422,45 @@ class OrderExecutor:
         comment: str = ""
     ) -> Optional[OrderStatus]:
         """
-        Place un ordre avec gestion des exécutions partielles.
+        Place un ordre de trading.
         
         Args:
-            symbol: Symbole
-            order_type: Type d'ordre ('BUY' ou 'SELL')
-            volume: Volume
-            price: Prix
-            stop_loss: Stop loss (optionnel)
-            take_profit: Take profit (optionnel)
-            comment: Commentaire (optionnel)
+            symbol: Symbole à trader
+            order_type: Type d'ordre ('MARKET', 'LIMIT', 'STOP')
+            volume: Volume de l'ordre
+            price: Prix pour les ordres limit/stop
+            stop_loss: Stop loss
+            take_profit: Take profit
+            comment: Commentaire sur l'ordre
             
         Returns:
-            OrderStatus: État de l'ordre ou None si erreur
+            Optional[OrderStatus]: État de l'ordre ou None en cas d'erreur
         """
-        # Convertir le type d'ordre
-        mt5_order_type = (
-            mt5.ORDER_TYPE_BUY if order_type == 'BUY'
-            else mt5.ORDER_TYPE_SELL
-        )
-        
-        # Placer l'ordre
-        result = self.connector.place_order(
-            symbol=symbol,
-            order_type=mt5_order_type,
-            volume=volume,
-            price=price,
-            stop_loss=stop_loss,
-            take_profit=take_profit,
-            comment=comment
-        )
-        
-        if not result or 'order' not in result:
-            logger.error(f"Échec de placement d'ordre: {result}")
-            return None
+        try:
+            # Déterminer le côté de l'ordre en fonction du signal
+            side = OrderSide.BUY if order_type == "BUY" else OrderSide.SELL
             
-        # Créer le statut de l'ordre
-        order = result['order']
-        status = OrderStatus(
-            order_id=order.ticket,
-            symbol=symbol,
-            type=order_type,
-            volume=volume,
-            price=price,
-            stop_loss=stop_loss,
-            take_profit=take_profit,
-            filled_volume=0.0,
-            remaining_volume=volume,
-            status='PENDING',
-            comment=comment,
-            timestamp=datetime.now()
-        )
-        
-        # Enregistrer l'ordre en attente
-        self.pending_orders[order.ticket] = status
-        
-        # Vérifier immédiatement l'état
-        self.check_order_status(order.ticket)
-        
-        return status
+            # Convertir le type d'ordre en OrderType
+            order_type = OrderType.from_string("MARKET", side.value)
+            
+            # Exécuter l'ordre
+            success, order_id = self.execute_market_order(
+                symbol=symbol,
+                volume=volume,
+                side=side,
+                sl=stop_loss if stop_loss > 0 else None,
+                tp=take_profit if take_profit > 0 else None
+            )
+            
+            if not success:
+                return None
+            
+            # Vérifier l'état de l'ordre
+            return self.check_order_status(order_id)
+            
+        except Exception as e:
+            logger.error(f"Erreur lors du placement de l'ordre: {str(e)}")
+            return None
         
     def check_order_status(self, order_id: int) -> Optional[OrderStatus]:
         """
@@ -445,7 +478,7 @@ class OrderExecutor:
         order = self.pending_orders[order_id]
         
         # Récupérer l'historique des trades pour cet ordre
-        trades = self.connector._safe_request(
+        trades = self.mt5_connector._safe_request(
             mt5.history_deals_get,
             from_date=order.timestamp
         )
@@ -493,4 +526,55 @@ class OrderExecutor:
         Returns:
             OrderStatus: État de l'ordre ou None si non trouvé
         """
-        return self.pending_orders.get(order_id) 
+        return self.pending_orders.get(order_id)
+
+    def execute_order(self, order: Order) -> bool:
+        """
+        Exécute un ordre de trading.
+        
+        Args:
+            order: Ordre à exécuter
+            
+        Returns:
+            bool: True si l'ordre a été exécuté avec succès
+        """
+        try:
+            # Vérifier si l'ordre peut être exécuté
+            can_open, adjusted_volume = self.risk_manager.can_open_position(
+                order.symbol,
+                order.volume,
+                order.strategy
+            )
+            
+            if not can_open:
+                return False
+            
+            # Utiliser le volume ajusté
+            order.volume = adjusted_volume
+            
+            # Exécuter l'ordre
+            if order.side == OrderSide.BUY:
+                result = self.mt5_connector.open_buy_position(
+                    order.symbol,
+                    order.volume,
+                    order.sl,
+                    order.tp
+                )
+            else:
+                result = self.mt5_connector.open_sell_position(
+                    order.symbol,
+                    order.volume,
+                    order.sl,
+                    order.tp
+                )
+            
+            if result:
+                logger.info(f"Ordre exécuté avec succès: {order}")
+                return True
+            else:
+                logger.error(f"Échec de l'ordre: {result}")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Erreur lors de l'exécution de l'ordre: {str(e)}")
+            return False 

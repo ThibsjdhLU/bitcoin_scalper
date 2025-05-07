@@ -3,14 +3,17 @@ Stratégie de trading basée sur le Moving Average Convergence Divergence (MACD)
 """
 from datetime import datetime
 from typing import Dict, List, Optional, Tuple
+import time
 
 import pandas as pd
 import numpy as np
+from loguru import logger
 
 from core.data_fetcher import DataFetcher, TimeFrame
 from core.order_executor import OrderExecutor, OrderSide
 from .base_strategy import BaseStrategy, Signal, SignalType
 from utils.indicators import calculate_macd, calculate_ema, calculate_atr
+from utils.logger import get_logger, format_boolean
 
 class MACDStrategy(BaseStrategy):
     """
@@ -34,7 +37,8 @@ class MACDStrategy(BaseStrategy):
         order_executor: OrderExecutor,
         symbols: List[str],
         timeframe: TimeFrame,
-        params: Optional[Dict] = None
+        params: Optional[Dict] = None,
+        is_optimizing: bool = False
     ):
         """
         Initialise la stratégie MACD.
@@ -45,6 +49,7 @@ class MACDStrategy(BaseStrategy):
             symbols: Liste des symboles à trader
             timeframe: Timeframe utilisé
             params: Paramètres de la stratégie (optionnel)
+            is_optimizing: Si True, désactive les logs pendant l'optimisation
         """
         default_params = {
             'fast_period': 12,
@@ -54,7 +59,8 @@ class MACDStrategy(BaseStrategy):
             'min_histogram_change': 0.0001,
             'divergence_lookback': 10,
             'atr_period': 14,
-            'take_profit_atr_multiplier': 2.0
+            'take_profit_atr_multiplier': 2.0,
+            'analysis_delay': 1.0  # Délai en secondes entre chaque analyse
         }
         
         if params:
@@ -69,6 +75,11 @@ class MACDStrategy(BaseStrategy):
             symbols=symbols,
             timeframe=timeframe
         )
+        
+        self.is_optimizing = is_optimizing
+        self._initialized = False
+        self._last_check_time = 0
+        self._last_signal_time = 0
         
     def _validate_params(self) -> None:
         """
@@ -136,33 +147,43 @@ class MACDStrategy(BaseStrategy):
         Returns:
             Tuple[bool, Optional[Signal]]: (Doit entrer, Signal)
         """
-        buy_signals, sell_signals = self.calculate_signals(data)
-        
-        if buy_signals.iloc[-1]:
-            metadata = self.generate_trade_metadata(data, -1, 'buy')
-            signal = Signal(
-                type=SignalType.BUY,
-                symbol=symbol,
-                timestamp=datetime.now(),
-                price=data['close'].iloc[-1],
-                strength=metadata['signal_strength'],
-                metadata=metadata
-            )
-            return True, signal
+        try:
+            buy_signals, sell_signals = self.calculate_signals(data)
             
-        elif sell_signals.iloc[-1]:
-            metadata = self.generate_trade_metadata(data, -1, 'sell')
-            signal = Signal(
-                type=SignalType.SELL,
-                symbol=symbol,
-                timestamp=datetime.now(),
-                price=data['close'].iloc[-1],
-                strength=metadata['signal_strength'],
-                metadata=metadata
-            )
-            return True, signal
+            # Vérifier si nous avons un signal d'achat ou de vente
+            if buy_signals.iloc[-1]:
+                metadata = self.generate_trade_metadata(data, -1, 'buy')
+                signal = Signal(
+                    type=SignalType.BUY,
+                    symbol=symbol,
+                    timestamp=datetime.now(),
+                    price=data['close'].iloc[-1],
+                    strength=metadata['signal_strength'],
+                    metadata=metadata
+                )
+                if not self.is_optimizing:
+                    logger.info(f"Ordre ACHAT {symbol} - Prix: {data['close'].iloc[-1]:.2f}, Force: {metadata['signal_strength']:.2f}")
+                return True, signal
+                
+            elif sell_signals.iloc[-1]:
+                metadata = self.generate_trade_metadata(data, -1, 'sell')
+                signal = Signal(
+                    type=SignalType.SELL,
+                    symbol=symbol,
+                    timestamp=datetime.now(),
+                    price=data['close'].iloc[-1],
+                    strength=metadata['signal_strength'],
+                    metadata=metadata
+                )
+                if not self.is_optimizing:
+                    logger.info(f"Ordre VENTE {symbol} - Prix: {data['close'].iloc[-1]:.2f}, Force: {metadata['signal_strength']:.2f}")
+                return True, signal
             
-        return False, None
+            return False, None
+            
+        except Exception as e:
+            logger.error(f"Erreur lors de la vérification des signaux d'entrée: {str(e)}")
+            return False, None
         
     def should_exit(
         self,
@@ -213,45 +234,28 @@ class MACDStrategy(BaseStrategy):
         self,
         symbol: str,
         data: pd.DataFrame
-    ) -> List[Signal]:
+    ) -> pd.Series:
         """
-        Génère les signaux de trading pour un symbole.
+        Génère les signaux de trading pour un symbole donné.
         
         Args:
             symbol: Symbole à analyser
             data: Données OHLCV
             
         Returns:
-            List[Signal]: Liste des signaux générés
+            pd.Series: Série de signaux (1 pour achat, -1 pour vente, 0 sinon)
         """
-        signals = []
+        signals = pd.Series(0, index=data.index)
         buy_signals, sell_signals = self.calculate_signals(data)
         
-        # Générer les signaux d'achat
-        for i in range(len(data)):
-            if buy_signals.iloc[i]:
-                metadata = self.generate_trade_metadata(data, i, 'buy')
-                signal = Signal(
-                    type=SignalType.BUY,
-                    symbol=symbol,
-                    timestamp=data.index[i],
-                    price=data['close'].iloc[i],
-                    strength=metadata['signal_strength'],
-                    metadata=metadata
-                )
-                signals.append(signal)
-                
-            elif sell_signals.iloc[i]:
-                metadata = self.generate_trade_metadata(data, i, 'sell')
-                signal = Signal(
-                    type=SignalType.SELL,
-                    symbol=symbol,
-                    timestamp=data.index[i],
-                    price=data['close'].iloc[i],
-                    strength=metadata['signal_strength'],
-                    metadata=metadata
-                )
-                signals.append(signal)
+        # Convertir les signaux booléens en entiers de manière sûre
+        signals = signals.astype('int64')
+        buy_signals = buy_signals.astype('int64')
+        sell_signals = sell_signals.astype('int64')
+        
+        # Générer les signaux
+        signals[buy_signals == 1] = 1
+        signals[sell_signals == 1] = -1
                 
         return signals
     
@@ -293,64 +297,70 @@ class MACDStrategy(BaseStrategy):
         return bullish_div, bearish_div
     
     def calculate_signals(self, data: pd.DataFrame) -> Tuple[pd.Series, pd.Series]:
-        """
-        Calcule les signaux d'achat et de vente.
-        
-        Args:
-            data: DataFrame avec colonnes ['open', 'high', 'low', 'close', 'volume']
+        """Calcule les signaux d'achat et de vente."""
+        try:
+            # Vérifier le délai d'analyse de manière non-bloquante
+            current_time = time.time()
+            if hasattr(self, '_last_check_time'):
+                delay = self.params.get('analysis_delay', 1.0)
+                elapsed = current_time - self._last_check_time
+                if elapsed < delay:
+                    # Au lieu de bloquer avec time.sleep, on retourne des signaux neutres
+                    return pd.Series(False, index=data.index), pd.Series(False, index=data.index)
+            self._last_check_time = current_time
+
+            # Calculer le MACD
+            macd, signal, hist = calculate_macd(
+                data['close'],
+                self.params['fast_period'],
+                self.params['slow_period'],
+                self.params['signal_period']
+            )
             
-        Returns:
-            Tuple[pd.Series, pd.Series]: Signaux d'achat et de vente
-        """
-        # Calcul des indicateurs
-        macd, signal, histogram = calculate_macd(
-            data['close'],
-            fast_period=self.params['fast_period'],
-            slow_period=self.params['slow_period'],
-            signal_period=self.params['signal_period']
-        )
-        
-        trend_ema = calculate_ema(data['close'], self.params['trend_ema_period'])
-        
-        # Détecter les croisements
-        crossover = (macd > signal) & (macd.shift(1) <= signal.shift(1))
-        crossunder = (macd < signal) & (macd.shift(1) >= signal.shift(1))
-        
-        # Détecter les changements d'histogramme
-        histogram_bullish = (
-            (histogram > 0) &
-            ((histogram - histogram.shift(1)) > self.params['min_histogram_change'])
-        )
-        histogram_bearish = (
-            (histogram < 0) &
-            ((histogram - histogram.shift(1)) < -self.params['min_histogram_change'])
-        )
-        
-        # Détecter les divergences
-        bullish_divs = pd.Series(False, index=data.index)
-        bearish_divs = pd.Series(False, index=data.index)
-        
-        for i in range(self.params['divergence_lookback'], len(data)):
-            bull_div, bear_div = self._detect_divergence(
-                data['close'].iloc[i-self.params['divergence_lookback']:i+1],
-                macd.iloc[i-self.params['divergence_lookback']:i+1],
+            # Calculer l'EMA de tendance
+            trend_ema = calculate_ema(data['close'], self.params['trend_ema_period'])
+            
+            # Détecter les divergences
+            bullish_div, bearish_div = self._detect_divergence(
+                data['close'],
+                macd,
                 self.params['divergence_lookback']
             )
-            bullish_divs.iloc[i] = bull_div
-            bearish_divs.iloc[i] = bear_div
-        
-        # Combiner les signaux
-        buy_signals = (
-            (crossover | histogram_bullish | bullish_divs) &
-            (data['close'] > trend_ema)  # Filtre de tendance
-        )
-        
-        sell_signals = (
-            (crossunder | histogram_bearish | bearish_divs) &
-            (data['close'] < trend_ema)  # Filtre de tendance
-        )
-        
-        return buy_signals, sell_signals
+            
+            # Conditions d'achat
+            crossover = pd.Series((macd > signal) & (macd.shift(1) <= signal.shift(1)), index=data.index)
+            histogram_bullish = pd.Series((hist > 0) & (hist > hist.shift(1)), index=data.index)
+            price_above_ema = pd.Series(data['close'] > trend_ema, index=data.index)
+            
+            # Conditions de vente
+            crossunder = pd.Series((macd < signal) & (macd.shift(1) >= signal.shift(1)), index=data.index)
+            histogram_bearish = pd.Series((hist < 0) & (hist < hist.shift(1)), index=data.index)
+            price_below_ema = pd.Series(data['close'] < trend_ema, index=data.index)
+            
+            # Générer les signaux
+            buy_signals = pd.Series(
+                crossover | (histogram_bullish & price_above_ema) | (bullish_div & price_above_ema),
+                index=data.index
+            )
+            sell_signals = pd.Series(
+                crossunder | (histogram_bearish & price_below_ema) | (bearish_div & price_below_ema),
+                index=data.index
+            )
+            
+            # Log uniquement si pas en optimisation et s'il y a un signal
+            if not self.is_optimizing and (buy_signals.iloc[-1] or sell_signals.iloc[-1]):
+                logger.info(f"Analyse MACD - Prix: {data['close'].iloc[-1]:.2f}, MACD: {macd.iloc[-1]:.2f}, Signal: {signal.iloc[-1]:.2f}")
+                
+                if buy_signals.iloc[-1]:
+                    logger.info(f"Signal ACHAT - Conditions: Croisement haussier={crossover.iloc[-1]}, Histogramme haussier={histogram_bullish.iloc[-1]}, Divergence haussière={bullish_div}, Prix > EMA={price_above_ema.iloc[-1]}")
+                elif sell_signals.iloc[-1]:
+                    logger.info(f"Signal VENTE - Conditions: Croisement baissier={crossunder.iloc[-1]}, Histogramme baissier={histogram_bearish.iloc[-1]}, Divergence baissière={bearish_div}, Prix < EMA={price_below_ema.iloc[-1]}")
+            
+            return buy_signals, sell_signals
+            
+        except Exception as e:
+            logger.error(f"Erreur lors de l'analyse de {data.index.name}: {str(e)}")
+            return pd.Series(False, index=data.index), pd.Series(False, index=data.index)
     
     def generate_trade_metadata(
         self,
@@ -369,14 +379,17 @@ class MACDStrategy(BaseStrategy):
         Returns:
             Dict: Métadonnées du trade
         """
+        # S'assurer que les données sont des Series pandas
+        close_prices = pd.Series(data['close'].values, index=data.index)
+        
         macd, signal, histogram = calculate_macd(
-            data['close'],
+            close_prices,
             fast_period=self.params['fast_period'],
             slow_period=self.params['slow_period'],
             signal_period=self.params['signal_period']
         )
         
-        trend_ema = calculate_ema(data['close'], self.params['trend_ema_period'])
+        trend_ema = calculate_ema(close_prices, self.params['trend_ema_period'])
         
         current_price = data['close'].iloc[index]
         current_macd = macd.iloc[index]
@@ -474,3 +487,54 @@ class MACDStrategy(BaseStrategy):
             take_profit = current_price - (self.params['take_profit_atr_multiplier'] * current_atr)
             
         return float(take_profit)  # Convertir en float pour éviter les NaN 
+
+    def _generate_signals_impl(self, data: pd.DataFrame, signals: pd.Series) -> None:
+        """
+        Implémente la logique de la stratégie MACD.
+        
+        Args:
+            data: DataFrame avec les données OHLCV
+            signals: Série des signaux à modifier
+        """
+        try:
+            # Calculer le MACD
+            macd, signal_line, histogram = calculate_macd(
+                data['close'],
+                self.params['fast_period'],
+                self.params['slow_period'],
+                self.params['signal_period']
+            )
+            
+            # Calculer la tendance avec l'EMA
+            trend_ema = calculate_ema(data['close'], self.params['trend_ema_period'])
+            
+            # Calculer la variation de l'histogramme
+            hist_change = histogram - histogram.shift(1)
+            
+            # Générer les signaux
+            # Signal d'achat: MACD croise au-dessus de la ligne de signal
+            # et la tendance est haussière
+            buy_signal = pd.Series(
+                (macd > signal_line) & 
+                (macd.shift(1) <= signal_line.shift(1)) &
+                (data['close'] > trend_ema) &
+                (hist_change > self.params['min_histogram_change']),
+                index=data.index
+            )
+            
+            # Signal de vente: MACD croise en-dessous de la ligne de signal
+            # et la tendance est baissière
+            sell_signal = pd.Series(
+                (macd < signal_line) & 
+                (macd.shift(1) >= signal_line.shift(1)) &
+                (data['close'] < trend_ema) &
+                (abs(hist_change) > self.params['min_histogram_change']),
+                index=data.index
+            )
+            
+            # Mettre à jour les signaux
+            signals[buy_signal] = 1
+            signals[sell_signal] = -1
+            
+        except Exception as e:
+            logger.error(f"Erreur lors de la génération des signaux MACD: {str(e)}") 

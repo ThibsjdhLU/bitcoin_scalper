@@ -22,13 +22,23 @@ class SignalType(Enum):
 
 @dataclass
 class Signal:
-    """Représente un signal de trading."""
+    """
+    Représente un signal de trading.
+    
+    Attributes:
+        type (SignalType): Type de signal
+        symbol (str): Symbole concerné
+        timestamp (datetime): Horodatage du signal
+        price (float): Prix au moment du signal
+        strength (float): Force du signal (0-1)
+        metadata (Dict): Métadonnées additionnelles
+    """
     type: SignalType
     symbol: str
     timestamp: datetime
     price: float
-    strength: float  # Entre 0 et 1
-    metadata: Dict  # Informations supplémentaires (ex: indicateurs)
+    strength: float
+    metadata: Dict
 
 class BaseStrategy(ABC):
     """
@@ -44,6 +54,9 @@ class BaseStrategy(ABC):
         timeframe (TimeFrame): Timeframe utilisé
     """
     
+    # Flag de classe pour suivre l'initialisation
+    _initialized_strategies = set()
+    
     def __init__(
         self,
         name: str,
@@ -52,10 +65,11 @@ class BaseStrategy(ABC):
         order_executor: OrderExecutor,
         params: Dict,
         symbols: List[str],
-        timeframe: TimeFrame
+        timeframe: TimeFrame,
+        is_optimizing: bool = False
     ):
         """
-        Initialise la stratégie.
+        Initialise la stratégie de base.
         
         Args:
             name: Nom de la stratégie
@@ -65,6 +79,7 @@ class BaseStrategy(ABC):
             params: Paramètres de la stratégie
             symbols: Liste des symboles à trader
             timeframe: Timeframe utilisé
+            is_optimizing: Si True, désactive les logs pendant l'optimisation
         """
         self.name = name
         self.description = description
@@ -73,11 +88,19 @@ class BaseStrategy(ABC):
         self.params = params
         self.symbols = symbols
         self.timeframe = timeframe
+        self.is_optimizing = is_optimizing
+        
+        # Log d'initialisation unique par type de stratégie
+        strategy_key = f"{name}_{len(symbols)}"
+        if not self.is_optimizing and strategy_key not in self._initialized_strategies:
+            logger.info(f"Stratégie {name} initialisée avec {len(symbols)} symboles")
+            self._initialized_strategies.add(strategy_key)
         
         # Vérifier les paramètres requis
         self._validate_params()
         
-        logger.info(f"Stratégie {name} initialisée avec {len(symbols)} symboles")
+        # Initialiser le volume
+        self.volume = self.params.get('volume', 0.01)
     
     def _validate_params(self) -> None:
         """
@@ -124,23 +147,49 @@ class BaseStrategy(ABC):
         """
         pass
     
-    @abstractmethod
-    def generate_signals(
-        self,
-        symbol: str,
-        data: pd.DataFrame
-    ) -> List[Signal]:
+    def generate_signals(self, symbol: str, data: pd.DataFrame) -> pd.Series:
         """
-        Génère les signaux de trading pour un symbole.
+        Génère les signaux de trading.
         
         Args:
             symbol: Symbole à analyser
-            data: Données OHLCV
+            data: DataFrame avec les données OHLCV
             
         Returns:
-            List[Signal]: Liste des signaux générés
+            pd.Series: Série des signaux (1: achat, -1: vente, 0: neutre)
         """
-        pass
+        try:
+            # S'assurer que les données sont un DataFrame pandas
+            if not isinstance(data, pd.DataFrame):
+                data = pd.DataFrame(data)
+                
+            # Vérifier que les colonnes nécessaires sont présentes
+            required_columns = ['open', 'high', 'low', 'close']
+            if not all(col in data.columns for col in required_columns):
+                raise ValueError(f"Données manquantes. Colonnes requises: {required_columns}")
+                
+            # Générer les signaux
+            signals = pd.Series(0, index=data.index)
+            
+            # Implémentation spécifique à la stratégie
+            self._generate_signals_impl(data, signals)
+            
+            return signals
+            
+        except Exception as e:
+            logger.error(f"Erreur lors de la génération des signaux: {str(e)}")
+            return pd.Series(0, index=data.index)
+            
+    def _generate_signals_impl(self, data: pd.DataFrame, signals: pd.Series) -> None:
+        """
+        Implémentation spécifique de la génération des signaux.
+        À surcharger par les classes dérivées.
+        
+        Args:
+            data: DataFrame avec les données OHLCV
+            signals: Série des signaux à modifier
+        """
+        raise NotImplementedError("La méthode _generate_signals_impl doit être implémentée")
     
     def get_required_data(self) -> int:
         """
@@ -192,30 +241,60 @@ class BaseStrategy(ABC):
                 )
                 return None
             
+            # Convertir les données en DataFrame avec le bon format
+            if isinstance(data, list):
+                data = pd.DataFrame(data)
+                data.columns = ['time', 'open', 'high', 'low', 'close', 'tick_volume', 'spread', 'real_volume']
+                data.set_index('time', inplace=True)
+                data.index = pd.to_datetime(data.index, unit='s')
+            
             return data
             
         except Exception as e:
             logger.error(f"Erreur lors de la récupération des données: {str(e)}")
             return None
     
-    def analyze(self, symbol: str) -> Optional[Tuple[bool, bool, List[Signal]]]:
+    def analyze(self, symbol: str, data: pd.DataFrame) -> Tuple[bool, bool, List[Signal]]:
         """
-        Analyse un symbole et génère les signaux.
+        Analyse un symbole et retourne les signaux de trading.
         
         Args:
             symbol: Symbole à analyser
+            data: DataFrame avec les données OHLCV
             
         Returns:
-            Optional[Tuple[bool, bool, List[Signal]]]: (Entrée, Sortie, Signaux)
+            Tuple[bool, bool, List[Signal]]: (Doit entrer, Doit sortir, Liste des signaux)
         """
-        data = self.get_current_data(symbol)
-        if data is None:
-            return None
+        try:
+            # Vérifier si on doit entrer en position
+            should_enter, enter_signal = self.should_enter(symbol, data)
+            
+            # Vérifier si on doit sortir d'une position
+            should_exit, exit_signal = self.should_exit(symbol, data, OrderSide.BUY)
+            
+            # Créer la liste des signaux
+            signals = []
+            if enter_signal is not None:
+                signals.append(enter_signal)
+            if exit_signal is not None:
+                signals.append(exit_signal)
+            
+            return should_enter, should_exit, signals
+            
+        except Exception as e:
+            logger.error(f"Erreur lors de l'analyse de {symbol}: {str(e)}")
+            return False, False, []
+    
+    def get_volume(self) -> float:
+        """
+        Retourne le volume à utiliser pour les ordres.
         
-        signals = self.generate_signals(symbol, data)
-        should_enter, enter_signal = self.should_enter(symbol, data)
+        Returns:
+            float: Volume à utiliser
+        """
+        # Utiliser le volume de la stratégie ou le volume par défaut
+        volume = self.params.get('volume', 0.01)
         
-        # Pour l'instant, on suppose qu'il n'y a pas de position ouverte
-        should_exit, exit_signal = self.should_exit(symbol, data, OrderSide.BUY)
-        
-        return should_enter, should_exit, signals 
+        # S'assurer que le volume ne dépasse pas le maximum autorisé
+        max_volume = self.params.get('max_position_size', 0.01)
+        return min(volume, max_volume) 

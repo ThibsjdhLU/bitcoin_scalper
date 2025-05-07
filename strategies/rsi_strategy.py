@@ -323,4 +323,48 @@ class RSIStrategy(BaseStrategy):
                 )
                 signals.append(signal)
         
-        return signals 
+        return signals
+    
+    def _generate_signals_impl(self, data: pd.DataFrame, signals: pd.Series) -> None:
+        """
+        Implémente la logique de la stratégie RSI.
+        
+        Args:
+            data: DataFrame avec les données OHLCV
+            signals: Série des signaux à modifier
+        """
+        try:
+            # Calculer le RSI
+            rsi = calculate_rsi(data['close'], self.params['rsi_period'])
+            
+            # Calculer la tendance avec l'EMA
+            trend_ema = calculate_ema(data['close'], self.params['trend_ema_period'])
+            
+            # Calculer la variation du RSI
+            rsi_change = rsi - rsi.shift(1)
+            
+            # Générer les signaux
+            # Signal d'achat: RSI sort de la zone de survente
+            # et la tendance est haussière
+            buy_signal = (
+                (rsi < self.params['oversold_threshold']) &
+                (rsi.shift(1) < self.params['oversold_threshold']) &
+                (rsi_change > self.params['min_bounce_strength']) &
+                (data['close'] > trend_ema)
+            )
+            
+            # Signal de vente: RSI sort de la zone de surachat
+            # et la tendance est baissière
+            sell_signal = (
+                (rsi > self.params['overbought_threshold']) &
+                (rsi.shift(1) > self.params['overbought_threshold']) &
+                (rsi_change < -self.params['min_bounce_strength']) &
+                (data['close'] < trend_ema)
+            )
+            
+            # Mettre à jour les signaux
+            signals[buy_signal] = 1
+            signals[sell_signal] = -1
+            
+        except Exception as e:
+            logger.error(f"Erreur lors de la génération des signaux RSI: {str(e)}") 

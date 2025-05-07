@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 
 def calculate_ema(
-    data: pd.Series,
+    data: Union[pd.Series, List[float], np.ndarray],
     period: int,
     smoothing: float = 2.0
 ) -> pd.Series:
@@ -16,13 +16,21 @@ def calculate_ema(
     Calcule l'Exponential Moving Average (EMA).
     
     Args:
-        data: Série de prix
+        data: Série de prix ou liste/array de prix
         period: Période de l'EMA
         smoothing: Facteur de lissage (par défaut 2.0)
         
     Returns:
         pd.Series: EMA calculée
     """
+    # Convertir les données en Series pandas si nécessaire
+    if not isinstance(data, pd.Series):
+        data = pd.Series(data)
+    
+    # S'assurer que les données sont numériques
+    data = pd.to_numeric(data, errors='coerce')
+    
+    # Calculer l'EMA
     return data.ewm(span=period, adjust=False).mean()
 
 def calculate_sma(
@@ -71,7 +79,7 @@ def calculate_rsi(
     return rsi
 
 def calculate_macd(
-    data: pd.Series,
+    data: Union[pd.Series, List[float], np.ndarray],
     fast_period: int = 12,
     slow_period: int = 26,
     signal_period: int = 9
@@ -80,7 +88,7 @@ def calculate_macd(
     Calcule le Moving Average Convergence Divergence (MACD).
     
     Args:
-        data: Série de prix
+        data: Série de prix ou liste/array de prix
         fast_period: Période rapide (par défaut 12)
         slow_period: Période lente (par défaut 26)
         signal_period: Période du signal (par défaut 9)
@@ -88,12 +96,30 @@ def calculate_macd(
     Returns:
         Tuple[pd.Series, pd.Series, pd.Series]: (MACD, Signal, Histogram)
     """
+    # Convertir les données en Series pandas si nécessaire
+    if not isinstance(data, pd.Series):
+        data = pd.Series(data)
+    
+    # S'assurer que les données sont numériques
+    data = pd.to_numeric(data, errors='coerce')
+    
+    # Calculer les EMAs
     fast_ema = calculate_ema(data, fast_period)
     slow_ema = calculate_ema(data, slow_period)
     
+    # Calculer le MACD
     macd = fast_ema - slow_ema
+    
+    # Calculer la ligne de signal
     signal = calculate_ema(macd, signal_period)
+    
+    # Calculer l'histogramme
     histogram = macd - signal
+    
+    # S'assurer que toutes les séries ont le même index
+    macd = pd.Series(macd, index=data.index)
+    signal = pd.Series(signal, index=data.index)
+    histogram = pd.Series(histogram, index=data.index)
     
     return macd, signal, histogram
 
@@ -120,9 +146,9 @@ def calculate_bollinger_bands(
     lower_band = middle_band - (std * num_std)
     
     # S'assurer que les bandes sont dans le bon ordre
-    upper_band = upper_band.fillna(method='bfill')
-    middle_band = middle_band.fillna(method='bfill')
-    lower_band = lower_band.fillna(method='bfill')
+    upper_band = upper_band.bfill()
+    middle_band = middle_band.bfill()
+    lower_band = lower_band.bfill()
     
     return upper_band, middle_band, lower_band
 
@@ -152,7 +178,7 @@ def calculate_atr(
     atr = tr.rolling(window=period).mean()
     
     # Remplacer les valeurs NaN par la première valeur valide
-    atr = atr.fillna(method='bfill')
+    atr = atr.bfill()
     
     # S'assurer que l'ATR est positif
     atr = atr.clip(lower=0)
@@ -242,10 +268,10 @@ def calculate_support_resistance(
     for i in range(window, len(price) - window):
         window_data = price[i - window:i + window]
         
-        if price[i] == window_data.min():
-            supports.append(price[i])
-        elif price[i] == window_data.max():
-            resistances.append(price[i])
+        if price.iloc[i] == window_data.min():
+            supports.append(price.iloc[i])
+        elif price.iloc[i] == window_data.max():
+            resistances.append(price.iloc[i])
     
     # Fusionner les niveaux proches
     supports = _merge_levels(supports, threshold)

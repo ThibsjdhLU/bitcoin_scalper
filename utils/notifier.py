@@ -339,4 +339,55 @@ class EmailNotifier:
             threshold,
             metadata
         )
-        return self.send_alert(AlertType.RISK, subject, message) 
+        return self.send_alert(AlertType.RISK, subject, message)
+
+class Notifier:
+    """
+    Façade pour la gestion des notifications.
+    Permet d'envoyer des notifications via différents canaux (email, etc.).
+    """
+    
+    def __init__(self, config: Dict):
+        """
+        Initialise le notifier.
+        
+        Args:
+            config: Configuration du notifier
+        """
+        self.email_notifier = None
+        
+        # Initialiser le notifier email si configuré
+        if config.get('notifications', {}).get('email', {}).get('enabled', False):
+            email_config = config['notifications']['email']
+            self.email_notifier = EmailNotifier(
+                smtp_server=email_config['smtp_server'],
+                smtp_port=email_config['smtp_port'],
+                sender_email=email_config['sender_email'],
+                sender_password=email_config['sender_password'],
+                recipient_email=email_config['recipient_email']
+            )
+            
+        logger.info("Notifier initialisé")
+        
+    def send_notification(self, message: str, alert_type: AlertType = AlertType.INFO) -> bool:
+        """
+        Envoie une notification.
+        
+        Args:
+            message: Message à envoyer
+            alert_type: Type d'alerte
+            
+        Returns:
+            bool: True si l'envoi a réussi, False sinon
+        """
+        success = True
+        
+        # Envoyer par email si configuré
+        if self.email_notifier:
+            success = self.email_notifier.send_alert(
+                alert_type=alert_type,
+                subject=f"Bot Trading - {alert_type.value}",
+                message=message
+            )
+            
+        return success 

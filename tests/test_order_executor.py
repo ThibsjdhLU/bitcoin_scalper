@@ -57,8 +57,31 @@ def mock_connector():
         'name': 'BTCUSD',
         'volume_min': 0.01,
         'volume_max': 1.0,
-        'digits': 2
+        'digits': 2,
+        'bid': 49999.0,
+        'ask': 50001.0,
+        'spread': 2
     }
+    
+    # Mock du résultat de place_order
+    order_result = MagicMock()
+    order_result.ticket = 12345
+    order_result.volume = 0.1
+    order_result.price = 50000.0
+    order_result.sl = 49000.0
+    order_result.tp = 51000.0
+    
+    connector.place_order.return_value = {
+        'order': order_result,
+        'request': {
+            'action': 1,
+            'symbol': 'BTCUSD',
+            'volume': 0.1,
+            'type': 0,
+            'price': 50000.0
+        }
+    }
+    
     return connector
 
 @pytest.fixture
@@ -91,7 +114,7 @@ def test_validate_order_params(order_executor):
     assert order_executor._validate_order_params(
         symbol="BTCUSD",
         volume=0.1,
-        order_type=OrderType.MARKET,
+        order_type=OrderType.MARKET_BUY,
         side=OrderSide.BUY
     )
     
@@ -99,7 +122,7 @@ def test_validate_order_params(order_executor):
     assert not order_executor._validate_order_params(
         symbol="BTCUSD",
         volume=2.0,  # > volume_max
-        order_type=OrderType.MARKET,
+        order_type=OrderType.MARKET_BUY,
         side=OrderSide.BUY
     )
     
@@ -108,7 +131,7 @@ def test_validate_order_params(order_executor):
     assert not order_executor._validate_order_params(
         symbol="INVALID",
         volume=0.1,
-        order_type=OrderType.MARKET,
+        order_type=OrderType.MARKET_BUY,
         side=OrderSide.BUY
     )
 
@@ -155,6 +178,52 @@ def test_execute_stop_order(order_executor, mock_mt5):
     assert success
     assert order_id == 12345
     mock_mt5.order_send.assert_called_once()
+
+def test_place_order(order_executor, mock_mt5):
+    """Teste le placement d'un ordre avec la nouvelle méthode."""
+    # Test d'un ordre d'achat au marché
+    status = order_executor.place_order(
+        symbol="BTCUSD",
+        order_type="MARKET",
+        volume=0.1,
+        price=50002.0,  # > ask -> BUY
+        stop_loss=49000.0,
+        take_profit=51000.0
+    )
+    
+    assert status is not None
+    assert status.type == "MARKET_BUY"
+    assert status.order_id == 12345
+    
+    # Test d'un ordre de vente au marché
+    status = order_executor.place_order(
+        symbol="BTCUSD",
+        order_type="MARKET",
+        volume=0.1,
+        price=49998.0,  # < bid -> SELL
+        stop_loss=48000.0,
+        take_profit=49500.0
+    )
+    
+    assert status is not None
+    assert status.type == "MARKET_SELL"
+    assert status.order_id == 12345
+
+def test_order_type_conversion():
+    """Teste la conversion des types d'ordres."""
+    # Test des conversions valides
+    assert OrderType.from_string("MARKET", "BUY") == OrderType.MARKET_BUY
+    assert OrderType.from_string("MARKET", "SELL") == OrderType.MARKET_SELL
+    assert OrderType.from_string("LIMIT", "BUY") == OrderType.LIMIT_BUY
+    assert OrderType.from_string("LIMIT", "SELL") == OrderType.LIMIT_SELL
+    assert OrderType.from_string("STOP", "BUY") == OrderType.STOP_BUY
+    assert OrderType.from_string("STOP", "SELL") == OrderType.STOP_SELL
+    
+    # Test des conversions invalides
+    with pytest.raises(ValueError):
+        OrderType.from_string("INVALID", "BUY")
+    with pytest.raises(ValueError):
+        OrderType.from_string("MARKET", "INVALID")
 
 def test_modify_order(order_executor, mock_mt5):
     """Teste la modification d'un ordre."""
