@@ -4,6 +4,8 @@ import plotly.graph_objects as go
 from datetime import datetime, timedelta
 import os
 from pathlib import Path
+import json
+import random
 
 class Dashboard:
     def __init__(self):
@@ -12,15 +14,56 @@ class Dashboard:
         self.trades_df = None
         self.performance_df = None
         self.errors_df = None
+        self.demo_mode = True  # Mode démo par défaut
         
     def load_data(self):
-        """Charge les données depuis les fichiers CSV."""
+        """Charge les données depuis les fichiers CSV ou génère des données de démo."""
         try:
-            self.trades_df = pd.read_csv(self.data_dir / "trades.csv")
-            self.performance_df = pd.read_csv(self.data_dir / "performance.csv")
-            self.load_error_logs()
+            if self.demo_mode:
+                self._generate_demo_data()
+            else:
+                self.trades_df = pd.read_csv(self.data_dir / "trades.csv")
+                self.performance_df = pd.read_csv(self.data_dir / "performance.csv")
+                self.load_error_logs()
         except Exception as e:
             st.error(f"Erreur lors du chargement des données: {str(e)}")
+            self._generate_demo_data()  # Fallback sur les données de démo
+            
+    def _generate_demo_data(self):
+        """Génère des données de démo pour le dashboard."""
+        # Générer des données de trading
+        dates = pd.date_range(start='2024-01-01', periods=100, freq='h')
+        trades_data = {
+            'timestamp': dates,
+            'symbol': ['BTCUSD'] * 100,
+            'strategy': ['EMA'] * 50 + ['RSI'] * 50,
+            'side': ['BUY', 'SELL'] * 50,
+            'volume': [random.uniform(0.01, 1.0) for _ in range(100)],
+            'price': [random.uniform(40000, 50000) for _ in range(100)],
+            'profit': [random.uniform(-100, 100) for _ in range(100)]
+        }
+        self.trades_df = pd.DataFrame(trades_data)
+        
+        # Générer des données de performance
+        balance = 10000
+        performance_data = {
+            'timestamp': dates,
+            'balance': [balance + sum(random.uniform(-100, 100) for _ in range(i)) for i in range(100)],
+            'equity': [balance + sum(random.uniform(-100, 100) for _ in range(i)) for i in range(100)]
+        }
+        self.performance_df = pd.DataFrame(performance_data)
+        
+        # Générer des logs d'erreurs
+        error_types = ['Connection', 'Order', 'Data', 'System']
+        errors = []
+        for i in range(20):
+            error = {
+                'timestamp': (datetime.now() - timedelta(hours=i)).isoformat(),
+                'error': f'{error_types[i % 4]} error',
+                'details': f'Error details {i}'
+            }
+            errors.append(error)
+        self.errors_df = pd.DataFrame(errors)
             
     def load_error_logs(self):
         """Charge les logs d'erreurs."""
@@ -86,6 +129,10 @@ def main():
     )
     
     st.title("Dashboard Trading Bot")
+    
+    # Afficher un avertissement en mode démo
+    if os.environ.get('DEMO_MODE', 'true').lower() == 'true':
+        st.warning("Mode Démo Actif - Les données affichées sont simulées")
     
     dashboard = Dashboard()
     dashboard.load_data()
