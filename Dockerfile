@@ -24,5 +24,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copie du code source
 COPY . .
 
+# Création des répertoires nécessaires
+RUN mkdir -p data logs
+
 # Commande par défaut
 CMD ["python", "run_bot.py"] 
