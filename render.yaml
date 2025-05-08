@@ -8,11 +8,17 @@ services:
       - key: PYTHON_VERSION
         value: 3.9.0
       - key: DEMO_MODE
-        value: "true"
+        value: "false"
       - key: STREAMLIT_SERVER_PORT
         value: "8080"
       - key: STREAMLIT_SERVER_ADDRESS
         value: "0.0.0.0"
+      - key: MT5_LOGIN
+        value: "101490774"
+      - key: MT5_PASSWORD
+        value: "MatLB356&"
+      - key: MT5_SERVER
+        value: "AvaTrade-Live"
 
   - type: worker
     name: bitcoin-scalper-bot
@@ -21,4 +27,10 @@ services:
     startCommand: cd /app && python run_bot.py
     envVars:
       - key: PYTHON_VERSION
-        value: 3.9.0 
+        value: 3.9.0
+      - key: MT5_LOGIN
+        value: "101490774"
+      - key: MT5_PASSWORD
+        value: "MatLB356&"
+      - key: MT5_SERVER
+        value: "AvaTrade-Live" 

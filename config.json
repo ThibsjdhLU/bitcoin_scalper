@@ -2,14 +2,15 @@
     "exchange": {
         "login": 101490774,
         "password": "MatLB356&",
-        "server": "Ava-Demo 1-MT5"
+        "server": "AvaTrade-Live"
     },
     "trading": {
         "symbol": "BTCUSD",
         "timeframe": "1m",
         "volume_min": 0.01,
         "volume_max": 1.0,
-        "risk_percent": 1.0
+        "risk_percent": 1.0,
+        "demo_mode": false
     },
     "logging": {
         "level": "INFO",
