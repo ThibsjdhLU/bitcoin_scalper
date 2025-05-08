@@ -18,14 +18,19 @@ RUN wget -qO- https://www.metatrader5.com/en/terminal/help/start_advanced_instal
 
 # Configuration de l'environnement Python
 WORKDIR /app
+
+# Copie des requirements d'abord pour optimiser le cache Docker
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+
+# Création des répertoires nécessaires
+RUN mkdir -p data logs src/dashboard
 
 # Copie du code source
 COPY . .
 
-# Création des répertoires nécessaires
-RUN mkdir -p data logs
+# Vérification des permissions
+RUN chmod -R 755 /app
 
 # Commande par défaut
 CMD ["python", "run_bot.py"] 

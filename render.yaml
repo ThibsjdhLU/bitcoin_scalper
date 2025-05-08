@@ -3,16 +3,22 @@ services:
     name: bitcoin-scalper-dashboard
     env: docker
     dockerfilePath: ./Dockerfile
-    startCommand: streamlit run src/dashboard/app.py
+    startCommand: cd /app && streamlit run src/dashboard/app.py
     envVars:
       - key: PYTHON_VERSION
         value: 3.9.0
+      - key: DEMO_MODE
+        value: "true"
+      - key: STREAMLIT_SERVER_PORT
+        value: "8080"
+      - key: STREAMLIT_SERVER_ADDRESS
+        value: "0.0.0.0"
 
   - type: worker
     name: bitcoin-scalper-bot
     env: docker
     dockerfilePath: ./Dockerfile
-    startCommand: python run_bot.py
+    startCommand: cd /app && python run_bot.py
     envVars:
       - key: PYTHON_VERSION
         value: 3.9.0 
