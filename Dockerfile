@@ -1,0 +1,28 @@
+FROM python:3.9-slim
+
+# Installation des dépendances système
+RUN apt-get update && apt-get install -y \
+    wget \
+    gnupg \
+    libfreetype6 \
+    libx11-6 \
+    libxext-dev \
+    libxrender1 \
+    libxtst6 \
+    libxi6 \
+    libglib2.0-0 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Installation de MetaTrader 5
+RUN wget -qO- https://www.metatrader5.com/en/terminal/help/start_advanced_install_deb | bash
+
+# Configuration de l'environnement Python
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copie du code source
+COPY . .
+
+# Commande par défaut
+CMD ["python", "run_bot.py"] 
