@@ -29,6 +29,9 @@ RUN mkdir -p data logs src/dashboard
 # Copie du code source
 COPY . .
 
+# Installation du package en mode développement
+RUN pip install -e .
+
 # Vérification des permissions
 RUN chmod -R 755 /app
 
