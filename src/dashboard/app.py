@@ -20,7 +20,15 @@ class Dashboard:
         self.trades_df = None
         self.performance_df = None
         self.errors_df = None
-        self.demo_mode = True  # Mode démo par défaut
+        
+        # Charger la configuration
+        try:
+            with open('config.json', 'r') as f:
+                config = json.load(f)
+                self.demo_mode = config['trading'].get('demo_mode', True)
+        except Exception as e:
+            logger.error(f"Error loading config: {str(e)}")
+            self.demo_mode = True  # Fallback sur le mode démo
         
     def load_data(self):
         """Charge les données depuis les fichiers CSV ou génère des données de démo."""
@@ -149,11 +157,12 @@ def main():
     
     st.title("Dashboard Trading Bot")
     
+    dashboard = Dashboard()
+    
     # Afficher un avertissement en mode démo
-    if os.environ.get('DEMO_MODE', 'true').lower() == 'true':
+    if dashboard.demo_mode:
         st.warning("Mode Démo Actif - Les données affichées sont simulées")
     
-    dashboard = Dashboard()
     dashboard.load_data()
     
     dashboard.display_metrics()
