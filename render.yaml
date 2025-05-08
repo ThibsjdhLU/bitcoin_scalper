@@ -33,4 +33,4 @@ services:
       - key: MT5_PASSWORD
         value: "MatLB356&"
       - key: MT5_SERVER
-        value: "AvaTrade-Live" 
+        value: "Ava-Demo 1-MT5" 
