@@ -1,5 +1,5 @@
 # Core dependencies
-# MetaTrader5==5.0.47  # Installer manuellement sur Windows uniquement
+MetaTrader5==5.0.47
 numpy==1.23.5  # Version stable avec Python 3.9
 pandas==1.5.3  # Version compatible avec numpy 1.23.5
 python-dotenv==1.0.0
@@ -36,3 +36,4 @@ psutil==5.9.8
 loguru>=0.5.3
 ta>=0.7.0
 requests>=2.26.0
+python-telegram-bot>=20.0
