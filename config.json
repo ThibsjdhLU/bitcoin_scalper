@@ -10,7 +10,7 @@
         "volume_min": 0.01,
         "volume_max": 1.0,
         "risk_percent": 1.0,
-        "demo_mode": true
+        "demo_mode": false
     },
     "logging": {
         "level": "INFO",

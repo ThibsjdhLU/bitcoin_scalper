@@ -5,8 +5,8 @@ from datetime import datetime, timedelta
 import os
 from pathlib import Path
 import json
-import random
 import logging
+from src.exchange.avatrader_mt5 import AvatraderMT5
 
 # Configuration du logging
 logging.basicConfig(level=logging.INFO)
@@ -24,66 +24,49 @@ class Dashboard:
         # Charger la configuration
         try:
             with open('config.json', 'r') as f:
-                config = json.load(f)
-                self.demo_mode = config['trading'].get('demo_mode', True)
+                self.config = json.load(f)
+                self.demo_mode = self.config['trading'].get('demo_mode', False)
         except Exception as e:
             logger.error(f"Error loading config: {str(e)}")
-            self.demo_mode = True  # Fallback sur le mode démo
+            self.demo_mode = False
+        
+        # Initialiser la connexion MT5
+        try:
+            self.mt5 = AvatraderMT5(
+                login=self.config['exchange']['login'],
+                password=self.config['exchange']['password'],
+                server=self.config['exchange']['server']
+            )
+        except Exception as e:
+            logger.error(f"Error initializing MT5: {str(e)}")
+            st.error(f"Erreur de connexion à MT5: {str(e)}")
         
     def load_data(self):
-        """Charge les données depuis les fichiers CSV ou génère des données de démo."""
+        """Charge les données depuis MT5."""
         try:
-            logger.info("Loading data")
-            if self.demo_mode:
-                logger.info("Using demo mode")
-                self._generate_demo_data()
-            else:
-                logger.info("Loading from files")
-                self.trades_df = pd.read_csv(self.data_dir / "trades.csv")
-                self.performance_df = pd.read_csv(self.data_dir / "performance.csv")
-                self.load_error_logs()
+            logger.info("Loading data from MT5")
+            
+            # Récupérer les positions ouvertes
+            positions = self.mt5.get_positions()
+            if positions:
+                self.trades_df = pd.DataFrame(positions)
+            
+            # Récupérer les informations du compte
+            account_info = self.mt5.get_account_info()
+            if account_info:
+                self.performance_df = pd.DataFrame([{
+                    'timestamp': datetime.now(),
+                    'balance': account_info['balance'],
+                    'equity': account_info['equity'],
+                    'profit': account_info['profit']
+                }])
+            
+            # Charger les logs d'erreurs
+            self.load_error_logs()
+            
         except Exception as e:
             logger.error(f"Error loading data: {str(e)}")
             st.error(f"Erreur lors du chargement des données: {str(e)}")
-            self._generate_demo_data()  # Fallback sur les données de démo
-            
-    def _generate_demo_data(self):
-        """Génère des données de démo pour le dashboard."""
-        logger.info("Generating demo data")
-        # Générer des données de trading
-        dates = pd.date_range(start='2024-01-01', periods=100, freq='h')
-        trades_data = {
-            'timestamp': dates,
-            'symbol': ['BTCUSD'] * 100,
-            'strategy': ['EMA'] * 50 + ['RSI'] * 50,
-            'side': ['BUY', 'SELL'] * 50,
-            'volume': [random.uniform(0.01, 1.0) for _ in range(100)],
-            'price': [random.uniform(40000, 50000) for _ in range(100)],
-            'profit': [random.uniform(-100, 100) for _ in range(100)]
-        }
-        self.trades_df = pd.DataFrame(trades_data)
-        
-        # Générer des données de performance
-        balance = 10000
-        performance_data = {
-            'timestamp': dates,
-            'balance': [balance + sum(random.uniform(-100, 100) for _ in range(i)) for i in range(100)],
-            'equity': [balance + sum(random.uniform(-100, 100) for _ in range(i)) for i in range(100)]
-        }
-        self.performance_df = pd.DataFrame(performance_data)
-        
-        # Générer des logs d'erreurs
-        error_types = ['Connection', 'Order', 'Data', 'System']
-        errors = []
-        for i in range(20):
-            error = {
-                'timestamp': (datetime.now() - timedelta(hours=i)).isoformat(),
-                'error': f'{error_types[i % 4]} error',
-                'details': f'Error details {i}'
-            }
-            errors.append(error)
-        self.errors_df = pd.DataFrame(errors)
-        logger.info("Demo data generated successfully")
             
     def load_error_logs(self):
         """Charge les logs d'erreurs."""
@@ -111,8 +94,7 @@ class Dashboard:
             with col2:
                 st.metric("Équité", f"${latest['equity']:.2f}")
             with col3:
-                daily_change = latest['equity'] - self.performance_df.iloc[-2]['equity']
-                st.metric("Variation Journalière", f"${daily_change:.2f}")
+                st.metric("Profit", f"${latest['profit']:.2f}")
                 
     def display_performance_chart(self):
         """Affiche le graphique de performance."""
@@ -136,9 +118,8 @@ class Dashboard:
         """Affiche la table des trades récents."""
         logger.info("Displaying trades")
         if self.trades_df is not None:
-            st.subheader("Trades Récents")
-            recent_trades = self.trades_df.tail(10)
-            st.dataframe(recent_trades)
+            st.subheader("Positions Ouvertes")
+            st.dataframe(self.trades_df)
             
     def display_errors(self):
         """Affiche les erreurs récentes."""
@@ -158,11 +139,6 @@ def main():
     st.title("Dashboard Trading Bot")
     
     dashboard = Dashboard()
-    
-    # Afficher un avertissement en mode démo
-    if dashboard.demo_mode:
-        st.warning("Mode Démo Actif - Les données affichées sont simulées")
-    
     dashboard.load_data()
     
     dashboard.display_metrics()
