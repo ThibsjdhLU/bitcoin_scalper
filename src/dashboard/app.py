@@ -6,6 +6,11 @@ import os
 from pathlib import Path
 import json
 import logging
+import sys
+
+# Ajouter le répertoire racine au PYTHONPATH
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+
 from src.exchange.avatrader_mt5 import AvatraderMT5
 
 # Configuration du logging
@@ -23,7 +28,8 @@ class Dashboard:
         
         # Charger la configuration
         try:
-            with open('config.json', 'r') as f:
+            config_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'config.json')
+            with open(config_path, 'r') as f:
                 self.config = json.load(f)
                 self.demo_mode = self.config['trading'].get('demo_mode', False)
         except Exception as e:
