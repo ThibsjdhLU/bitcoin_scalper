@@ -1,8 +1,8 @@
 services:
   - type: web
     name: bitcoin-scalper-dashboard
-    env: python
-    buildCommand: pip install -r requirements.txt
+    env: docker
+    dockerfilePath: ./Dockerfile
     startCommand: streamlit run src/dashboard/app.py
     envVars:
       - key: PYTHON_VERSION
@@ -10,8 +10,8 @@ services:
 
   - type: worker
     name: bitcoin-scalper-bot
-    env: python
-    buildCommand: pip install -r requirements.txt
+    env: docker
+    dockerfilePath: ./Dockerfile
     startCommand: python run_bot.py
     envVars:
       - key: PYTHON_VERSION
