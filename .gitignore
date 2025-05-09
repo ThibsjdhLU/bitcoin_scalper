@@ -20,23 +20,9 @@ wheels/
 .installed.cfg
 *.egg
 
-# Configuration
-config/config.json
-config/risk_config.json
-.env
-*.env
-
-# Logs et résultats
-logs/
-backtest_results/
-*.log
-*.csv
-*.xlsx
-
-# Environnements virtuels
+# Virtual Environment
 venv/
 env/
-.venv
 ENV/
 
 # IDE
@@ -44,18 +30,23 @@ ENV/
 .vscode/
 *.swp
 *.swo
-.project
-.pydevproject
+.cursor/
 
-# MetaTrader
-*.ex4
-*.ex5
-*.mq4
-*.mq5
+# Logs
+logs/
+*.log
 
-# Système
+# Data
+data/
+*.csv
+*.json
+!config/config.json
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# OS
 .DS_Store
-Thumbs.db
-
-# Release
-release/v*
+Thumbs.db 
