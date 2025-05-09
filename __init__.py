@@ -1,10 +1,9 @@
 """
-Bot de scalping Bitcoin avancé avec adversarial testing et apprentissage méta-continu
+Module de détection des régimes de marché
 """
 
-from .bitcoin_scalper import BitcoinScalper
+from .gmm_regime import GMMRegimeDetector
+from .hmm_regime import HMMRegimeDetector
+from .regime_detector import RegimeDetector
 
-__version__ = "2.0.0"
-__author__ = "V-Max Ultimate"
-
-__all__ = ['BitcoinScalper'] 
+__all__ = ["RegimeDetector", "HMMRegimeDetector", "GMMRegimeDetector"]

@@ -1,81 +1,85 @@
 # Bitcoin Scalper
 
-Bot de trading algorithmique pour le scalping de Bitcoin sur MetaTrader 5.
+Un outil de backtesting pour les stratégies de trading sur le Bitcoin, avec une interface utilisateur interactive.
 
-## 🚀 Fonctionnalités
+## Fonctionnalités
 
-- Interface graphique avec PySide6
-- Connexion à MetaTrader 5
-- Stratégies de trading basées sur des indicateurs techniques
-- Gestion des risques avancée
-- Backtesting des stratégies
-- Logging complet des opérations
-- API REST pour le monitoring
+- Backtesting de stratégies de trading
+- Interface utilisateur avec Streamlit
+- Visualisation des résultats avec Plotly
+- Sauvegarde et chargement des résultats
+- Stratégies disponibles :
+  - Bollinger Bands Reversal
 
-## 📋 Prérequis
+## Installation
 
-- Python 3.11+
-- MetaTrader 5 installé
-- Compte AvaTrade (demo ou réel)
-
-## 🛠 Installation
-
-1. Cloner le repository :
+1. Cloner le dépôt :
 ```bash
-git clone https://github.com/mat0192/bitcoin_scalper.git
-cd bitcoin_scalper
+git clone https://github.com/votre-username/bitcoin-scalper.git
+cd bitcoin-scalper
 ```
 
-2. Installer les dépendances :
+2. Créer un environnement virtuel :
+```bash
+python -m venv venv
+source venv/bin/activate  # Linux/Mac
+venv\Scripts\activate     # Windows
+```
+
+3. Installer les dépendances :
 ```bash
 pip install -r requirements.txt
 ```
 
-3. Configurer les variables d'environnement dans le fichier `.env`:
-```
-MT5_LOGIN=votre_login
-MT5_PASSWORD=votre_mot_de_passe
-MT5_SERVER=votre_serveur
-```
-
-## 🏗 Structure du Projet
-
-```
-/bitcoin_scalper/
-├── main.py                 # Point d'entrée
-├── config/                 # Configuration
-├── core/                   # Composants principaux
-├── strategies/            # Stratégies de trading
-├── backtest/              # Outils de backtesting
-├── utils/                 # Utilitaires
-├── tests/                 # Tests unitaires
-└── logs/                  # Fichiers de logs
-```
-
-## 🧪 Tests
-
-Exécuter les tests unitaires :
+4. Installer le package en mode développement :
 ```bash
-pytest tests/
+pip install -e .
 ```
 
-## 📝 Logging
+## Structure du projet
 
-Les logs sont stockés dans le dossier `logs/` avec :
-- Rotation automatique des fichiers
-- Différents niveaux de log (DEBUG, INFO, WARNING, ERROR)
-- Format détaillé avec timestamp et contexte
+```
+bitcoin-scalper/
+├── data/                    # Données de marché et résultats
+├── src/
+│   ├── strategies/         # Stratégies de trading
+│   ├── services/          # Services (backtest, stockage)
+│   ├── utils/             # Utilitaires
+│   └── ui/                # Interface utilisateur
+├── tests/                 # Tests unitaires
+├── setup.py              # Configuration du package
+└── requirements.txt      # Dépendances
+```
 
-## 🔒 Sécurité
+## Utilisation
 
-- Les credentials sont stockés dans le fichier `.env`
-- Validation des paramètres de trading
-- Gestion des erreurs robuste
+1. Lancer l'interface utilisateur :
+```bash
+streamlit run src/ui/app.py
+```
 
-## 📈 Roadmap
+2. Dans l'interface :
+   - Sélectionner une stratégie
+   - Configurer les paramètres
+   - Charger les données
+   - Lancer le backtest
+   - Visualiser les résultats
 
-Voir le fichier `roadmap.md` pour les détails de l'évolution du projet.
+## Tests
 
-## 📄 Licence
+Pour lancer les tests :
+```bash
+python -m pytest tests/
+```
 
-MIT License
+## Contribution
+
+1. Fork le projet
+2. Créer une branche (`git checkout -b feature/nouvelle-fonctionnalite`)
+3. Commit les changements (`git commit -am 'Ajout d'une nouvelle fonctionnalité'`)
+4. Push la branche (`git push origin feature/nouvelle-fonctionnalite`)
+5. Créer une Pull Request
+
+## Licence
+
+Ce projet est sous licence MIT. Voir le fichier `LICENSE` pour plus de détails.
