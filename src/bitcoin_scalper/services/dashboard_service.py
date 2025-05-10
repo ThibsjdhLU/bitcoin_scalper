@@ -37,14 +37,19 @@ class DashboardService:
     def __init__(self):
         """Initialise le service dashboard."""
         self.mt5_service = MT5Service()
+        if not self.mt5_service.connected:
+            if not self.mt5_service.connect():
+                logger.error("Échec de la connexion MT5")
         self.storage_service = StorageService()
         self.backtest_service = BacktestService()
-        
-        # Initialize session state
         self._initialize_session_state()
+        if self.mt5_service.connected:
+            st.session_state.bot_status = "Actif"
     
     def _initialize_session_state(self):
         """Initialise les variables de session Streamlit."""
+        if 'selected_symbol' not in st.session_state:
+            st.session_state.selected_symbol = "BTCUSD"
         if 'indicators' not in st.session_state:
             st.session_state.indicators = {
                 'show_sma': False,
@@ -60,7 +65,53 @@ class DashboardService:
                 'macd_slow': 26,
                 'macd_signal': 9
             }
-        # Initialize other session state variables similarly...
+        if 'account_stats' not in st.session_state:
+            st.session_state.account_stats = {}
+        if 'log_messages' not in st.session_state:
+            st.session_state.log_messages = []
+        if 'trades_history' not in st.session_state:
+            st.session_state.trades_history = pd.DataFrame()
+        defaults = {
+            'indicators': {
+                'show_sma': False,
+                'sma_period': 20,
+                'show_ema': False,
+                'ema_period': 9,
+                'show_bollinger': False,
+                'bollinger_period': 20,
+                'show_rsi': False,
+                'rsi_period': 14,
+                'show_macd': False,
+                'macd_fast': 12,
+                'macd_slow': 26,
+                'macd_signal': 9
+            },
+            'account_stats': {
+                'balance': 0.0,
+                'equity': 0.0,
+                'profit': 0.0,
+                'max_drawdown': 0.0,
+                'win_rate': 0.0,
+                'open_trades': 0,
+                'total_trades': 0
+            },
+            'log_messages': [],
+            'trading_params': {
+                'initial_capital': 10000.0,
+                'risk_per_trade': 1.0,
+                'strategy': ['EMA Crossover'],
+                'take_profit': 2.0,
+                'stop_loss': 1.0,
+                'trailing_stop': False
+            },
+            'selected_symbol': "BTCUSD",
+            'bot_status': "Inactif",
+            'confirm_action': None,
+            'trades_history': pd.DataFrame()
+        }
+        for key, value in defaults.items():
+            if key not in st.session_state:
+                st.session_state[key] = value
     
     @st.cache_data(ttl=60)
     def get_available_symbols(_self) -> List[str]:
@@ -108,7 +159,7 @@ class DashboardService:
             # Positions depuis MT5
             positions = self.mt5_service.get_positions()
             
-            # Charger l'historique des trades sauvegardés
+            # Charger l'historique des  sauvegardés
             saved_trades = self.storage_service.load_trades()
             
             # Combiner les deux sources
@@ -167,43 +218,41 @@ class DashboardService:
     
     def handle_bot_action(self, action: str):
         """Gère les actions du bot (démarrer, arrêter, réinitialiser)."""
-        if action == "start":
-            if st.session_state.confirm_action == "start":
-                st.session_state.bot_status = "Actif"
-                self.add_log("Bot démarré", level="info")
+        if action == "start" and st.session_state.confirm_action == "start":
+            st.session_state.bot_status = "Actif"
+            st.session_state.need_refresh = True  # Forcer le rafraîchissement
+            self.add_log("Bot démarré", level="info")
+            
+            # Ajouter les logs des stratégies
+            if isinstance(st.session_state.trading_params['strategy'], list):
+                strategies = st.session_state.trading_params['strategy']
+                self.add_log(f"Stratégies activées: {', '.join(strategies)}", level="info")
                 
-                # Ajouter les logs des stratégies
-                if isinstance(st.session_state.trading_params['strategy'], list):
-                    strategies = st.session_state.trading_params['strategy']
-                    self.add_log(f"Stratégies activées: {', '.join(strategies)}", level="info")
-                    
-                    # Logs détaillés pour chaque stratégie
-                    for strategy in strategies:
-                        if strategy == "EMA Crossover":
-                            self.add_log("📈 EMA Crossover: Surveille le croisement de moyennes mobiles exponentielles", level="info")
-                        elif strategy == "RSI":
-                            self.add_log("📊 RSI: Surveille les conditions de surachat/survente", level="info")
-                        elif strategy == "MACD":
-                            self.add_log("🔍 MACD: Surveille les croisements et divergences", level="info")
-                        elif strategy == "Bollinger Bands":
-                            self.add_log("📏 Bollinger Bands: Surveille les dépassements des bandes", level="info")
-                        elif strategy == "Combinaison":
-                            self.add_log("🔄 Combinaison: Utilise plusieurs indicateurs pour confirmer les signaux", level="info")
-                else:
-                    self.add_log(f"Stratégie activée: {st.session_state.trading_params['strategy']}", level="info")
-                
-                # Ajouter les paramètres de trading
-                self.add_log(f"Capital initial: ${st.session_state.trading_params['initial_capital']}", level="info")
-                self.add_log(f"Risque par trade: {st.session_state.trading_params['risk_per_trade']}%", level="info")
-                self.add_log(f"Take Profit: {st.session_state.trading_params['take_profit']}%", level="info")
-                self.add_log(f"Stop Loss: {st.session_state.trading_params['stop_loss']}%", level="info")
-                
-                st.session_state.confirm_action = None
-                
-                # Exécuter la simulation des signaux
-                self.simulate_trading_signals()
+                # Logs détaillés pour chaque stratégie
+                for strategy in strategies:
+                    if strategy == "EMA Crossover":
+                        self.add_log("📈 EMA Crossover: Surveille le croisement de moyennes mobiles exponentielles", level="info")
+                    elif strategy == "RSI":
+                        self.add_log("📊 RSI: Surveille les conditions de surachat/survente", level="info")
+                    elif strategy == "MACD":
+                        self.add_log("🔍 MACD: Surveille les croisements et divergences", level="info")
+                    elif strategy == "Bollinger Bands":
+                        self.add_log("📏 Bollinger Bands: Surveille les dépassements des bandes", level="info")
+                    elif strategy == "Combinaison":
+                        self.add_log("🔄 Combinaison: Utilise plusieurs indicateurs pour confirmer les signaux", level="info")
             else:
-                st.session_state.confirm_action = "start"
+                self.add_log(f"Stratégie activée: {st.session_state.trading_params['strategy']}", level="info")
+            
+            # Ajouter les paramètres de trading
+            self.add_log(f"Capital initial: ${st.session_state.trading_params['initial_capital']}", level="info")
+            self.add_log(f"Risque par trade: {st.session_state.trading_params['risk_per_trade']}%", level="info")
+            self.add_log(f"Take Profit: {st.session_state.trading_params['take_profit']}%", level="info")
+            self.add_log(f"Stop Loss: {st.session_state.trading_params['stop_loss']}%", level="info")
+            
+            st.session_state.confirm_action = None
+            
+            # Exécuter la simulation des signaux
+            self.simulate_trading_signals()
         elif action == "stop":
             if st.session_state.confirm_action == "stop":
                 st.session_state.bot_status = "Inactif"
@@ -262,6 +311,29 @@ class DashboardService:
     def create_price_chart(self, with_indicators: bool = True) -> go.Figure:
         """Crée un graphique de prix interactif avec Plotly."""
         try:
+            # Vérifier les données
+            if 'price_history' not in st.session_state or st.session_state.price_history is None or st.session_state.price_history.empty:
+                logger.error("Aucune donnée disponible pour le graphique!")
+                return go.Figure().add_annotation(
+                    text="Aucune donnée disponible",
+                    x=0.5,
+                    y=0.5,
+                    showarrow=False,
+                    font=dict(size=20)
+                )
+            
+            # Vérification des colonnes obligatoires
+            required_columns = ['open', 'high', 'low', 'close']
+            if not all(col in st.session_state.price_history.columns for col in required_columns):
+                logger.error(f"Colonnes manquantes: {required_columns}")
+                return go.Figure().add_annotation(
+                    text="Format de données incorrect",
+                    x=0.5,
+                    y=0.5,
+                    showarrow=False,
+                    font=dict(size=20)
+                )
+            
             # Créer la figure
             if with_indicators and st.session_state.indicators['show_rsi'] or st.session_state.indicators['show_macd']:
                 fig = make_subplots(rows=2, cols=1, shared_xaxes=True, 
@@ -275,214 +347,170 @@ class DashboardService:
             # Données de prix
             price_data = st.session_state.price_history
             
-            if price_data is not None and not price_data.empty:
-                # Chandelier japonais
-                candlestick = go.Candlestick(
-                    x=price_data.index,
-                    open=price_data['open'],
-                    high=price_data['high'],
-                    low=price_data['low'],
-                    close=price_data['close'],
-                    name="OHLC",
-                    increasing_line_color='#00FF88',
-                    decreasing_line_color='#FF5588'
-                )
+            # Chandelier japonais
+            candlestick = go.Candlestick(
+                x=price_data.index,
+                open=price_data['open'],
+                high=price_data['high'],
+                low=price_data['low'],
+                close=price_data['close'],
+                name="OHLC",
+                increasing_line_color='#00FF88',
+                decreasing_line_color='#FF5588'
+            )
+            
+            # Ajouter le chandelier
+            if with_indicators and (st.session_state.indicators['show_rsi'] or st.session_state.indicators['show_macd']):
+                fig.add_trace(candlestick, row=1, col=1)
+            else:
+                fig.add_trace(candlestick)
+            
+            # Ajouter les indicateurs techniques
+            if with_indicators:
+                if st.session_state.indicators['show_sma']:
+                    period = st.session_state.indicators['sma_period']
+                    sma = price_data['close'].rolling(window=period).mean()
+                    sma_trace = go.Scatter(
+                        x=price_data.index,
+                        y=sma,
+                        mode='lines',
+                        line=dict(color='blue', width=1),
+                        name=f'SMA ({period})'
+                    )
+                    if st.session_state.indicators['show_rsi'] or st.session_state.indicators['show_macd']:
+                        fig.add_trace(sma_trace, row=1, col=1)
+                    else:
+                        fig.add_trace(sma_trace)
                 
-                # Ajouter le chandelier
-                if with_indicators and (st.session_state.indicators['show_rsi'] or st.session_state.indicators['show_macd']):
-                    fig.add_trace(candlestick, row=1, col=1)
-                else:
-                    fig.add_trace(candlestick)
+                if st.session_state.indicators['show_ema']:
+                    period = st.session_state.indicators['ema_period']
+                    ema = price_data['close'].ewm(span=period, adjust=False).mean()
+                    ema_trace = go.Scatter(
+                        x=price_data.index,
+                        y=ema,
+                        mode='lines',
+                        line=dict(color='orange', width=1),
+                        name=f'EMA ({period})'
+                    )
+                    if st.session_state.indicators['show_rsi'] or st.session_state.indicators['show_macd']:
+                        fig.add_trace(ema_trace, row=1, col=1)
+                    else:
+                        fig.add_trace(ema_trace)
                 
-                # Ajouter les indicateurs techniques
-                if with_indicators:
-                    if st.session_state.indicators['show_sma']:
-                        period = st.session_state.indicators['sma_period']
-                        sma = price_data['close'].rolling(window=period).mean()
-                        sma_trace = go.Scatter(
-                            x=price_data.index,
-                            y=sma,
-                            mode='lines',
-                            line=dict(color='blue', width=1),
-                            name=f'SMA ({period})'
-                        )
-                        if st.session_state.indicators['show_rsi'] or st.session_state.indicators['show_macd']:
-                            fig.add_trace(sma_trace, row=1, col=1)
-                        else:
-                            fig.add_trace(sma_trace)
+                if st.session_state.indicators['show_bollinger']:
+                    period = st.session_state.indicators['bollinger_period']
+                    sma = price_data['close'].rolling(window=period).mean()
+                    std = price_data['close'].rolling(window=period).std()
+                    upper_band = sma + (std * 2)
+                    lower_band = sma - (std * 2)
                     
-                    if st.session_state.indicators['show_ema']:
-                        period = st.session_state.indicators['ema_period']
-                        ema = price_data['close'].ewm(span=period, adjust=False).mean()
-                        ema_trace = go.Scatter(
-                            x=price_data.index,
-                            y=ema,
-                            mode='lines',
-                            line=dict(color='orange', width=1),
-                            name=f'EMA ({period})'
-                        )
-                        if st.session_state.indicators['show_rsi'] or st.session_state.indicators['show_macd']:
-                            fig.add_trace(ema_trace, row=1, col=1)
-                        else:
-                            fig.add_trace(ema_trace)
+                    upper_trace = go.Scatter(
+                        x=price_data.index,
+                        y=upper_band,
+                        mode='lines',
+                        line=dict(color='rgba(100, 100, 255, 0.5)', width=1),
+                        name='Bollinger (upper)'
+                    )
                     
-                    if st.session_state.indicators['show_bollinger']:
-                        period = st.session_state.indicators['bollinger_period']
-                        sma = price_data['close'].rolling(window=period).mean()
-                        std = price_data['close'].rolling(window=period).std()
-                        upper_band = sma + (std * 2)
-                        lower_band = sma - (std * 2)
-                        
-                        upper_trace = go.Scatter(
-                            x=price_data.index,
-                            y=upper_band,
-                            mode='lines',
-                            line=dict(color='rgba(100, 100, 255, 0.5)', width=1),
-                            name='Bollinger (upper)'
-                        )
-                        
-                        lower_trace = go.Scatter(
-                            x=price_data.index,
-                            y=lower_band,
-                            mode='lines',
-                            line=dict(color='rgba(100, 100, 255, 0.5)', width=1),
-                            name='Bollinger (lower)',
-                            fill='tonexty',
-                            fillcolor='rgba(100, 100, 255, 0.1)'
-                        )
-                        
-                        if st.session_state.indicators['show_rsi'] or st.session_state.indicators['show_macd']:
-                            fig.add_trace(upper_trace, row=1, col=1)
-                            fig.add_trace(lower_trace, row=1, col=1)
-                        else:
-                            fig.add_trace(upper_trace)
-                            fig.add_trace(lower_trace)
+                    lower_trace = go.Scatter(
+                        x=price_data.index,
+                        y=lower_band,
+                        mode='lines',
+                        line=dict(color='rgba(100, 100, 255, 0.5)', width=1),
+                        name='Bollinger (lower)',
+                        fill='tonexty',
+                        fillcolor='rgba(100, 100, 255, 0.1)'
+                    )
+                    
+                    if st.session_state.indicators['show_rsi'] or st.session_state.indicators['show_macd']:
+                        fig.add_trace(upper_trace, row=1, col=1)
+                        fig.add_trace(lower_trace, row=1, col=1)
+                    else:
+                        fig.add_trace(upper_trace)
+                        fig.add_trace(lower_trace)
+                
+                if st.session_state.indicators['show_rsi']:
+                    period = st.session_state.indicators['rsi_period']
+                    delta = price_data['close'].diff()
+                    gain = delta.where(delta > 0, 0)
+                    loss = -delta.where(delta < 0, 0)
+                    avg_gain = gain.rolling(window=period).mean()
+                    avg_loss = loss.rolling(window=period).mean()
+                    rs = avg_gain / avg_loss
+                    rsi = 100 - (100 / (1 + rs))
+                    
+                    rsi_trace = go.Scatter(
+                        x=price_data.index,
+                        y=rsi,
+                        mode='lines',
+                        line=dict(color='purple', width=1),
+                        name=f'RSI ({period})'
+                    )
+                    
+                    # Lignes de référence RSI
+                    overbought = go.Scatter(
+                        x=price_data.index,
+                        y=[70] * len(price_data),
+                        mode='lines',
+                        line=dict(color='red', width=1, dash='dash'),
+                        name='Survente'
+                    )
+                    
+                    oversold = go.Scatter(
+                        x=price_data.index,
+                        y=[30] * len(price_data),
+                        mode='lines',
+                        line=dict(color='green', width=1, dash='dash'),
+                        name='Surachat'
+                    )
+                    
+                    fig.add_trace(rsi_trace, row=2, col=1)
+                    fig.add_trace(overbought, row=2, col=1)
+                    fig.add_trace(oversold, row=2, col=1)
+                
+                if st.session_state.indicators['show_macd']:
+                    fast = st.session_state.indicators['macd_fast']
+                    slow = st.session_state.indicators['macd_slow']
+                    signal = st.session_state.indicators['macd_signal']
+                    
+                    ema_fast = price_data['close'].ewm(span=fast, adjust=False).mean()
+                    ema_slow = price_data['close'].ewm(span=slow, adjust=False).mean()
+                    macd_line = ema_fast - ema_slow
+                    signal_line = macd_line.ewm(span=signal, adjust=False).mean()
+                    histogram = macd_line - signal_line
+                    
+                    macd_trace = go.Scatter(
+                        x=price_data.index,
+                        y=macd_line,
+                        mode='lines',
+                        line=dict(color='blue', width=1),
+                        name=f'MACD ({fast},{slow})'
+                    )
+                    
+                    signal_trace = go.Scatter(
+                        x=price_data.index,
+                        y=signal_line,
+                        mode='lines',
+                        line=dict(color='red', width=1),
+                        name=f'Signal ({signal})'
+                    )
+                    
+                    # Histogramme MACD
+                    colors = ['green' if val >= 0 else 'red' for val in histogram]
+                    histogram_trace = go.Bar(
+                        x=price_data.index,
+                        y=histogram,
+                        name='Histogram',
+                        marker_color=colors
+                    )
                     
                     if st.session_state.indicators['show_rsi']:
-                        period = st.session_state.indicators['rsi_period']
-                        delta = price_data['close'].diff()
-                        gain = delta.where(delta > 0, 0)
-                        loss = -delta.where(delta < 0, 0)
-                        avg_gain = gain.rolling(window=period).mean()
-                        avg_loss = loss.rolling(window=period).mean()
-                        rs = avg_gain / avg_loss
-                        rsi = 100 - (100 / (1 + rs))
-                        
-                        rsi_trace = go.Scatter(
-                            x=price_data.index,
-                            y=rsi,
-                            mode='lines',
-                            line=dict(color='purple', width=1),
-                            name=f'RSI ({period})'
-                        )
-                        
-                        # Lignes de référence RSI
-                        overbought = go.Scatter(
-                            x=price_data.index,
-                            y=[70] * len(price_data),
-                            mode='lines',
-                            line=dict(color='red', width=1, dash='dash'),
-                            name='Survente'
-                        )
-                        
-                        oversold = go.Scatter(
-                            x=price_data.index,
-                            y=[30] * len(price_data),
-                            mode='lines',
-                            line=dict(color='green', width=1, dash='dash'),
-                            name='Surachat'
-                        )
-                        
-                        fig.add_trace(rsi_trace, row=2, col=1)
-                        fig.add_trace(overbought, row=2, col=1)
-                        fig.add_trace(oversold, row=2, col=1)
-                    
-                    if st.session_state.indicators['show_macd']:
-                        fast = st.session_state.indicators['macd_fast']
-                        slow = st.session_state.indicators['macd_slow']
-                        signal = st.session_state.indicators['macd_signal']
-                        
-                        ema_fast = price_data['close'].ewm(span=fast, adjust=False).mean()
-                        ema_slow = price_data['close'].ewm(span=slow, adjust=False).mean()
-                        macd_line = ema_fast - ema_slow
-                        signal_line = macd_line.ewm(span=signal, adjust=False).mean()
-                        histogram = macd_line - signal_line
-                        
-                        macd_trace = go.Scatter(
-                            x=price_data.index,
-                            y=macd_line,
-                            mode='lines',
-                            line=dict(color='blue', width=1),
-                            name=f'MACD ({fast},{slow})'
-                        )
-                        
-                        signal_trace = go.Scatter(
-                            x=price_data.index,
-                            y=signal_line,
-                            mode='lines',
-                            line=dict(color='red', width=1),
-                            name=f'Signal ({signal})'
-                        )
-                        
-                        # Histogramme MACD
-                        colors = ['green' if val >= 0 else 'red' for val in histogram]
-                        histogram_trace = go.Bar(
-                            x=price_data.index,
-                            y=histogram,
-                            name='Histogram',
-                            marker_color=colors
-                        )
-                        
-                        if st.session_state.indicators['show_rsi']:
-                            # Si RSI est déjà utilisé, ne pas afficher MACD pour éviter la confusion
-                            pass
-                        else:
-                            fig.add_trace(histogram_trace, row=2, col=1)
-                            fig.add_trace(macd_trace, row=2, col=1)
-                            fig.add_trace(signal_trace, row=2, col=1)
-                
-                # Ajouter les trades sur le graphique
-                trades_history = st.session_state.trades_history
-                if trades_history is not None and not trades_history.empty and 'time' in trades_history.columns:
-                    # Filtrer les transactions qui ont des dates correspondant aux données de prix
-                    buy_trades = trades_history[trades_history['type'] == 'BUY']
-                    sell_trades = trades_history[trades_history['type'] == 'SELL']
-                    
-                    if not buy_trades.empty:
-                        buy_scatter = go.Scatter(
-                            x=buy_trades['time'],
-                            y=buy_trades['price_open'],
-                            mode='markers',
-                            marker=dict(
-                                symbol='triangle-up',
-                                size=12,
-                                color='green',
-                                line=dict(width=1, color='darkgreen')
-                            ),
-                            name='Achats'
-                        )
-                        if st.session_state.indicators['show_rsi'] or st.session_state.indicators['show_macd']:
-                            fig.add_trace(buy_scatter, row=1, col=1)
-                        else:
-                            fig.add_trace(buy_scatter)
-                    
-                    if not sell_trades.empty:
-                        sell_scatter = go.Scatter(
-                            x=sell_trades['time'],
-                            y=sell_trades['price_open'],
-                            mode='markers',
-                            marker=dict(
-                                symbol='triangle-down',
-                                size=12,
-                                color='red',
-                                line=dict(width=1, color='darkred')
-                            ),
-                            name='Ventes'
-                        )
-                        if st.session_state.indicators['show_rsi'] or st.session_state.indicators['show_macd']:
-                            fig.add_trace(sell_scatter, row=1, col=1)
-                        else:
-                            fig.add_trace(sell_scatter)
+                        # Si RSI est déjà utilisé, ne pas afficher MACD pour éviter la confusion
+                        pass
+                    else:
+                        fig.add_trace(histogram_trace, row=2, col=1)
+                        fig.add_trace(macd_trace, row=2, col=1)
+                        fig.add_trace(signal_trace, row=2, col=1)
             
             # Mise en forme du graphique
             fig.update_layout(
@@ -496,20 +524,17 @@ class DashboardService:
                 legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
             )
             
-            # Si nous avons des sous-graphiques
-            if with_indicators and (st.session_state.indicators['show_rsi'] or st.session_state.indicators['show_macd']):
-                if st.session_state.indicators['show_rsi']:
-                    fig.update_yaxes(title_text="RSI", row=2, col=1, range=[0, 100])
-                elif st.session_state.indicators['show_macd']:
-                    fig.update_yaxes(title_text="MACD", row=2, col=1)
-                    
-                fig.update_yaxes(title_text="Prix", row=1, col=1)
-                
             return fig
+            
         except Exception as e:
             logger.error(f"Erreur lors de la création du graphique: {str(e)}")
-            # Retourner un graphique vide en cas d'erreur
-            return go.Figure()
+            return go.Figure().add_annotation(
+                text=f"Erreur: {str(e)}",
+                x=0.5,
+                y=0.5,
+                showarrow=False,
+                font=dict(size=20)
+            )
     
     def calculate_statistics(self) -> Dict[str, Any]:
         """Calcule les statistiques de trading."""
@@ -604,30 +629,57 @@ class DashboardService:
         except Exception as e:
             logger.error(f"Erreur lors de la mise à jour des indicateurs: {e}")
 
-    def get_raw_data(self) -> Optional[pd.DataFrame]:
-        """Récupère les données brutes de prix."""
+    @st.cache_data(ttl=30)
+    def fetch_raw_data(self):
+        """Récupère les données brutes depuis MT5."""
         try:
-            if 'selected_symbol' not in st.session_state:
-                st.session_state.selected_symbol = "BTCUSD"
+            logger.info(f"Tentative de récupération des données pour {st.session_state.selected_symbol}")
             
-            price_history = self._get_price_history(st.session_state.selected_symbol)
-            if price_history is not None and not price_history.empty:
-                return price_history
-            return None
+            # Vérifier la connexion MT5
+            if not self.mt5_service.connected:
+                if not self.mt5_service.connect():
+                    logger.error("Impossible de se connecter à MT5")
+                    return None
+            
+            # Récupérer les données
+            data = self.mt5_service.get_price_history(st.session_state.selected_symbol)
+            
+            if data is None:
+                logger.error("Aucune donnée reçue de MT5Service")
+                return None
+                
+            if data.empty:
+                logger.error("DataFrame vide reçu de MT5Service")
+                return None
+                
+            logger.info(f"Données récupérées avec succès: {len(data)} lignes")
+            
+            # Mettre à jour l'état de session
+            st.session_state.price_history = data
+            
+            return data
+            
         except Exception as e:
-            logger.error(f"Erreur lors de la récupération des données brutes: {e}")
+            logger.error(f"Erreur lors de la récupération des données: {str(e)}", exc_info=True)
             return None
 
     def _update_trades_history(self):
         """Met à jour l'historique des trades."""
         try:
-            # Récupérer les trades depuis MT5
             trades = mt5.history_deals_get(0, datetime.now())
             if trades is None:
+                logger.warning("Aucun trade trouvé.")
                 return
-                
-            # Convertir en DataFrame
+            
             trades_df = pd.DataFrame(list(trades), columns=trades[0]._asdict().keys())
+            
+            if trades_df.empty:
+                logger.warning("Le DataFrame des trades est vide.")
+                return
+            
+            # Logique pour vérifier les trades gagnants
+            if (trades_df['profit'] > 0).any():
+                logger.info("Il y a des trades gagnants.")
             
             # Mettre à jour la session state
             st.session_state.trades_history = trades_df
@@ -784,3 +836,45 @@ class DashboardService:
         except Exception as e:
             logger.error(f"Erreur lors de la mise à jour du dashboard: {str(e)}")
             # Ne pas propager l'erreur pour éviter de casser le thread 
+
+    def get_raw_data(self):
+        """Récupère les données brutes pour le tableau de bord."""
+        return self.mt5_service.get_price_history("BTCUSD")  # Exemple simplifié
+
+    def _update_dashboard(self):
+        """Met à jour les données du dashboard."""
+        try:
+            # Vérifier si nous sommes dans un thread
+            if threading.current_thread() is not threading.main_thread():
+                # Nous sommes dans un thread, utiliser le contexte principal
+                ctx = get_script_run_ctx()
+                if ctx:
+                    add_script_run_ctx(threading.current_thread(), ctx)
+            
+            # S'assurer que les variables de session sont initialisées
+            with self._initialization_lock:
+                if not hasattr(st.session_state, '_initialized'):
+                    self._initialize_session_state()
+                    st.session_state._initialized = True
+            
+            # Mettre à jour les données
+            self._update_logs()
+            self._update_indicators()
+            self._update_account_stats()
+            self._update_trades_history()
+            
+            # Mettre à jour le timestamp de rafraîchissement
+            st.session_state.last_refresh = datetime.now()
+            logger.info("Données du dashboard mises à jour avec succès")
+            
+        except Exception as e:
+            logger.error(f"Erreur lors de la mise à jour du dashboard: {str(e)}")
+            # Ne pas propager l'erreur pour éviter de casser le thread 
+
+    def fetch_raw_data(self):
+        """Récupère les données brutes pour le tableau de bord."""
+        try:
+            return self.mt5_service.get_price_history("BTCUSD")  # Remplacez "BTCUSD" par le symbole souhaité
+        except Exception as e:
+            logger.error(f"Erreur lors de la récupération des données brutes: {str(e)}")
+            return None 
