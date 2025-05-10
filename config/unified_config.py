@@ -367,7 +367,7 @@ class UnifiedConfig:
                 }
             },
             "exchange": {
-                "login": "101490774",
+                "login": 101490774,
                 "password": "MatLB356&",
                 "server": "Ava-Demo 1-MT5"
             },

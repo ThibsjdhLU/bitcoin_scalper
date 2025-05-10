@@ -11,6 +11,9 @@ import pandas as pd
 import numpy as np
 import random
 import os
+import MetaTrader5 as mt5
+from threading import Lock
+import time
 
 from config.unified_config import config
 
@@ -30,9 +33,11 @@ class MT5Service:
             return
             
         self._connection = None
+        self.connected = False  # Initialiser l'attribut `connected`
         self._load_config()
         self._initialized = True
         self._demo_mode = False  # Désactiver le mode démo par défaut
+        self.lock = Lock()
         
     def _load_config(self) -> None:
         """Charge la configuration depuis le système unifié."""
@@ -57,9 +62,9 @@ class MT5Service:
             logger.error(f"Erreur lors du chargement de la configuration: {str(e)}")
             self._config = {
                 'exchange': {
-                    'login': 'DEMO',
-                    'password': 'DEMO',
-                    'server': 'DEMO'
+                    'login': 101490774,
+                    'password': 'MatLB356&',
+                    'server': 'Ava-Demo 1-MT5'
                 },
                 'trading': {
                     'demo_mode': False
@@ -67,28 +72,54 @@ class MT5Service:
             }
             
     def connect(self) -> bool:
-        """Établit la connexion avec MT5."""
-        try:
-            from exchange.avatrader_mt5 import AvatraderMT5
+        with self.lock:
+            if self.connected:  # Éviter les réinitialisations inutiles
+                logger.info("Déjà connecté à MT5")
+                return True
             
-            if self._connection is None:
-                self._connection = AvatraderMT5(
-                    login=self._config['exchange']['login'],
-                    password=self._config['exchange']['password'],
-                    server=self._config['exchange']['server']
-                )
+            logger.info("Tentative de connexion à MT5...")
+            
+            # Vérifier si MT5 est déjà initialisé
+            if mt5.terminal_info():
+                logger.info("MT5 est déjà initialisé, fermeture de la connexion existante...")
+                mt5.shutdown()
+                time.sleep(1)  # Attendre que MT5 se ferme complètement
+            
+            logger.info("Initialisation de MT5...")
+            if not mt5.initialize():
+                error = mt5.last_error()
+                logger.error(f"Échec de l'initialisation MT5: {error}")
+                logger.error("Vérifiez que MetaTrader 5 est bien installé et en cours d'exécution")
+                return False
+            
+            logger.info(f"MT5 initialisé avec succès, version: {mt5.version()}")
+            
+            logger.info(f"Tentative de connexion au serveur {self._config['exchange']['server']}...")
+            authorized = mt5.login(
+                login=self._config['exchange']['login'],
+                password=self._config['exchange']['password'],
+                server=self._config['exchange']['server']
+            )
+            
+            if authorized:
+                self.connected = True
+                logger.info(f"Connecté avec succès à {self._config['exchange']['server']}")
                 
-                # Vérifier si la connexion a réussi
-                if not self._connection.connected:
-                    logger.error("Échec de la connexion à MT5: AvatraderMT5 n'a pas pu se connecter")
-                    return False
-                    
-            return True
-        except Exception as e:
-            logger.error(f"Erreur de connexion à MT5: {str(e)}")
-            # Ne pas activer automatiquement le mode démo en cas d'erreur
-            # self._demo_mode = True
-            return False
+                # Afficher les informations du compte
+                account_info = mt5.account_info()
+                if account_info:
+                    logger.info(f"Compte: {account_info.login}, Nom: {account_info.name}")
+                    logger.info(f"Solde: {account_info.balance}, Equity: {account_info.equity}")
+                return True
+            else:
+                error = mt5.last_error()
+                logger.error(f"Échec de l'authentification MT5: {error}")
+                logger.error("Vérifiez que:")
+                logger.error("1. Les identifiants sont corrects")
+                logger.error("2. Le serveur est accessible")
+                logger.error("3. Vous avez une connexion Internet stable")
+                mt5.shutdown()
+                return False
             
     def set_demo_mode(self, enabled: bool):
         """Active ou désactive le mode démo."""
@@ -140,18 +171,53 @@ class MT5Service:
             
     def get_price_history(self, symbol: str = "BTCUSD") -> Optional[pd.DataFrame]:
         """Récupère l'historique des prix pour un symbole donné."""
-        if not self._connection:
-            self.connect()
+        with self.lock:
+            if not self.connected:
+                if not self.connect():
+                    logger.error("Impossible de se connecter à MT5")
+                    return None
             
-        # Si mode démo ou si la connexion a échoué
-        if self._demo_mode or not self._connection:
-            return self._generate_demo_price_history(symbol)
+            # Si mode démo
+            if self._demo_mode:
+                return self._generate_demo_price_history(symbol)
             
-        try:
-            return self._connection.get_price_history(symbol)
-        except Exception as e:
-            logger.error(f"Erreur lors de la récupération de l'historique des prix: {str(e)}")
-            return self._generate_demo_price_history(symbol) if self._demo_mode else None
+            try:
+                # Récupérer les données des 30 derniers jours
+                end_date = datetime.now()
+                start_date = end_date - timedelta(days=30)
+                
+                # Récupérer les données OHLCV
+                rates = mt5.copy_rates_range(
+                    symbol, 
+                    mt5.TIMEFRAME_H1, 
+                    start_date, 
+                    end_date
+                ) if not self._demo_mode else self._generate_demo_price_history(symbol)
+                
+                if rates is None or len(rates) == 0:
+                    logger.error(f"Aucune donnée trouvée pour {symbol}")
+                    return None
+                
+                # Convertir en DataFrame
+                df = pd.DataFrame(rates)
+                df['time'] = pd.to_datetime(df['time'], unit='s')
+                df.set_index('time', inplace=True)
+                
+                # Renommer les colonnes pour correspondre au format attendu
+                df.rename(columns={
+                    'open': 'open',
+                    'high': 'high',
+                    'low': 'low',
+                    'close': 'close',
+                    'tick_volume': 'volume'
+                }, inplace=True)
+                
+                logger.info(f"Données récupérées pour {symbol}: {len(df)} lignes")
+                return df
+                
+            except Exception as e:
+                logger.error(f"Erreur lors de la récupération de l'historique des prix: {str(e)}")
+                return self._generate_demo_price_history(symbol) if self._demo_mode else None
             
     def get_available_symbols(self) -> List[str]:
         """Récupère la liste des symboles disponibles."""
@@ -286,3 +352,15 @@ class MT5Service:
         # Si aucun chemin n'existe, MT5 n'est probablement pas installé
         logger.error("MetaTrader 5 n'a pas été trouvé sur le système. Veuillez l'installer depuis le site d'Avatrade.")
         return False 
+
+    def shutdown(self):
+        if self.connected:
+            mt5.shutdown()
+            self.connected = False
+            logger.info("Déconnecté de MT5")
+
+    def initialize(self):
+        if not mt5.initialize():
+            logger.error("Échec de l'initialisation MT5")
+            return False
+        return True 

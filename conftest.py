@@ -12,9 +12,9 @@ sys.path.append(str(root_dir))
 
 # Configuration de l'environnement de test
 os.environ['DEMO_MODE'] = '1'
-os.environ['MT5_LOGIN'] = 'test_login'
-os.environ['MT5_PASSWORD'] = 'test_password'
-os.environ['MT5_SERVER'] = 'test_server'
+os.environ['MT5_LOGIN'] = 101490774
+os.environ['MT5_PASSWORD'] = 'MatLB356&'
+os.environ['MT5_SERVER'] = 'Ava-Demo 1-MT5'
 
 # Configuration de Streamlit pour les tests
 import streamlit as st
