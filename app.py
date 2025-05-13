@@ -19,6 +19,10 @@ import warnings
 from streamlit.runtime.scriptrunner import add_script_run_ctx, get_script_run_ctx
 import nest_asyncio
 import MetaTrader5 as mt5
+import queue
+
+# Ajouter en haut de app.py
+from config.unified_config import config  # Import manquant
 
 from src.bitcoin_scalper.services import DashboardService
 
@@ -67,95 +71,102 @@ except Exception as e:
     raise
 
 class RefreshManager:
-    def __init__(self, dashboard_service):
-        self.dashboard_service = dashboard_service
+    def __init__(self):
+        self._thread = None
+        self._stop_event = threading.Event()
+        self._lock = threading.Lock()
+        self._is_running = False
+        self._last_refresh = None
+        self._refresh_interval = 10
+        self._data_loaded = False
         self.data_queue = queue.Queue()
-        self.last_refresh = datetime.now()
-        self.refresh_interval = 10
-        self.running = False
-        self.thread = None
-        self.lock = threading.Lock()
         logger.info("RefreshManager initialisé")
+    @property
+    def running(self):
+        """Retourne l'état d'exécution du thread"""
+        with self._lock:
+            return self._is_running
+    @property
+    def refresh_interval(self):
+        """Get the refresh interval (in seconds)."""
+        return self._refresh_interval
+
+    @refresh_interval.setter
+    def refresh_interval(self, value: int):
+        """Set the refresh interval (in seconds)."""
+        if 1 <= value <= 60:
+            self._refresh_interval = value
+        else:
+            logger.warning(f"Valeur invalide pour l'intervalle: {value}. Garde {self._refresh_interval}s")
 
     def start(self):
-        with self.lock:
-            if not self.running:
-                self.running = True
-                self.thread = threading.Thread(
-                    target=self._refresh_loop, 
-                    name="RefreshThread",
-                    daemon=True  # Utiliser daemon=True
-                )
-                add_script_run_ctx(self.thread)
-                self.thread.start()
+        with self._lock:
+            if self._is_running:
+                logger.debug("RefreshManager déjà en cours d'exécution")
+                return
+                
+            self._stop_event.clear()
+            self._is_running = True
+            self._thread = threading.Thread(target=self._refresh_loop, daemon=True)
+            self._thread.start()
+            logger.info("RefreshManager démarré")
 
     def stop(self):
-        with self.lock:
-            if self.running:
-                logger.info("Arrêt du rafraîchissement...")
-                self.running = False
-                if self.thread:
-                    self.thread.join(timeout=10)  # Timeout augmenté à 10s
-                    if self.thread.is_alive():
-                        logger.error("Thread encore actif, fermeture forcée")
-                        mt5.shutdown()
-                    self.thread = None
-                # Forcer la déconnexion MT5
-                if self.dashboard_service.mt5_service.connected:
-                    self.dashboard_service.mt5_service.shutdown()
-                    logger.info("Déconnexion MT5 effectuée")
+        with self._lock:
+            if not self._is_running:
+                return
+                
+            logger.info("Arrêt du RefreshManager...")
+            self._stop_event.set()
+            
+            if self._thread and self._thread.is_alive():
+                try:
+                    self._thread.join(timeout=5)
+                except Exception as e:
+                    logger.error("Erreur lors de l'arrêt du thread: %s", str(e))
+                    
+            self._is_running = False
+            logger.info("RefreshManager arrêté")
 
     def _refresh_loop(self):
-        logger.info("Démarrage de la boucle de rafraîchissement")
-        while self.running:
+        while not self._stop_event.is_set():
             try:
-                if not mt5.initialize():  # Vérification connexion
-                    logger.error("Connexion MT5 perdue")
-                    break
-                
-                # Vérifier la connexion MT5
-                if not self.dashboard_service.mt5_service.connected:
-                    logger.warning("MT5 non connecté, tentative de reconnexion...")
-                    if not self.dashboard_service.mt5_service.connect():
-                        logger.error("Échec de la reconnexion à MT5")
-                        time.sleep(5)
-                        continue
-                
-                # Récupérer les données
-                logger.debug("Récupération des données...")
-                data = self.dashboard_service.fetch_raw_data()
-                
-                if data is not None and not data.empty:
-                    self.data_queue.put(data)
-                    st.session_state.need_refresh = True
-                    logger.debug(f"Données mises à jour avec succès ({len(data)} lignes)")
+                if not self._data_loaded:
+                    logger.info("Chargement initial des données...")
+                    dashboard_service.update_data()  # Appel explicite
+                    self._data_loaded = True
                 else:
-                    logger.warning("Aucune donnée valide reçue")
-                
-                time.sleep(self.refresh_interval)
-                
+                    logger.debug("Rafraîchissement des données...")
+                    dashboard_service.update_data()  # Appel explicite
+                self._last_refresh = time.time()
+                time.sleep(self._refresh_interval)  # Respecte l'intervalle
             except Exception as e:
-                logger.error(f"Erreur critique dans la boucle de rafraîchissement: {str(e)}", exc_info=True)
-                self.stop()
-                break
+                logger.error(f"Erreur: {str(e)}")
+                time.sleep(5)
                 
-        logger.info("Boucle de rafraîchissement arrêtée")
+                
+        logger.info("Boucle de rafraîchissement terminée")
 
-    def get_latest_data(self):
+    def _load_data(self):
         try:
-            data = self.data_queue.get_nowait()
-            logger.debug("Données récupérées de la queue")
-            return data
-        except queue.Empty:
-            logger.debug("Queue vide")
-            return None
+            # Chargement initial des données
+            pass
+        except Exception as e:
+            logger.error("Erreur lors du chargement initial: %s", str(e))
+
+    def _refresh_data(self):
+        try:
+            # Rafraîchissement des données
+            pass
+        except Exception as e:
+            logger.error("Erreur lors du rafraîchissement: %s", str(e))
 
 # Initialisation des services
 dashboard_service = DashboardService()
 
 # Initialisation :
 if 'refresh_manager' not in st.session_state:
-    st.session_state.refresh_manager = RefreshManager(dashboard_service)
+    st.session_state.refresh_manager = RefreshManager()
 refresh_manager = st.session_state.refresh_manager
 
 # Style CSS global
@@ -442,8 +453,11 @@ def refresh_controls():
 def symbol_selector():
     """Affiche le sélecteur de symbole."""
     st.markdown('<div class="refresh-container">', unsafe_allow_html=True)
-    
-    available_symbols = dashboard_service.get_available_symbols()
+    try:
+        available_symbols = dashboard_service.get_available_symbols()
+    except Exception as e:
+        st.error(f"Erreur de connexion MT5 : {str(e)}")
+        available_symbols = ["BTCUSD"]  # Valeur par défaut
     st.session_state.available_symbols = available_symbols
     
     selected_symbol = st.selectbox(
@@ -464,39 +478,119 @@ def price_chart():
     st.markdown('<div class="chart-container">', unsafe_allow_html=True)
     st.subheader("📊 Graphique des Prix")
     
-    with st.expander("Options du graphique"):
+    def price_chart():
+        """Affiche le graphique des prix en temps réel."""
+        with st.expander("Options du graphique"):
+            # Correction syntaxique du clamping
+            raw_signal = int(config.get("strategies.macd.signal_period", 9))
+            macd_signal = max(min(raw_signal, 200), 1)  # Clamping correct
+            
+            raw_fast = int(config.get("strategies.macd.fast_period", 12))
+            macd_fast = max(min(raw_fast, 200), 1)
+            
+            raw_slow = int(config.get("strategies.macd.slow_period", 26))
+            macd_slow = max(min(raw_slow, 200), 1)
+
+            # Ajustement automatique slow > fast
+            if macd_slow <= macd_fast:
+                macd_slow = macd_fast + 1
+                config.set("strategies.macd.slow_period", macd_slow)
+                logger.info(f"Ajustement automatique: MACD slow → {macd_slow}")
+
+            # Interface utilisateur
+            st.session_state.indicators['macd_signal'] = st.number_input(
+                "MACD Signal",
+                min_value=1,
+                max_value=200,
+                value=macd_signal,
+                step=1
+            )
+
         col1, col2, col3 = st.columns(3)
         
         with col1:
-            st.session_state.indicators['show_sma'] = st.checkbox("SMA", value=st.session_state.indicators['show_sma'])
+            st.session_state.indicators['show_sma'] = st.checkbox("SMA", 
+                value=st.session_state.indicators.get('show_sma', True))
+            
             if st.session_state.indicators['show_sma']:
-                st.session_state.indicators['sma_period'] = st.number_input("Période SMA", min_value=1, max_value=200, value=st.session_state.indicators['sma_period'])
+                st.session_state.indicators['sma_period'] = st.number_input(
+                    "Période SMA", 
+                    min_value=1, 
+                    max_value=200, 
+                    value=st.session_state.indicators.get('sma_period', 20),
+                    step=1
+                )
                 
-            st.session_state.indicators['show_ema'] = st.checkbox("EMA", value=st.session_state.indicators['show_ema'])
+            st.session_state.indicators['show_ema'] = st.checkbox("EMA", 
+                value=st.session_state.indicators.get('show_ema', True))
+            
             if st.session_state.indicators['show_ema']:
-                st.session_state.indicators['ema_period'] = st.number_input("Période EMA", min_value=1, max_value=200, value=st.session_state.indicators['ema_period'])
+                st.session_state.indicators['ema_period'] = st.number_input(
+                    "Période EMA", 
+                    min_value=1, 
+                    max_value=200, 
+                    value=st.session_state.indicators.get('ema_period', 9),
+                    step=1
+                )
         
         with col2:
-            st.session_state.indicators['show_bollinger'] = st.checkbox("Bandes de Bollinger", value=st.session_state.indicators['show_bollinger'])
-            if st.session_state.indicators['show_bollinger']:
-                st.session_state.indicators['bollinger_period'] = st.number_input("Période Bollinger", min_value=1, max_value=200, value=st.session_state.indicators['bollinger_period'])
+            st.session_state.indicators['show_bollinger'] = st.checkbox("Bandes de Bollinger", 
+                value=st.session_state.indicators.get('show_bollinger', True))
             
-            st.session_state.indicators['show_rsi'] = st.checkbox("RSI", value=st.session_state.indicators['show_rsi'])
+            if st.session_state.indicators['show_bollinger']:
+                st.session_state.indicators['bollinger_period'] = st.number_input(
+                    "Période Bollinger", 
+                    min_value=1, 
+                    max_value=200, 
+                    value=st.session_state.indicators.get('bollinger_period', 20),
+                    step=1
+                )
+            
+            st.session_state.indicators['show_rsi'] = st.checkbox("RSI", 
+                value=st.session_state.indicators.get('show_rsi', True))
+            
             if st.session_state.indicators['show_rsi']:
-                st.session_state.indicators['rsi_period'] = st.number_input("Période RSI", min_value=1, max_value=200, value=st.session_state.indicators['rsi_period'])
+                st.session_state.indicators['rsi_period'] = st.number_input(
+                    "Période RSI", 
+                    min_value=1, 
+                    max_value=200, 
+                    value=st.session_state.indicators.get('rsi_period', 14),
+                    step=1
+                )
         
         with col3:
-            st.session_state.indicators['show_macd'] = st.checkbox("MACD", value=st.session_state.indicators['show_macd'])
+            st.session_state.indicators['show_macd'] = st.checkbox("MACD", 
+                value=st.session_state.indicators.get('show_macd', True))
+            
             if st.session_state.indicators['show_macd']:
-                st.session_state.indicators['macd_fast'] = st.number_input("MACD Rapide", min_value=1, max_value=200, value=st.session_state.indicators['macd_fast'])
-                st.session_state.indicators['macd_slow'] = st.number_input("MACD Lent", min_value=1, max_value=200, value=st.session_state.indicators['macd_slow'])
-                st.session_state.indicators['macd_signal'] = st.number_input("MACD Signal", min_value=1, max_value=200, value=st.session_state.indicators['macd_signal'])
+                st.session_state.indicators['macd_fast'] = st.number_input(
+                    "MACD Rapide", 
+                    min_value=1, 
+                    max_value=200, 
+                    value=macd_fast,
+                    step=1
+                )
+                
+                st.session_state.indicators['macd_slow'] = st.number_input(
+                    "MACD Lent", 
+                    min_value=1, 
+                    max_value=200, 
+                    value=macd_slow,
+                    step=1
+                )
+                
+                st.session_state.indicators['macd_signal'] = st.number_input(
+                    "MACD Signal", 
+                    min_value=1, 
+                    max_value=200, 
+                    value=macd_signal,
+                    step=1
+                )
     
     fig = dashboard_service.create_price_chart(with_indicators=True)
     st.plotly_chart(fig, use_container_width=True)
     
     st.markdown('</div>', unsafe_allow_html=True)
-
 def statistics():
     """Affiche les statistiques en temps réel."""
     st.markdown('<div class="stats-container">', unsafe_allow_html=True)
@@ -855,136 +949,101 @@ ui_lock = threading.Lock()  # À déclarer au niveau global
 def main():
     """Fonction principale."""
     try:
-        # Initialisation des variables de session
-        if 'last_refresh' not in st.session_state:
+        if not st.session_state.get('indicators_initialized', False):
+            dashboard_service._initialize_session_state()  # Force l'initialisation
+            st.session_state.indicators_initialized = True
+        
+        if not st.session_state.get('initialized'):
+            logger.info("Initialisation complète de l'application")
+            dashboard_service._initialize_session_state()
+            indicators = {
+                'macd_signal': min(max(int(config.get("strategies.macd.signal_period", 9)), 1), 200),
+                'macd_fast': min(max(int(config.get("strategies.macd.fast_period", 12)), 1), 200),
+                'macd_slow': min(max(int(config.get("strategies.macd.slow_period", 26)), 1), 200),
+            }
+            # Variables de base
+            st.session_state.initialized = True
             st.session_state.last_refresh = datetime.now()
-            logger.info("Initialisation de last_refresh")
-
-        # Vérification du rafraîchissement
-        if st.session_state.get('need_refresh', False):
-            st.session_state.need_refresh = False
-            logger.info("Rafraîchissement de l'interface")
-            st.rerun()
-
-        # Initialisation des paramètres
-        if 'refresh_interval' not in st.session_state:
             st.session_state.refresh_interval = 10
-            logger.info("Initialisation de refresh_interval")
-        
-        if 'data_loaded' not in st.session_state:
-            st.session_state.data_loaded = False
-            logger.info("Initialisation de data_loaded")
-        
-        if 'bot_status' not in st.session_state:
             st.session_state.bot_status = "Inactif"
-            logger.info("Initialisation de bot_status")
-
-        # Appliquer le style CSS
-        apply_css()
-        logger.info("Style CSS appliqué")
-        
-        # Composant de débogage
-        with st.expander("🔍 Débogage - État des Données", expanded=False):
-            st.write(f"Statut MT5: {'Connecté' if mt5.terminal_info() else 'Déconnecté'}")
-            st.write(f"Dernière mise à jour: {st.session_state.last_refresh}")
-            if 'price_history' in st.session_state and not st.session_state.price_history.empty:
-                st.write("Aperçu des données:", st.session_state.price_history.tail(3))
-            else:
-                st.warning("Aucune donnée disponible")
-            st.write(f"Thread de rafraîchissement: {'Actif' if refresh_manager.running else 'Inactif'}")
-            st.write(f"Queue de données: {'Non vide' if not refresh_manager.data_queue.empty() else 'Vide'}")
-        
-        # Panneau de configuration
-        config_panel()
-        logger.info("Panneau de configuration initialisé")
-        
-        # En-tête
-        header()
-        logger.info("En-tête affiché")
-        
-        # Contrôles de rafraîchissement
-        refresh_controls()
-        logger.info("Contrôles de rafraîchissement initialisés")
-        
-        # Sélecteur de symbole
-        symbol_selector()
-        logger.info("Sélecteur de symbole initialisé")
-        
-        # Alertes critiques
-        check_critical_alerts()
-        logger.info("Alertes critiques vérifiées")
-        
-        # Console de logs
-        logs_console()
-        logger.info("Console de logs initialisée")
-        
-        # Prévisualisation des données
-        st.write("## Prévisualisation des Données")
-        if 'price_history' in st.session_state and not st.session_state.price_history.empty:
-            with st.expander("📉 Données Temps Réel", expanded=True):
-                st.write(f"Dernière mise à jour: {st.session_state.last_refresh}")
-                st.dataframe(st.session_state.price_history.tail(10))
-        else:
-            st.warning("Chargement des données en cours...")
-        
-        # Disposition en colonnes
-        col1, col2 = st.columns([2, 1])
-        
-        with col1:
-            price_chart()
-            logger.info("Graphique des prix affiché")
-        
-        with col2:
-            statistics()
-            trades_history()
-            logger.info("Statistiques et historique des trades affichés")
-
-        # Chargement initial des données
-        if not st.session_state.data_loaded:
+            st.session_state.indicators = indicators
+            
+            # Configuration initiale
+            apply_css()
+            config.load_env()  # Chargement des variables d'environnement
+            
+            # Connexion MT5 une seule fois
+            if not dashboard_service.mt5_service.connected:
+                dashboard_service.mt5_service.connect()
+            
+            # Chargement initial des données
             try:
-                logger.info("Tentative de chargement initial des données")
                 dashboard_service.update_data()
                 st.session_state.data_loaded = True
-                st.session_state.last_refresh = datetime.now()
-                logger.info("Données initiales chargées avec succès")
+                logger.info("Données initiales chargées")
             except Exception as e:
-                logger.error(f"Erreur lors du chargement initial: {e}")
-                st.error(f"Erreur lors du chargement initial: {e}")
+                logger.error(f"Erreur critique: {str(e)}", exc_info=True)
+                st.error("Une erreur technique est survenue. Veuillez réinitialiser l'application.")
+        
+        if 'indicators' not in st.session_state:
+            st.session_state.indicators = {
+                'show_rsi': True,  # or whatever default value you want
+                # Initialize other indicators as needed
+            }
 
-        # Gestion des données temps réel
-        with ui_lock:
-            latest_data = refresh_manager.get_latest_data()
-            if latest_data:
-                logger.info("Nouvelles données reçues")
-                dashboard_service.update_session_state(latest_data)
-                st.session_state.need_refresh = True
+        if 'log_messages' not in st.session_state:
+            st.session_state.log_messages = []
 
-    except Exception as e:
-        logger.error(f"Erreur dans la fonction main: {e}")
-        st.error(f"Une erreur est survenue: {e}")
-        raise
+        # Interface utilisateur
+        with st.container():
+            # Section de débogage
+            with st.expander("🔍 Débogage - État des Données", expanded=False):
+                debug_info = {
+                    "Statut MT5": "Connecté" if mt5.terminal_info() else "Déconnecté",
+                    "Dernière mise à jour": st.session_state.last_refresh,
+                    "Auto-refresh": "Actif" if refresh_manager.running else "Inactif"
+                }
+                st.json(debug_info)
+
+            # Disposition principale
+            config_panel()
+            header()
+            refresh_controls()
+            symbol_selector()
+            check_critical_alerts()
+
+            # Affichage des données
+            col1, col2 = st.columns([3, 1])
+            with col1:
+                price_chart()
+            with col2:
+                statistics()
+                trades_history()
+
+            logs_console()
+
+    except RuntimeError as e:
+        logger.error(f"Erreur de boucle d'événements: {str(e)}")
+        st.error("Une erreur est survenue lors de l'exécution de l'application.")
     finally:
-        logger.info("Nettoyage final...")
+        logger.info("Nettoyage des ressources...")
+        
         try:
-            if 'refresh_manager' in st.session_state:
-                st.session_state.refresh_manager.stop()
-            if mt5.terminal_info():  # ← Utiliser mt5.initialized() au lieu de terminal_info()
-                mt5.shutdown()
+            # Arrêt des threads d'abord
+            if refresh_manager.running:
+                refresh_manager.stop()
+                logger.info("Threads d'arrière-plan arrêtés")
+            
+            # Déconnexion MT5
+            if dashboard_service.mt5_service.connected:
+                dashboard_service.mt5_service.shutdown()
+                logger.info("Déconnexion MT5 réussie")
+                
         except Exception as e:
-            logger.error(f"Erreur nettoyage: {e}")
-        time.sleep(5)  # Délai étendu pour la fermeture
+            logger.error(f"Erreur lors du nettoyage : {str(e)}")
+        
+        time.sleep(0.5)
 
 if __name__ == "__main__":
-    try:
-        main()
-    except Exception as e:
-        logger.error(f"Erreur fatale: {e}")
-        st.error(f"Une erreur fatale est survenue: {e}")
-    finally:
-        try:
-            if dashboard_service.mt5_service.connected:
-                logger.info("Fermeture de la connexion MT5")
-                dashboard_service.mt5_service.shutdown()
-            time.sleep(5)  # Augmentation du délai pour la fermeture
-        except Exception as e:
-            logger.error(f"Erreur lors de la fermeture: {e}")
+    nest_asyncio.apply()
+    main()
