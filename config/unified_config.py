@@ -46,7 +46,7 @@ class UnifiedConfig:
             "broker": {
                 "mt5": {
                     "server": "Ava-Demo 1-MT5",
-                    "login": "101490774",
+                    "login": 101490774,
                     "password": "MatLB356&",
                     "symbols": ["BTCUSD"],
                     "timeframe": "M5",
