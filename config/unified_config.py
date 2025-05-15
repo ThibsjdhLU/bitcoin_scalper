@@ -35,6 +35,10 @@ class UnifiedConfig:
         self._load_config()
         self._initialized = True
     
+    def __del__(self):
+        if hasattr(self, 'connected') and self.connected:
+            self.shutdown()
+    
     def _initialize_default_config(self) -> Dict[str, Any]:
         """
         Initialise la configuration par défaut

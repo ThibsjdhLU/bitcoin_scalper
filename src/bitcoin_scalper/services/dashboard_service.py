@@ -14,6 +14,7 @@ import re
 import MetaTrader5 as mt5
 from streamlit.runtime.scriptrunner import add_script_run_ctx, get_script_run_ctx
 import threading
+import time
 
 from ..services.mt5_service import MT5Service
 from ..services.storage_service import StorageService
@@ -48,8 +49,9 @@ class DashboardService:
     
     def _initialize_session_state(self):
         """Initialise les variables de session Streamlit."""
-        if 'account_stats' not in st.session_state:
-            st.session_state.account_stats = {
+        defaults = {
+            'bot_status': "Inactif",  # Always initialize this key
+            'account_stats': {
                 'balance': 0.0,
                 'equity': 0.0,
                 'profit': 0.0,
@@ -57,13 +59,18 @@ class DashboardService:
                 'win_rate': 0.0,
                 'open_trades': 0,
                 'total_trades': 0
-            }
-        if 'log_messages' not in st.session_state:
-            st.session_state.log_messages = []
-        if 'trades_history' not in st.session_state:
-            st.session_state.trades_history = pd.DataFrame()
-        if 'indicators' not in st.session_state:
-            st.session_state.indicators = {
+            },
+            'trading_params': {
+                'initial_capital': 10000.0,
+                'risk_per_trade': 1.0,
+                'strategy': ['EMA Crossover'],
+                'take_profit': 2.0,
+                'stop_loss': 1.0,
+                'trailing_stop': False
+            },
+            'log_messages': [],
+            'trades_history': pd.DataFrame(),
+            'indicators': {
                 'show_sma': False,
                 'sma_period': 20,
                 'show_ema': False,
@@ -78,23 +85,14 @@ class DashboardService:
                 'macd_signal': 9,
                 'bb_upper': 0,
                 'bb_lower': 0
-            }
-        defaults = {
-            'trading_params': {
-                'initial_capital': 10000.0,
-                'risk_per_trade': 1.0,
-                'strategy': ['EMA Crossover'],
-                'take_profit': 2.0,
-                'stop_loss': 1.0,
-                'trailing_stop': False
             },
             'selected_symbol': "BTCUSD",
-            'bot_status': "Inactif",
             'confirm_action': None,
         }
+        
         for key, value in defaults.items():
             if key not in st.session_state:
-                st.session_state[key] = value.copy() if isinstance(value, dict) else value
+                st.session_state[key] = value
         if 'selected_symbol' not in st.session_state:
             st.session_state.selected_symbol = "BTCUSD"  # Default value
     
@@ -215,60 +213,50 @@ class DashboardService:
             logger.error(f"Erreur lors de la mise à jour des statistiques du compte: {str(e)}")
     
     def handle_bot_action(self, action: str):
-        """Gère les actions du bot (démarrer, arrêter, réinitialiser)."""
-        if action == "start" and st.session_state.confirm_action == "start":
-            st.session_state.bot_status = "Actif"
-            st.session_state.need_refresh = True  # Forcer le rafraîchissement
-            self.add_log("Bot démarré", level="info")
-            
-            # Ajouter les logs des stratégies
-            if isinstance(st.session_state.trading_params['strategy'], list):
-                strategies = st.session_state.trading_params['strategy']
-                self.add_log(f"Stratégies activées: {', '.join(strategies)}", level="info")
-                
-                # Logs détaillés pour chaque stratégie
-                for strategy in strategies:
-                    if strategy == "EMA Crossover":
-                        self.add_log("📈 EMA Crossover: Surveille le croisement de moyennes mobiles exponentielles", level="info")
-                    elif strategy == "RSI":
-                        self.add_log("📊 RSI: Surveille les conditions de surachat/survente", level="info")
-                    elif strategy == "MACD":
-                        self.add_log("🔍 MACD: Surveille les croisements et divergences", level="info")
-                    elif strategy == "Bollinger Bands":
-                        self.add_log("📏 Bollinger Bands: Surveille les dépassements des bandes", level="info")
-                    elif strategy == "Combinaison":
-                        self.add_log("🔄 Combinaison: Utilise plusieurs indicateurs pour confirmer les signaux", level="info")
-            else:
-                self.add_log(f"Stratégie activée: {st.session_state.trading_params['strategy']}", level="info")
-            
-            # Ajouter les paramètres de trading
-            self.add_log(f"Capital initial: ${st.session_state.trading_params['initial_capital']}", level="info")
-            self.add_log(f"Risque par trade: {st.session_state.trading_params['risk_per_trade']}%", level="info")
-            self.add_log(f"Take Profit: {st.session_state.trading_params['take_profit']}%", level="info")
-            self.add_log(f"Stop Loss: {st.session_state.trading_params['stop_loss']}%", level="info")
-            
-            st.session_state.confirm_action = None
-            
-            # Exécuter la simulation des signaux
-            self.simulate_trading_signals()
-        elif action == "stop":
-            if st.session_state.confirm_action == "stop":
+        try:
+            if action == "start":
+                if not st.session_state.get('bot_status', "Inactif") == "Actif":
+                    st.session_state.bot_status = "Actif"
+                    self._start_trading_thread()
+                    self.add_log("Bot démarré avec succès", level="info")
+                    
+            elif action == "stop":
                 st.session_state.bot_status = "Inactif"
                 self.add_log("Bot arrêté", level="info")
-                st.session_state.confirm_action = None
-                # TODO: Implémenter la logique d'arrêt du bot
-            else:
-                st.session_state.confirm_action = "stop"
-        elif action == "reset":
-            if st.session_state.confirm_action == "reset":
-                st.session_state.bot_status = "Inactif"
-                self.add_log("Bot réinitialisé", level="info")
-                st.session_state.confirm_action = None
-                # TODO: Implémenter la logique de réinitialisation du bot
-            else:
-                st.session_state.confirm_action = "reset"
-        elif action == "cancel":
-            st.session_state.confirm_action = None
+                
+            st.experimental_rerun()
+            
+        except Exception as e:
+            self.add_log(f"Erreur action: {str(e)}", level="error")
+
+    def _start_trading_thread(self):
+        if not hasattr(self, '_trading_thread') or not self._trading_thread.is_alive():
+            self._trading_thread = threading.Thread(target=self._execute_trading_strategy, daemon=True)
+            self._trading_thread.start()
+
+    def _execute_trading_strategy(self):
+        try:
+            # Add Streamlit context to the thread
+            ctx = get_script_run_ctx()
+            if ctx:
+                add_script_run_ctx(threading.current_thread(), ctx)
+            
+            while True:
+                # Secure state check
+                if 'bot_status' not in st.session_state:
+                    break
+                
+                if st.session_state.get('bot_status') != "Actif":
+                    break
+                
+                # Trading logic
+                self.simulate_trading_signals()
+                time.sleep(5)
+                
+        except Exception as e:
+            self.add_log(f"ERREUR Thread: {str(e)}", level="error")
+        finally:
+            self.add_log("Arrêt de la stratégie", level="info")
     
     def add_log(self, message: str, level: str = "info"):
         """Ajoute un message au journal des logs."""
@@ -854,40 +842,6 @@ class DashboardService:
         """Récupère les données brutes pour le tableau de bord."""
         return self.mt5_service.get_price_history("BTCUSD")  # Exemple simplifié
 
-    def _update_dashboard(self):
-        """Met à jour les données du dashboard."""
-        try:
-            # Vérifier si nous sommes dans un thread
-            if threading.current_thread() is not threading.main_thread():
-                # Nous sommes dans un thread, utiliser le contexte principal
-                ctx = get_script_run_ctx()
-                if ctx:
-                    add_script_run_ctx(threading.current_thread(), ctx)
-            
-            # S'assurer que les variables de session sont initialisées
-            with self._initialization_lock:
-                if not hasattr(st.session_state, '_initialized'):
-                    self._initialize_session_state()
-                    st.session_state._initialized = True
-            
-            # Mettre à jour les données
-            self._update_logs()
-            self._update_indicators()
-            self._update_account_stats()
-            self._update_trades_history()
-            
-            # Mettre à jour le timestamp de rafraîchissement
-            st.session_state.last_refresh = datetime.now()
-            logger.info("Données du dashboard mises à jour avec succès")
-            
-        except Exception as e:
-            logger.error(f"Erreur lors de la mise à jour du dashboard: {str(e)}")
-            # Ne pas propager l'erreur pour éviter de casser le thread 
-
-    def fetch_raw_data(self):
-        """Récupère les données brutes pour le tableau de bord."""
-        try:
-            return self.mt5_service.get_price_history("BTCUSD")  # Remplacez "BTCUSD" par le symbole souhaité
-        except Exception as e:
-            logger.error(f"Erreur lors de la récupération des données brutes: {str(e)}")
-            return None 
+    def _stop_trading_thread(self):
+        if hasattr(self, '_trading_thread') and self._trading_thread.is_alive():
+            self._trading_thread.join() 

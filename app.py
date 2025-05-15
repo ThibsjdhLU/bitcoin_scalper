@@ -17,7 +17,6 @@ import threading
 import queue
 import warnings
 from streamlit.runtime.scriptrunner import add_script_run_ctx, get_script_run_ctx
-import nest_asyncio
 import MetaTrader5 as mt5
 import queue
 
@@ -63,12 +62,9 @@ except Exception as e:
 os.environ['MT5_LOGIN'] = '101490774' # Replace with your actual login ID
 logger.info("Variables d'environnement configurées")
 
-try:
-    nest_asyncio.apply()
-    logger.info("nest_asyncio appliqué avec succès")
-except Exception as e:
-    logger.error(f"Erreur lors de l'application de nest_asyncio: {e}")
-    raise
+# At the beginning of app.py, add:
+if not hasattr(st, 'experimental_rerun'):
+    st.experimental_rerun = st.rerun
 
 class RefreshManager:
     def __init__(self):
@@ -85,7 +81,7 @@ class RefreshManager:
     def running(self):
         """Retourne l'état d'exécution du thread"""
         with self._lock:
-            return self._is_running
+            return self._is_running and self._thread is not None and self._thread.is_alive()
     @property
     def refresh_interval(self):
         """Get the refresh interval (in seconds)."""
@@ -101,19 +97,19 @@ class RefreshManager:
 
     def start(self):
         with self._lock:
-            if self._is_running:
+            if self.running:
                 logger.debug("RefreshManager déjà en cours d'exécution")
                 return
                 
             self._stop_event.clear()
-            self._is_running = True
             self._thread = threading.Thread(target=self._refresh_loop, daemon=True)
             self._thread.start()
+            self._is_running = True
             logger.info("RefreshManager démarré")
 
     def stop(self):
         with self._lock:
-            if not self._is_running:
+            if not self.running:
                 return
                 
             logger.info("Arrêt du RefreshManager...")
@@ -131,18 +127,21 @@ class RefreshManager:
     def _refresh_loop(self):
         while not self._stop_event.is_set():
             try:
+                if not get_script_run_ctx():
+                    break
+                    
                 if not self._data_loaded:
                     logger.info("Chargement initial des données...")
-                    dashboard_service.update_data()  # Appel explicite
+                    dashboard_service.update_data()
                     self._data_loaded = True
                 else:
                     logger.debug("Rafraîchissement des données...")
-                    dashboard_service.update_data()  # Appel explicite
+                    dashboard_service.update_data()
                 self._last_refresh = time.time()
-                time.sleep(self._refresh_interval)  # Respecte l'intervalle
+                time.sleep(self._refresh_interval)
             except Exception as e:
-                logger.error(f"Erreur: {str(e)}")
-                time.sleep(5)
+                    logger.error(f"Erreur: {str(e)}")
+                    time.sleep(5)
                 
                 
         logger.info("Boucle de rafraîchissement terminée")
@@ -191,8 +190,13 @@ def apply_css():
         font-size: 0.8rem;
         color: #AAAAAA;
     }
-    .stButton>button {
-        width: 100%;
+    .stButton>button:disabled {
+        background-color: #FF5555 !important;
+        color: white !important;
+    }
+    .stButton>button:enabled {
+        background-color: #00AA00 !important;
+        color: white !important;
     }
     .chart-container {
         background-color: #121212;
@@ -402,6 +406,10 @@ def header():
     
     st.markdown('</div>', unsafe_allow_html=True)
 
+    if st.session_state.bot_status == "Actif":
+        st.session_state.auto_refresh = True  # Enable auto-refresh
+        refresh_manager.start()
+
 def refresh_controls():
     """Affiche les contrôles de rafraîchissement."""
     st.markdown('<div class="refresh-container">', unsafe_allow_html=True)
@@ -413,7 +421,7 @@ def refresh_controls():
             try:
                 dashboard_service.update_data()
                 st.session_state.last_refresh = datetime.now()
-                st.rerun()
+                st.experimental_rerun()
             except Exception as e:
                 st.error(f"Erreur lors du rafraîchissement: {e}")
     
@@ -774,7 +782,7 @@ def logs_console():
             
         if 'log_messages' not in st.session_state or len(current_logs) > len(st.session_state.log_messages):
             st.session_state.log_messages = current_logs
-            st.rerun()
+            st.experimental_rerun()
     except Exception as e:
         st.error(f"Erreur lors de la lecture des logs: {e}")
         current_logs = []
@@ -949,6 +957,15 @@ ui_lock = threading.Lock()  # À déclarer au niveau global
 def main():
     """Fonction principale."""
     try:
+        # Explicit initialization
+        if 'bot_status' not in st.session_state:
+            st.session_state.bot_status = "Inactif"
+        
+        # Create context before threads
+        ctx = get_script_run_ctx()
+        if ctx:
+            add_script_run_ctx(threading.current_thread(), ctx)
+        
         if not st.session_state.get('indicators_initialized', False):
             dashboard_service._initialize_session_state()  # Force l'initialisation
             st.session_state.indicators_initialized = True
@@ -1027,23 +1044,28 @@ def main():
         st.error("Une erreur est survenue lors de l'exécution de l'application.")
     finally:
         logger.info("Nettoyage des ressources...")
+        refresh_manager.stop()
         
+        # Enhanced thread state check
+        if (hasattr(refresh_manager, '_thread') and
+            refresh_manager._thread is not None and
+            refresh_manager._thread.is_alive()):
+            try:
+                refresh_manager._thread.join(timeout=1)
+                logger.info("Thread RefreshManager arrêté")
+            except RuntimeError as e:
+                logger.error(f"Erreur d'arrêt du thread : {str(e)}")
+        
+        # MT5 disconnection
         try:
-            # Arrêt des threads d'abord
-            if refresh_manager.running:
-                refresh_manager.stop()
-                logger.info("Threads d'arrière-plan arrêtés")
-            
-            # Déconnexion MT5
-            if dashboard_service.mt5_service.connected:
+            if (hasattr(dashboard_service, 'mt5_service') and
+                dashboard_service.mt5_service.connected):
                 dashboard_service.mt5_service.shutdown()
-                logger.info("Déconnexion MT5 réussie")
-                
+                logger.info("Déconnexion MT5 confirmée")
         except Exception as e:
-            logger.error(f"Erreur lors du nettoyage : {str(e)}")
+            logger.error(f"Erreur déconnexion MT5 : {str(e)}")
         
-        time.sleep(0.5)
+        time.sleep(0.2)
 
 if __name__ == "__main__":
-    nest_asyncio.apply()
     main()
