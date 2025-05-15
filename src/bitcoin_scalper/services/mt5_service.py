@@ -22,9 +22,10 @@ logger = logging.getLogger(__name__)
 
 class MT5Service:
     _instance = None
+    _initialized = False
     
     def __new__(cls):
-        if cls._instance is None:
+        if not cls._instance:
             cls._instance = super(MT5Service, cls).__new__(cls)
             cls._instance._initialized = False
         return cls._instance
@@ -32,9 +33,10 @@ class MT5Service:
     def __init__(self):
         if self._initialized:
             return
+        self._initialized = True
+        self.connected = False  # Ensure this attribute is initialized
             
         self.config = config
-        self.connected = False
         self.connected_lock = threading.Lock()
         self._last_connection_attempt = 0
         self.connected_cooldown = 30  # Augmentation du délai entre les tentatives
@@ -47,18 +49,16 @@ class MT5Service:
         
     def connect(self) -> bool:
         with self.connected_lock:
-            current_time = time.time()
-            
-            # Vérifier si on est déjà connecté
             if self.connected:
                 return True
                 
-            # Vérifier le délai minimum entre les tentatives
-            if current_time - self._last_connection_attempt < self.connected_cooldown:
-                logger.debug("Trop de tentatives de connexion, attente...")
-                return False
+            # Reset the retry count if the last attempt was more than 2 minutes ago
+            if time.time() - self._last_connection_attempt > 120:
+                self._retry_count = 0
                 
-            self._last_connection_attempt = current_time
+            # New reconnection logic with exponential backoff
+            backoff_time = min(2 ** self._retry_count, 30)
+            time.sleep(backoff_time)
             
             # Vérifier le nombre maximum de tentatives
             if self._retry_count >= self._max_retries:
@@ -151,25 +151,25 @@ class MT5Service:
             
     def get_account_info(self) -> Optional[Dict]:
         """Récupère les informations du compte."""
-        if not self.connected:
-            if not self.connect():
-                return None  # Échec de la connexion
-            try:
-                # Utilisation directe de l'API MT5
-                account_info = mt5.account_info()
-                if account_info:
-                    return {
-                    'balance': account_info.balance,
-                    'equity': account_info.equity,
-                    'profit': account_info.profit,
-                    'margin': account_info.margin,
-                    'free_margin': account_info.margin_free,
-                    'margin_level': account_info.margin_level
-                }
-                return None
-            except Exception as e:
-                logger.error(f"Erreur lors de la récupération des infos compte: {str(e)}")
-                return None
+        try:
+            if not self.connected:
+                self.connect()
+            
+            account_info = mt5.account_info()
+            if account_info is None:
+                raise ValueError("Aucune donnée de compte")
+            
+            return {
+                'balance': account_info.balance,
+                'equity': account_info.equity,
+                'profit': account_info.profit,
+                'margin': account_info.margin,
+                'free_margin': account_info.margin_free,
+                'margin_level': account_info.margin_level
+            }
+        except Exception as e:
+            logger.error(f"Erreur compte: {str(e)}")
+            return None
             
     def get_price_history(self, symbol: str = "BTCUSD") -> Optional[pd.DataFrame]:
         """Récupère l'historique des prix pour un symbole donné."""
