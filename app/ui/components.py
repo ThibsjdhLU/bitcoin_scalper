@@ -95,13 +95,20 @@ class ControlPanel:
                 ui.button('Réinitialiser', on_click=lambda: self.confirm(on_reset, 'Réinitialiser le bot ?', 'info'), icon='refresh', color=PRIMARY_COLOR)
             ui.label('Stratégie').classes('mt-4')
             self.strategy_select = ui.select(
-                options=[
-                    {'label': 'MACD', 'value': 'MACD', 'description': 'Moving Average Convergence Divergence'},
-                    {'label': 'RSI', 'value': 'RSI', 'description': 'Relative Strength Index'},
-                    {'label': 'Bollinger Bands', 'value': 'Bollinger Bands', 'description': 'Bandes de volatilité'}
-                ],
+                options=['MACD', 'RSI', 'Bollinger Bands'],
                 label='Stratégie', value='MACD', with_input=False
             ).classes('w-full mt-2')
+            # Description dynamique sous le select
+            self.strategy_desc = ui.label('').classes('text-sm mt-1')
+            def update_desc(e=None):
+                descs = {
+                    'MACD': 'Moving Average Convergence Divergence',
+                    'RSI': 'Relative Strength Index',
+                    'Bollinger Bands': 'Bandes de volatilité'
+                }
+                self.strategy_desc.set_text(descs.get(self.strategy_select.value, ''))
+            self.strategy_select.on('update:model-value', update_desc)
+            update_desc()
 
     def confirm(self, callback, message, type_):
         def on_confirm():
