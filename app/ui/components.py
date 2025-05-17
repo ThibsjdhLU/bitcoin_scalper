@@ -23,7 +23,7 @@ AVATAR_PATH = '/static/avatar.png'
 class Sidebar:
     def __init__(self):
         with ui.left_drawer().classes('bg-slate-800 text-white'):
-            ui.image(LOGO_PATH).classes('w-24 mx-auto my-4')
+            ui.icon('currency_bitcoin').classes('text-4xl mx-auto my-4')
             ui.label('Bitcoin Scalper').classes('text-xl font-bold text-center mb-4')
             ui.separator()
             ui.link('Dashboard', '/').classes('block py-2 px-4 hover:bg-slate-700 rounded')
@@ -31,7 +31,7 @@ class Sidebar:
             ui.link('Aide', '/help').classes('block py-2 px-4 hover:bg-slate-700 rounded')
             ui.separator()
             with ui.row().classes('justify-center mt-8'):
-                ui.image(AVATAR_PATH).classes('w-12 h-12 rounded-full border-2 border-white')
+                ui.icon('account_circle').classes('text-3xl')
                 ui.label('Utilisateur').classes('ml-2')
 
 # Toast notifications
@@ -55,22 +55,32 @@ class PriceChart:
         self.data = None
 
     def update(self, df: pd.DataFrame):
+        if df is None:
+            return
         self.data = df
         self.fig.data = []
         if self.chart_type.value == 'Bougies':
             self.fig.add_trace(go.Candlestick(
                 x=df.index,
-                open=df['open'], high=df['high'], low=df['low'], close=df['close'], name='Prix',
-                increasing_line_color=SUCCESS_COLOR, decreasing_line_color=ERROR_COLOR
+                open=df['open'], high=df['high'], low=df['low'], close=df['close'],
+                name='Prix',
+                increasing_line_color=SUCCESS_COLOR,
+                decreasing_line_color=ERROR_COLOR
             ))
         else:
             self.fig.add_trace(go.Scatter(
-                x=df.index, y=df['close'], mode='lines', name='Prix',
+                x=df.index, y=df['close'],
+                mode='lines',
+                name='Prix',
                 line=dict(color=PRIMARY_COLOR, width=2)
             ))
         self.fig.update_layout(
-            title='Bitcoin Price', yaxis_title='Price (USD)', xaxis_title='Time', template='plotly_dark',
-            plot_bgcolor=DARK_BG, paper_bgcolor=DARK_BG
+            title='Bitcoin Price',
+            yaxis_title='Price (USD)',
+            xaxis_title='Time',
+            template='plotly_dark',
+            plot_bgcolor=DARK_BG,
+            paper_bgcolor=DARK_BG
         )
         self.chart.update()
 
@@ -91,15 +101,16 @@ class ControlPanel:
         with ui.card().classes(f'w-full p-4 bg-slate-800 text-white {CARD_SHADOW} {CARD_RADIUS}'):
             ui.label('Contrôles').classes('text-xl font-bold mb-4')
             with ui.row().classes('w-full justify-between'):
-                ui.button('Démarrer', on_click=lambda: self.confirm(on_start, 'Démarrer le bot ?', 'success'), icon='play_arrow', color=SUCCESS_COLOR)
-                ui.button('Arrêter', on_click=lambda: self.confirm(on_stop, 'Arrêter le bot ?', 'error'), icon='stop', color=ERROR_COLOR)
-                ui.button('Réinitialiser', on_click=lambda: self.confirm(on_reset, 'Réinitialiser le bot ?', 'info'), icon='refresh', color=PRIMARY_COLOR)
+                ui.button('Démarrer', on_click=lambda: self.confirm(on_start, 'Démarrer le bot ?', 'success'), icon='play_arrow').classes('bg-green-500')
+                ui.button('Arrêter', on_click=lambda: self.confirm(on_stop, 'Arrêter le bot ?', 'error'), icon='stop').classes('bg-red-500')
+                ui.button('Réinitialiser', on_click=lambda: self.confirm(on_reset, 'Réinitialiser le bot ?', 'info'), icon='refresh').classes('bg-blue-500')
             ui.label('Stratégie').classes('mt-4')
             self.strategy_select = ui.select(
                 options=['MACD', 'RSI', 'Bollinger Bands'],
-                label='Stratégie', value='MACD', with_input=False
+                label='Stratégie',
+                value='MACD',
+                with_input=False
             ).classes('w-full mt-2')
-            # Description dynamique sous le select
             self.strategy_desc = ui.label('').classes('text-sm mt-1')
             def update_desc(e=None):
                 descs = {
@@ -112,11 +123,12 @@ class ControlPanel:
             update_desc()
 
     def confirm(self, callback, message, type_):
-        def on_confirm():
-            Notifier.toast(f'Action confirmée : {message}', type_)
-            if callback:
-                callback()
-        ui.dialog(message, on_confirm=on_confirm)
+        dialog = ui.dialog()
+        with dialog, ui.card():
+            ui.label(message)
+            with ui.row().classes('w-full justify-end'):
+                ui.button('Annuler', on_click=dialog.close).classes('bg-gray-500')
+                ui.button('Confirmer', on_click=lambda: [Notifier.toast(f'Action confirmée : {message}', type_), callback(), dialog.close()]).classes('bg-blue-500')
 
 class StatsPanel:
     def __init__(self):
@@ -126,7 +138,8 @@ class StatsPanel:
                 with ui.card().classes(f'w-1/3 bg-slate-700 {CARD_RADIUS}'):
                     ui.label('PnL').classes('text-lg font-bold')
                     self.pnl_label = ui.label('0.00').classes('text-2xl')
-                    self.pnl_plot = ui.line_plot([0], color=SUCCESS_COLOR).classes('h-8')
+                    self.pnl_plot = ui.line_plot().classes('h-8')
+                    self.pnl_plot.push([[0]], [[0]])
                 with ui.card().classes(f'w-1/3 bg-slate-700 {CARD_RADIUS}'):
                     ui.label('Positions').classes('text-lg font-bold')
                     self.positions_label = ui.label('0').classes('text-2xl')
@@ -139,7 +152,8 @@ class StatsPanel:
         self.positions_label.set_text(str(positions))
         self.trades_label.set_text(str(trades))
         if pnl_history:
-            self.pnl_plot.set_data(pnl_history)
+            x_values = list(range(len(pnl_history)))
+            self.pnl_plot.push([x_values], [pnl_history])
 
 # Internationalisation (français/anglais)
 LANG = 'fr'
