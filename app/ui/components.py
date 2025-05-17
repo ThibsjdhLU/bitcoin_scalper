@@ -126,7 +126,7 @@ class StatsPanel:
                 with ui.card().classes(f'w-1/3 bg-slate-700 {CARD_RADIUS}'):
                     ui.label('PnL').classes('text-lg font-bold')
                     self.pnl_label = ui.label('0.00').classes('text-2xl')
-                    self.pnl_spark = ui.sparkline([0], color=SUCCESS_COLOR)
+                    self.pnl_plot = ui.line_plot([0], color=SUCCESS_COLOR).classes('h-8')
                 with ui.card().classes(f'w-1/3 bg-slate-700 {CARD_RADIUS}'):
                     ui.label('Positions').classes('text-lg font-bold')
                     self.positions_label = ui.label('0').classes('text-2xl')
@@ -139,7 +139,7 @@ class StatsPanel:
         self.positions_label.set_text(str(positions))
         self.trades_label.set_text(str(trades))
         if pnl_history:
-            self.pnl_spark.set_value(pnl_history)
+            self.pnl_plot.set_data(pnl_history)
 
 # Internationalisation (français/anglais)
 LANG = 'fr'
