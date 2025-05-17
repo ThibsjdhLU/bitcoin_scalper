@@ -50,7 +50,8 @@ class PriceChart:
         # Ajout d'un switch candle/line et zoom
         with ui.row().classes('justify-end mb-2'):
             self.chart_type = ui.toggle(['Bougies', 'Ligne'], value='Bougies')
-            self.zoom_slider = ui.slider(min=10, max=200, value=100, step=10, label='Zoom')
+            self.zoom_slider = ui.slider(min=10, max=200, value=100, step=10)
+            ui.label('Zoom').classes('ml-2')
         self.data = None
 
     def update(self, df: pd.DataFrame):
