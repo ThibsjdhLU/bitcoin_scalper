@@ -1624,3 +1624,126 @@ Traceback (most recent call last):
   File "C:\Users\thibl\Downloads\bitcoin_scalper-main\app\ui\components.py", line 53, in __init__
     self.zoom_slider = ui.slider(min=10, max=200, value=100, step=10, label='Zoom')
 TypeError: __init__() got an unexpected keyword argument 'label'
+2025-05-17 14:35:46,650 - asyncio - DEBUG - Using selector: SelectSelector
+2025-05-17 14:35:47,715 - nicegui - ERROR - module 'nicegui.ui' has no attribute 'sparkline'
+  + Exception Group Traceback (most recent call last):
+  |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\_utils.py", line 76, in collapse_excgroups
+  |     yield
+  |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\base.py", line 181, in __call__
+  |     recv_stream.close()
+  |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\anyio\_backends\_asyncio.py", line 772, in __aexit__
+  |     raise BaseExceptionGroup(
+  | exceptiongroup.ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)
+  +-+---------------- 1 ----------------
+    | Traceback (most recent call last):
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\errors.py", line 165, in __call__
+    |     await self.app(scope, receive, _send)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\base.py", line 181, in __call__
+    |     recv_stream.close()
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\contextlib.py", line 135, in __exit__
+    |     self.gen.throw(type, value, traceback)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\_utils.py", line 82, in collapse_excgroups
+    |     raise exc
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\base.py", line 178, in __call__
+    |     response = await self.dispatch_func(request, call_next)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\nicegui\middlewares.py", line 10, in dispatch
+    |     response = await call_next(request)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\base.py", line 156, in call_next
+    |     raise app_exc
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\base.py", line 141, in coro
+    |     await self.app(scope, receive_or_disconnect, send_no_error)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\gzip.py", line 29, in __call__
+    |     await responder(scope, receive, send)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\gzip.py", line 126, in __call__
+    |     await super().__call__(scope, receive, send)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\gzip.py", line 46, in __call__
+    |     await self.app(scope, receive, self.send_with_compression)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
+    |     await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    |     raise exc
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    |     await app(scope, receive, sender)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\routing.py", line 714, in __call__
+    |     await self.middleware_stack(scope, receive, send)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\routing.py", line 734, in app
+    |     await route.handle(scope, receive, send)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\routing.py", line 288, in handle
+    |     await self.app(scope, receive, send)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\routing.py", line 76, in app
+    |     await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    |     raise exc
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    |     await app(scope, receive, sender)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\routing.py", line 73, in app
+    |     response = await f(request)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\fastapi\routing.py", line 301, in app
+    |     raw_response = await run_endpoint_function(
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    |     return await dependant.call(**values)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\nicegui\page.py", line 120, in decorated
+    |     result = func(*dec_args, **dec_kwargs)
+    |   File "C:\Users\thibl\Downloads\bitcoin_scalper-main\app\main.py", line 92, in main
+    |     stats_panel = StatsPanel()
+    |   File "C:\Users\thibl\Downloads\bitcoin_scalper-main\app\ui\components.py", line 129, in __init__
+    |     self.pnl_spark = ui.sparkline([0], color=SUCCESS_COLOR)
+    | AttributeError: module 'nicegui.ui' has no attribute 'sparkline'
+    +------------------------------------
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\errors.py", line 165, in __call__
+    await self.app(scope, receive, _send)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\base.py", line 181, in __call__
+    recv_stream.close()
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\contextlib.py", line 135, in __exit__
+    self.gen.throw(type, value, traceback)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\_utils.py", line 82, in collapse_excgroups
+    raise exc
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\base.py", line 178, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\nicegui\middlewares.py", line 10, in dispatch
+    response = await call_next(request)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\base.py", line 156, in call_next
+    raise app_exc
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\base.py", line 141, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\gzip.py", line 29, in __call__
+    await responder(scope, receive, send)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\gzip.py", line 126, in __call__
+    await super().__call__(scope, receive, send)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\gzip.py", line 46, in __call__
+    await self.app(scope, receive, self.send_with_compression)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\routing.py", line 714, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\routing.py", line 734, in app
+    await route.handle(scope, receive, send)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\routing.py", line 288, in handle
+    await self.app(scope, receive, send)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\routing.py", line 76, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\routing.py", line 73, in app
+    response = await f(request)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\fastapi\routing.py", line 301, in app
+    raw_response = await run_endpoint_function(
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    return await dependant.call(**values)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\nicegui\page.py", line 120, in decorated
+    result = func(*dec_args, **dec_kwargs)
+  File "C:\Users\thibl\Downloads\bitcoin_scalper-main\app\main.py", line 92, in main
+    stats_panel = StatsPanel()
+  File "C:\Users\thibl\Downloads\bitcoin_scalper-main\app\ui\components.py", line 129, in __init__
+    self.pnl_spark = ui.sparkline([0], color=SUCCESS_COLOR)
+AttributeError: module 'nicegui.ui' has no attribute 'sparkline'
