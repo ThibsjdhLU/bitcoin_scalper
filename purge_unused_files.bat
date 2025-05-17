@@ -1,5 +1,5 @@
 @echo off
-REM Script de nettoyage des fichiers/dossiers inutiles pour app.py
+REM Script de nettoyage pour ne garder que le code nécessaire à app.py
 
 REM -- FICHIERS À SUPPRIMER --
 del /Q check_mt5.py
@@ -25,7 +25,6 @@ rmdir /S /Q .pytest_cache
 rmdir /S /Q dashboard
 rmdir /S /Q docs
 rmdir /S /Q exchange
-rmdir /S /Q logs
 rmdir /S /Q scripts
 rmdir /S /Q services
 rmdir /S /Q tests
