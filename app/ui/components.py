@@ -6,6 +6,9 @@ from nicegui import ui, events
 import plotly.graph_objects as go
 from datetime import datetime
 import pandas as pd
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Palette de couleurs
 PRIMARY_COLOR = '#2563eb'  # Bleu
@@ -36,17 +39,48 @@ class Sidebar:
 
 # Toast notifications
 class Notifier:
-    @staticmethod
-    def toast(message, type_='info'):
-        color = {'info': PRIMARY_COLOR, 'success': SUCCESS_COLOR, 'error': ERROR_COLOR}.get(type_, PRIMARY_COLOR)
-        ui.notify(message, color=color, position='top-right', timeout=2500)
+    def __init__(self):
+        self.notifications = []
+
+    def notify(self, message: str, type='info'):
+        """Affiche une notification."""
+        try:
+            color = {
+                'info': PRIMARY_COLOR,
+                'success': SUCCESS_COLOR,
+                'error': ERROR_COLOR,
+                'warning': '#facc15'
+            }.get(type, PRIMARY_COLOR)
+            
+            with ui.notification().classes(f'bg-{color} text-white'):
+                ui.label(message)
+        except Exception as e:
+            logger.error(f"Erreur lors de l'affichage d'une notification: {e}")
+
+    def error(self, message: str):
+        """Affiche une notification d'erreur."""
+        self.notify(message, 'error')
+
+    def success(self, message: str):
+        """Affiche une notification de succès."""
+        self.notify(message, 'success')
+
+    def warning(self, message: str):
+        """Affiche une notification d'avertissement."""
+        self.notify(message, 'warning')
 
 class PriceChart:
     def __init__(self):
         self.fig = go.Figure()
-        self.fig.update_layout(margin=dict(l=0, r=0, t=0, b=0))
+        self.fig.update_layout(
+            margin=dict(l=0, r=0, t=0, b=0),
+            template='plotly_dark',
+            plot_bgcolor=DARK_BG,
+            paper_bgcolor=DARK_BG
+        )
         self.chart = ui.plotly(self.fig).classes('w-full h-96')
         self.chart.props('dark')
+        
         # Ajout d'un switch candle/line et zoom
         with ui.row().classes('justify-end mb-2'):
             self.chart_type = ui.toggle(['Bougies', 'Ligne'], value='Bougies')
@@ -54,35 +88,59 @@ class PriceChart:
             ui.label('Zoom').classes('ml-2')
         self.data = None
 
-    def update(self, df: pd.DataFrame):
-        if df is None:
-            return
-        self.data = df
-        self.fig.data = []
-        if self.chart_type.value == 'Bougies':
-            self.fig.add_trace(go.Candlestick(
-                x=df.index,
-                open=df['open'], high=df['high'], low=df['low'], close=df['close'],
-                name='Prix',
-                increasing_line_color=SUCCESS_COLOR,
-                decreasing_line_color=ERROR_COLOR
-            ))
-        else:
-            self.fig.add_trace(go.Scatter(
-                x=df.index, y=df['close'],
-                mode='lines',
-                name='Prix',
-                line=dict(color=PRIMARY_COLOR, width=2)
-            ))
-        self.fig.update_layout(
-            title='Bitcoin Price',
-            yaxis_title='Price (USD)',
-            xaxis_title='Time',
-            template='plotly_dark',
-            plot_bgcolor=DARK_BG,
-            paper_bgcolor=DARK_BG
-        )
-        self.chart.update()
+    def update(self, positions: list):
+        """Met à jour le graphique avec les nouvelles données."""
+        try:
+            if not positions:
+                return
+                
+            # Conversion des positions en DataFrame
+            df = pd.DataFrame(positions)
+            if df.empty:
+                return
+                
+            self.data = df
+            self.fig.data = []
+            
+            if self.chart_type.value == 'Bougies':
+                self.fig.add_trace(go.Candlestick(
+                    x=df.index,
+                    open=df['open'],
+                    high=df['high'],
+                    low=df['low'],
+                    close=df['close'],
+                    name='Prix',
+                    increasing_line_color=SUCCESS_COLOR,
+                    decreasing_line_color=ERROR_COLOR
+                ))
+            else:
+                self.fig.add_trace(go.Scatter(
+                    x=df.index,
+                    y=df['close'],
+                    mode='lines',
+                    name='Prix',
+                    line=dict(color=PRIMARY_COLOR, width=2)
+                ))
+                
+            self.fig.update_layout(
+                title='Bitcoin Price',
+                yaxis_title='Price (USD)',
+                xaxis_title='Time',
+                template='plotly_dark',
+                plot_bgcolor=DARK_BG,
+                paper_bgcolor=DARK_BG
+            )
+            
+            # Application du zoom
+            zoom_level = self.zoom_slider.value / 100
+            visible_range = int(len(df) * zoom_level)
+            if visible_range > 0:
+                self.fig.update_xaxes(range=[df.index[-visible_range], df.index[-1]])
+                
+            self.chart.update()
+            
+        except Exception as e:
+            logger.error(f"Erreur lors de la mise à jour du graphique: {e}")
 
 class LogConsole:
     def __init__(self):
@@ -90,11 +148,21 @@ class LogConsole:
         self.logs = []
 
     def add_log(self, message: str, level='info'):
-        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        color = {'info': 'white', 'success': SUCCESS_COLOR, 'error': ERROR_COLOR, 'warning': '#facc15'}.get(level, 'white')
-        self.logs.append(f"<span style='color:{color}'>[{timestamp}] {message}</span>")
-        self.console.set_value('\n'.join(self.logs[-100:]))
-        self.console.props('scrollable')
+        """Ajoute un message au log."""
+        try:
+            timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            color = {
+                'info': 'white',
+                'success': SUCCESS_COLOR,
+                'error': ERROR_COLOR,
+                'warning': '#facc15'
+            }.get(level, 'white')
+            
+            self.logs.append(f"<span style='color:{color}'>[{timestamp}] {message}</span>")
+            self.console.set_value('\n'.join(self.logs[-100:]))
+            self.console.props('scrollable')
+        except Exception as e:
+            logger.error(f"Erreur lors de l'ajout d'un log: {e}")
 
 class ControlPanel:
     def __init__(self, on_start=None, on_stop=None, on_reset=None):

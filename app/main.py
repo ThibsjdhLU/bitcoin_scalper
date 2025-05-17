@@ -11,7 +11,15 @@ from ui.analysis import PerformanceMetrics as AnalysisMetrics, BenchmarkComparis
 from ui.backtest import BacktestResults, ModelComparison, ParameterHeatmap, ModelParameters
 from ui.settings import TradingSettings, NotificationSettings, APISettings
 from ui.components import Sidebar, Notifier, PriceChart, LogConsole
-
+bot_status = None
+performance_metrics = None
+recent_trades = None
+analysis_metrics = None
+risk_metrics = None
+trade_analysis = None
+price_chart = None
+log_console = None
+notifier = None
 # Configuration du moteur de rendu
 app.native.start_args['gui'] = 'qt'
 
@@ -26,6 +34,19 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# État global de l'application
+app_state = {
+    'is_running': False,
+    'pnl': 0.0,
+    'positions': [],
+    'trades': [],
+    'metrics': {
+        'daily': (0.0, 0.0),
+        'weekly': (0.0, 0.0),
+        'monthly': (0.0, 0.0)
+    }
+}
+
 def find_available_port(start_port: int = 8080, max_attempts: int = 10) -> int:
     """Trouve un port disponible."""
     for port in range(start_port, start_port + max_attempts):
@@ -36,19 +57,6 @@ def find_available_port(start_port: int = 8080, max_attempts: int = 10) -> int:
         except OSError:
             continue
     raise RuntimeError(f"Aucun port disponible entre {start_port} et {start_port + max_attempts - 1}")
-
-# État global de l'application
-app_state = {
-    'is_running': False,
-    'pnl': 0.0,
-    'positions': [],
-    'trades': [],
-    'metrics': {
-        'daily': 0.0,
-        'weekly': 0.0,
-        'monthly': 0.0
-    }
-}
 
 def show_error_dialog(exc: Exception):
     """Affiche une boîte de dialogue d'erreur."""
@@ -69,29 +77,22 @@ def show_error_dialog(exc: Exception):
 app.on_exception(show_error_dialog)
 
 def update_ui():
-    """Met à jour l'interface utilisateur avec les dernières données."""
+    global bot_status, performance_metrics, recent_trades, analysis_metrics, risk_metrics, trade_analysis, price_chart, log_console, notifier
     try:
-        # Mise à jour des composants du dashboard
         bot_status.update(app_state['is_running'])
         performance_metrics.update(app_state['metrics'])
         recent_trades.update(app_state['trades'])
-        
-        # Mise à jour des composants d'analyse
         analysis_metrics.update(app_state['metrics'])
         risk_metrics.update(app_state['metrics'])
         trade_analysis.update(app_state['trades'])
-        
-        # Mise à jour du graphique de prix
         price_chart.update(app_state['positions'])
-        
-        # Mise à jour de la console de logs
         log_console.update()
-        
     except Exception as e:
         logger.error(f"Erreur lors de la mise à jour de l'UI: {e}")
         notifier.error(f"Erreur UI: {e}")
 
 def main():
+    global bot_status, performance_metrics, recent_trades, analysis_metrics, risk_metrics, trade_analysis, price_chart, log_console, notifier
     """Fonction principale de l'application."""
     try:
         # Configuration de la page

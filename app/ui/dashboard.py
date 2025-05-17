@@ -17,10 +17,16 @@ class BotStatus:
                 self.uptime = ui.label('Uptime: 0h 0m').classes('text-sm')
                 self.last_update = ui.label('Dernière mise à jour: -').classes('text-sm')
 
-    def update(self, status: str, uptime: str, last_update: str):
-        self.status.set_text(status)
-        self.uptime.set_text(f'Uptime: {uptime}')
-        self.last_update.set_text(f'Dernière mise à jour: {last_update}')
+    def update(self, is_running: bool):
+        """Met à jour l'état du bot."""
+        try:
+            status_text = "Actif" if is_running else "Inactif"
+            status_color = SUCCESS_COLOR if is_running else ERROR_COLOR
+            self.status.set_text(status_text)
+            self.status.classes(f'text-lg text-{status_color}')
+            self.last_update.set_text(f'Dernière mise à jour: {datetime.now().strftime("%H:%M:%S")}')
+        except Exception as e:
+            logger.error(f"Erreur lors de la mise à jour du statut du bot: {e}")
 
 class PerformanceMetrics:
     def __init__(self):
@@ -43,13 +49,21 @@ class PerformanceMetrics:
                     self.monthly_pnl = ui.label('0.00 €').classes('text-xl')
                     self.monthly_pct = ui.label('0.00%').classes('text-sm')
 
-    def update(self, daily: tuple, weekly: tuple, monthly: tuple):
-        self.daily_pnl.set_text(f"{daily[0]:.2f} €")
-        self.daily_pct.set_text(f"{daily[1]:.2f}%")
-        self.weekly_pnl.set_text(f"{weekly[0]:.2f} €")
-        self.weekly_pct.set_text(f"{weekly[1]:.2f}%")
-        self.monthly_pnl.set_text(f"{monthly[0]:.2f} €")
-        self.monthly_pct.set_text(f"{monthly[1]:.2f}%")
+    def update(self, metrics: dict):
+        """Met à jour les métriques de performance."""
+        try:
+            daily_pnl, daily_pct = metrics.get('daily', (0.0, 0.0))
+            weekly_pnl, weekly_pct = metrics.get('weekly', (0.0, 0.0))
+            monthly_pnl, monthly_pct = metrics.get('monthly', (0.0, 0.0))
+            
+            self.daily_pnl.set_text(f"{daily_pnl:.2f} €")
+            self.daily_pct.set_text(f"{daily_pct:.2f}%")
+            self.weekly_pnl.set_text(f"{weekly_pnl:.2f} €")
+            self.weekly_pct.set_text(f"{weekly_pct:.2f}%")
+            self.monthly_pnl.set_text(f"{monthly_pnl:.2f} €")
+            self.monthly_pct.set_text(f"{monthly_pct:.2f}%")
+        except Exception as e:
+            logger.error(f"Erreur lors de la mise à jour des métriques: {e}")
 
 class RecentTrades:
     def __init__(self):
@@ -69,7 +83,11 @@ class RecentTrades:
             }).classes('w-full')
 
     def update(self, trades: list):
-        self.table.rows = trades
+        """Met à jour la liste des trades récents."""
+        try:
+            self.table.rows = trades
+        except Exception as e:
+            logger.error(f"Erreur lors de la mise à jour des trades: {e}")
 
 class EmergencyStop:
     def __init__(self, on_stop=None):
