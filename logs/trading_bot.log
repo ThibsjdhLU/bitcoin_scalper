@@ -5034,3 +5034,13 @@ TypeError: __init__() got an unexpected keyword argument 'on_confirm'
 2025-05-17 15:48:54,815 - __main__ - INFO - Lancement de l'application sur le port 8080
 2025-05-17 15:49:18,138 - __main__ - INFO - Lancement de l'application sur le port 8080
 2025-05-17 15:49:25,379 - nicegui - WARNING - http://127.0.0.1:8080/.well-known/appspecific/com.chrome.devtools.json not found
+2025-05-17 15:54:35,642 - __main__ - INFO - Lancement de l'application sur le port 8080
+2025-05-17 16:01:01,596 - __main__ - INFO - Lancement de l'application sur le port 8080
+2025-05-17 16:02:10,872 - __main__ - INFO - Lancement de l'application sur le port 8080
+2025-05-17 16:07:25,044 - __main__ - INFO - Lancement de l'application sur le port 8081
+2025-05-17 16:07:35,971 - nicegui - WARNING - http://127.0.0.1:8081/.well-known/appspecific/com.chrome.devtools.json not found
+2025-05-17 16:11:37,703 - __main__ - INFO - Application arrêtée par l'utilisateur
+2025-05-17 16:11:40,967 - __main__ - INFO - Lancement de l'application sur le port 8081
+2025-05-17 16:11:43,535 - nicegui - WARNING - http://127.0.0.1:8081/.well-known/appspecific/com.chrome.devtools.json not found
+2025-05-17 16:11:56,003 - nicegui - WARNING - binding propagation for 0 active links took 0.012 s
+2025-05-17 16:12:04,175 - nicegui - WARNING - http://127.0.0.1:8081/.well-known/appspecific/com.chrome.devtools.json not found
