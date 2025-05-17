@@ -28,3 +28,26 @@
 2025-05-17 11:24:44,302 - __main__ - INFO - Démarrage de l'application...
 2025-05-17 11:24:44,302 - __main__ - INFO - Configuration de la page Streamlit effectuée
 2025-05-17 11:24:44,308 - __main__ - INFO - Variables d'environnement configurées
+2025-05-17 12:18:53,402 - __main__ - INFO - Démarrage de l'application...
+2025-05-17 12:18:53,461 - __main__ - INFO - Configuration de la page Streamlit effectuée
+2025-05-17 12:18:53,462 - __main__ - INFO - Variables d'environnement configurées
+2025-05-17 12:18:53,463 - bot.services.mt5_service - INFO - Configuration chargée avec succès
+2025-05-17 12:18:54,475 - bot.services.mt5_service - INFO - Tentative de connexion à MT5...
+2025-05-17 12:18:54,491 - bot.services.mt5_service - INFO - MT5 initialisé avec succès, version: (500, 4885, '28 Feb 2025')
+2025-05-17 12:18:54,492 - bot.services.mt5_service - INFO - Tentative de connexion au serveur Ava-Demo 1-MT5...
+2025-05-17 12:18:54,497 - bot.services.mt5_service - INFO - Connecté avec succès à Ava-Demo 1-MT5
+2025-05-17 12:18:54,497 - bot.services.mt5_service - INFO - Compte: 101490774, Nom: 17307552
+2025-05-17 12:18:54,498 - bot.services.mt5_service - INFO - Solde: 9797.20, Equity: 9797.20
+2025-05-17 12:18:54,500 - __main__ - INFO - RefreshManager initialisé
+2025-05-17 12:18:54,501 - __main__ - INFO - Initialisation complète de l'application
+2025-05-17 12:18:54,681 - UnifiedConfig - INFO - Variables d'environnement chargées depuis .env
+2025-05-17 12:18:54,706 - bot.services.mt5_service - INFO - Données récupérées pour BTCUSD: 720 lignes
+2025-05-17 12:18:54,711 - bot.services.dashboard_service - INFO - Statistiques du compte mises à jour: {'balance': 9797.2, 'equity': 9797.2, 'profit': 0.0, 'max_drawdown': 0.0, 'win_rate': 0.0, 'open_trades': 0, 'total_trades': 0}
+2025-05-17 12:18:54,711 - bot.services.dashboard_service - WARNING - Aucun trade historique trouvé
+2025-05-17 12:18:54,712 - bot.services.dashboard_service - INFO - Logs mis à jour avec succès
+2025-05-17 12:18:54,712 - bot.services.dashboard_service - INFO - Données du dashboard mises à jour avec succès
+2025-05-17 12:18:54,712 - __main__ - INFO - Données initiales chargées
+2025-05-17 12:18:55,657 - __main__ - INFO - Nettoyage des ressources...
+2025-05-17 12:19:02,362 - __main__ - INFO - Démarrage de l'application...
+2025-05-17 12:19:02,376 - __main__ - INFO - Configuration de la page Streamlit effectuée
+2025-05-17 12:19:02,423 - __main__ - INFO - Variables d'environnement configurées
