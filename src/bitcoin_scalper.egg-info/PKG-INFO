@@ -1,0 +1,103 @@
+Metadata-Version: 2.1
+Name: bitcoin-scalper
+Version: 0.1.0
+Summary: Un bot de trading algorithmique pour le Bitcoin
+Home-page: https://github.com/votre-username/bitcoin-scalper
+Author: Votre Nom
+Author-email: votre.email@example.com
+License: UNKNOWN
+Description: # Bitcoin Scalper
+        
+        Un outil de backtesting pour les stratÃ©gies de trading sur le Bitcoin, avec une interface utilisateur interactive.
+        
+        ## FonctionnalitÃ©s
+        
+        - Backtesting de stratÃ©gies de trading
+        - Interface utilisateur avec Streamlit
+        - Visualisation des rÃ©sultats avec Plotly
+        - Sauvegarde et chargement des rÃ©sultats
+        - StratÃ©gies disponibles :
+          - Bollinger Bands Reversal
+        
+        ## Installation
+        
+        1. Cloner le dÃ©pÃ´t :
+        ```bash
+        git clone https://github.com/votre-username/bitcoin-scalper.git
+        cd bitcoin-scalper
+        ```
+        
+        2. CrÃ©er un environnement virtuel :
+        ```bash
+        python -m venv venv
+        source venv/bin/activate  # Linux/Mac
+        venv\Scripts\activate     # Windows
+        ```
+        
+        3. Installer les dÃ©pendances :
+        ```bash
+        pip install -r requirements.txt
+        ```
+        
+        4. Installer le package en mode dÃ©veloppement :
+        ```bash
+        pip install -e .
+        ```
+        
+        ## Structure du projet
+        
+        ```
+        bitcoin-scalper/
+        â”œâ”€â”€ data/                    # DonnÃ©es de marchÃ© et rÃ©sultats
+        â”œâ”€â”€ src/
+        â”‚   â”œâ”€â”€ strategies/         # StratÃ©gies de trading
+        â”‚   â”œâ”€â”€ services/          # Services (backtest, stockage)
+        â”‚   â”œâ”€â”€ utils/             # Utilitaires
+        â”‚   â””â”€â”€ ui/                # Interface utilisateur
+        â”œâ”€â”€ tests/                 # Tests unitaires
+        â”œâ”€â”€ setup.py              # Configuration du package
+        â””â”€â”€ requirements.txt      # DÃ©pendances
+        ```
+        
+        ## Utilisation
+        
+        1. Lancer l'interface utilisateur :
+        ```bash
+        streamlit run src/ui/app.py
+        ```
+        
+        2. Dans l'interface :
+           - SÃ©lectionner une stratÃ©gie
+           - Configurer les paramÃ¨tres
+           - Charger les donnÃ©es
+           - Lancer le backtest
+           - Visualiser les rÃ©sultats
+        
+        ## Tests
+        
+        Pour lancer les tests :
+        ```bash
+        python -m pytest tests/
+        ```
+        
+        ## Contribution
+        
+        1. Fork le projet
+        2. CrÃ©er une branche (`git checkout -b feature/nouvelle-fonctionnalite`)
+        3. Commit les changements (`git commit -am 'Ajout d'une nouvelle fonctionnalitÃ©'`)
+        4. Push la branche (`git push origin feature/nouvelle-fonctionnalite`)
+        5. CrÃ©er une Pull Request
+        
+        ## Licence
+        
+        Ce projet est sous licence MIT. Voir le fichier `LICENSE` pour plus de dÃ©tails.
+        
+Platform: UNKNOWN
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Financial and Insurance Industry
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown

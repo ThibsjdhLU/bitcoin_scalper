@@ -15,10 +15,12 @@ import MetaTrader5 as mt5
 from streamlit.runtime.scriptrunner import add_script_run_ctx, get_script_run_ctx
 import threading
 import time
-
+from functools import lru_cache
 from ..services.mt5_service import MT5Service
 from ..services.storage_service import StorageService
 from ..services.backtest_service import BacktestService
+import queue
+# from utils.streamlit_context import safe_mode  # Commenté ou supprimé
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +29,7 @@ class DashboardService:
     
     _instance = None
     _initialization_lock = threading.Lock()
+    _cache = {}  # Ajoutez cette ligne pour définir le cache
     
     def __new__(cls):
         if cls._instance is None:
@@ -46,11 +49,14 @@ class DashboardService:
         self._initialize_session_state()
         if self.mt5_service.connected:
             st.session_state.bot_status = "Actif"
+        self._trading_lock = threading.Lock()
+        self._stop_signal = threading.Event()
+        self._task_queue = queue.PriorityQueue(maxsize=100)
     
     def _initialize_session_state(self):
         """Initialise les variables de session Streamlit."""
         defaults = {
-            'bot_status': "Inactif",  # Always initialize this key
+            'bot_status': "Inactif",
             'account_stats': {
                 'balance': 0.0,
                 'equity': 0.0,
@@ -63,51 +69,27 @@ class DashboardService:
             'trading_params': {
                 'initial_capital': 10000.0,
                 'risk_per_trade': 1.0,
-                'strategy': ['EMA Crossover'],
+                'strategy': ['EMA Crossover', 'RSI', 'MACD', 'Bollinger Bands', 'Combinaison'],
                 'take_profit': 2.0,
                 'stop_loss': 1.0,
                 'trailing_stop': False
             },
             'log_messages': [],
             'trades_history': pd.DataFrame(),
-            'indicators': {
-                'show_sma': False,
-                'sma_period': 20,
-                'show_ema': False,
-                'ema_period': 9,
-                'show_bollinger': False,
-                'bollinger_period': 20,
-                'show_rsi': False,
-                'rsi_period': 14,
-                'show_macd': False,
-                'macd_fast': 12,
-                'macd_slow': 26,
-                'macd_signal': 9,
-                'bb_upper': 0,
-                'bb_lower': 0
-            },
             'selected_symbol': "BTCUSD",
             'confirm_action': None,
+            'last_trade_id': None,
         }
         
+        # Initialisation explicite
         for key, value in defaults.items():
-            if key not in st.session_state:
-                st.session_state[key] = value
+            st.session_state.setdefault(key, value)  # Utilisation de setdefault
         if 'selected_symbol' not in st.session_state:
             st.session_state.selected_symbol = "BTCUSD"  # Default value
     
-    @st.cache_data(ttl=60)
-    def get_available_symbols(_self) -> List[str]:
-        """Récupère la liste des symboles disponibles."""
-        try:
-            symbols = _self.mt5_service.get_available_symbols()
-            if not symbols:
-                # Valeurs par défaut si le service MT5 ne retourne rien
-                symbols = ["BTCUSD", "ETHUSD", "XRPUSD"]
-            return symbols
-        except Exception as e:
-            logger.error(f"Erreur lors de la récupération des symboles: {str(e)}")
-            return ["BTCUSD"]
+    @lru_cache(maxsize=32)
+    def _fetch_symbols_from_mt5(self, server: str):
+        return mt5.symbols_get()
     
     def update_data(self):
         """Met à jour toutes les données du dashboard"""
@@ -213,80 +195,44 @@ class DashboardService:
             logger.error(f"Erreur lors de la mise à jour des statistiques du compte: {str(e)}")
     
     def handle_bot_action(self, action: str):
-        try:
-            if action == "start":
-                if not st.session_state.get('bot_status', "Inactif") == "Actif":
-                    st.session_state.bot_status = "Actif"
-                    self._start_trading_thread()
-                    self.add_log("Bot démarré avec succès", level="info")
-                    
-            elif action == "stop":
-                st.session_state.bot_status = "Inactif"
-                self.add_log("Bot arrêté", level="info")
-                
-            st.experimental_rerun()
-            
-        except Exception as e:
-            self.add_log(f"Erreur action: {str(e)}", level="error")
+        if action == "start":
+            st.session_state.task_queue.put((
+                1,  # Priorité
+                lambda: self._start_trading_thread(safe_mode=True)
+            ))
 
-    def _start_trading_thread(self):
-        if not hasattr(self, '_trading_thread') or not self._trading_thread.is_alive():
-            self._trading_thread = threading.Thread(target=self._execute_trading_strategy, daemon=True)
-            self._trading_thread.start()
+    def _start_trading_thread(self, safe_mode: bool = False):
+        ctx = get_script_run_ctx()
+        thread = threading.Thread(target=self._execute_trading_strategy)
+        if ctx:
+            add_script_run_ctx(thread, ctx)
+        thread.start()
 
     def _execute_trading_strategy(self):
         try:
-            # Add Streamlit context to the thread
-            ctx = get_script_run_ctx()
-            if ctx:
-                add_script_run_ctx(threading.current_thread(), ctx)
-            
-            while True:
-                # Secure state check
-                if 'bot_status' not in st.session_state:
-                    break
+            while not self._stop_signal.is_set():
+                # Découpler la logique métier
+                task = self._task_queue.get(timeout=1)  # Éviter le polling actif
+                task()
                 
-                if st.session_state.get('bot_status') != "Actif":
-                    break
+                # Maintenir l'UI réactive
+                self._update_ui_safe()
                 
-                # Trading logic
-                self.simulate_trading_signals()
-                time.sleep(5)
-                
-        except Exception as e:
-            self.add_log(f"ERREUR Thread: {str(e)}", level="error")
+        except queue.Empty:
+            pass
         finally:
-            self.add_log("Arrêt de la stratégie", level="info")
+            mt5.shutdown()
     
     def add_log(self, message: str, level: str = "info"):
-        """Ajoute un message au journal des logs."""
-        timestamp = datetime.now().strftime("%H:%M:%S")
-        log_entry = f"[{timestamp}] [{level.upper()}] {message}"
+        """Journalisation robuste avec gestion Unicode"""
+        clean_msg = message.encode('utf-8', 'replace').decode('utf-8')
+        timestamp = datetime.now().strftime("%H:%M:%S.%f")[:-3]
+        log_entry = f"[{timestamp}] [{level.upper()}] {clean_msg}"
         
-        # Ajouter au journal en mémoire pour l'UI
-        st.session_state.log_messages.append(log_entry)
-        
-        # Limiter à 100 entrées
-        if len(st.session_state.log_messages) > 100:
-            st.session_state.log_messages = st.session_state.log_messages[-100:]
-        
-        # Nettoyer les émojis pour le logging système (pour éviter les erreurs d'encodage)
-        clean_message = re.sub(r'[^\x00-\x7F]+', '', message)
-        
-        # Sauvegarder dans le fichier de logs avec message nettoyé
-        try:
-            self.storage_service.save_log(clean_message, level)
-        except Exception as e:
-            # Ne pas faire planter l'application si la sauvegarde échoue
-            pass
-        
-        # Logguer avec le module logging (sans emoji)
-        if level == "error":
-            logger.error(clean_message)
-        elif level == "warning":
-            logger.warning(clean_message)
-        else:
-            logger.info(clean_message)
+        with threading.Lock():  # Synchronisation thread-safe
+            if 'log_messages' not in st.session_state:
+                st.session_state.log_messages = []
+            st.session_state.log_messages = [log_entry] + st.session_state.log_messages[:99]
     
     def save_trading_params(self, params: Dict[str, Any]):
         """Sauvegarde les paramètres de trading."""
@@ -658,13 +604,14 @@ class DashboardService:
     def _update_trades_history(self):
         """Met à jour l'historique des trades."""
         try:
-            trades = mt5.history_deals_get(0, datetime.now())
-            if not trades or len(trades) == 0:
+            last_trade_id = st.session_state.last_trade_id
+            new_trades = mt5.history_deals_get(last_trade_id, datetime.now())
+            if not new_trades or len(new_trades) == 0:
                 logger.warning("Aucun trade historique trouvé")
                 return
 
             # Vérification supplémentaire pour les données corrompues
-            valid_trades = [t for t in trades if isinstance(t, mt5.TradeDeal)]
+            valid_trades = [t for t in new_trades if isinstance(t, mt5.TradeDeal)]
             if not valid_trades:
                 logger.error("Format de trades invalide")
                 return
@@ -704,6 +651,10 @@ class DashboardService:
     def _check_ema_crossover(self, price_data: pd.DataFrame) -> str:
         """Vérifie le signal de croisement EMA."""
         try:
+            if len(price_data) < 2:
+                raise InvalidDataError("Données insuffisantes pour calcul EMA")
+            if 'close' not in price_data.columns:
+                raise InvalidDataFormatError("Colonne 'close' manquante")
             ema_short = price_data['close'].ewm(span=9, adjust=False).mean()
             ema_long = price_data['close'].ewm(span=21, adjust=False).mean()
             
@@ -844,4 +795,8 @@ class DashboardService:
 
     def _stop_trading_thread(self):
         if hasattr(self, '_trading_thread') and self._trading_thread.is_alive():
-            self._trading_thread.join() 
+            self._trading_thread.join()
+
+    def get_available_symbols(self):
+        """Récupère la liste des symboles disponibles."""
+        return self.mt5_service.get_available_symbols()  # Assurez-vous que cette méthode existe dans MT5Service 
