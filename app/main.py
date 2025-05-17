@@ -22,9 +22,9 @@ import queue
 import traceback
 
 # Ajouter en haut de app.py
-from unified_config import config
+from config.unified_config import config
 
-from src.bitcoin_scalper.services import DashboardService
+from bot.services import DashboardService
 
 # Ignorer les avertissements de contexte manquant
 warnings.filterwarnings("ignore", message="missing ScriptRunContext")
