@@ -51,3 +51,562 @@
 2025-05-17 12:19:02,362 - __main__ - INFO - Démarrage de l'application...
 2025-05-17 12:19:02,376 - __main__ - INFO - Configuration de la page Streamlit effectuée
 2025-05-17 12:19:02,423 - __main__ - INFO - Variables d'environnement configurées
+2025-05-17 12:24:28,347 - __main__ - INFO - Démarrage de l'application...
+2025-05-17 12:24:28,416 - __main__ - INFO - Configuration de la page Streamlit effectuée
+2025-05-17 12:24:28,417 - __main__ - INFO - Variables d'environnement configurées
+2025-05-17 12:24:28,417 - bot.services.mt5_service - INFO - Configuration chargée avec succès
+2025-05-17 12:24:29,431 - bot.services.mt5_service - INFO - Tentative de connexion à MT5...
+2025-05-17 12:24:29,439 - bot.services.mt5_service - INFO - MT5 initialisé avec succès, version: (500, 4885, '28 Feb 2025')
+2025-05-17 12:24:29,440 - bot.services.mt5_service - INFO - Tentative de connexion au serveur Ava-Demo 1-MT5...
+2025-05-17 12:24:29,442 - bot.services.mt5_service - INFO - Connecté avec succès à Ava-Demo 1-MT5
+2025-05-17 12:24:29,442 - bot.services.mt5_service - INFO - Compte: 101490774, Nom: 17307552
+2025-05-17 12:24:29,443 - bot.services.mt5_service - INFO - Solde: 9797.20, Equity: 9797.20
+2025-05-17 12:24:29,444 - __main__ - INFO - RefreshManager initialisé
+2025-05-17 12:24:29,445 - __main__ - INFO - Initialisation complète de l'application
+2025-05-17 12:24:29,639 - UnifiedConfig - INFO - Variables d'environnement chargées depuis .env
+2025-05-17 12:24:29,645 - bot.services.mt5_service - INFO - Données récupérées pour BTCUSD: 720 lignes
+2025-05-17 12:24:29,650 - bot.services.dashboard_service - INFO - Statistiques du compte mises à jour: {'balance': 9797.2, 'equity': 9797.2, 'profit': 0.0, 'max_drawdown': 0.0, 'win_rate': 0.0, 'open_trades': 0, 'total_trades': 0}
+2025-05-17 12:24:29,651 - bot.services.dashboard_service - WARNING - Aucun trade historique trouvé
+2025-05-17 12:24:29,651 - bot.services.dashboard_service - INFO - Logs mis à jour avec succès
+2025-05-17 12:24:29,651 - bot.services.dashboard_service - INFO - Données du dashboard mises à jour avec succès
+2025-05-17 12:24:29,651 - __main__ - INFO - Données initiales chargées
+2025-05-17 12:24:29,740 - __main__ - INFO - Nettoyage des ressources...
+2025-05-17 12:24:33,329 - __main__ - INFO - Démarrage de l'application...
+2025-05-17 12:24:33,333 - __main__ - INFO - Configuration de la page Streamlit effectuée
+2025-05-17 12:24:33,334 - __main__ - INFO - Variables d'environnement configurées
+2025-05-17 12:24:36,096 - __main__ - INFO - Démarrage de l'application...
+2025-05-17 12:24:36,101 - __main__ - INFO - Configuration de la page Streamlit effectuée
+2025-05-17 12:24:36,103 - __main__ - INFO - Variables d'environnement configurées
+2025-05-17 12:38:46,288 - watchfiles.main - DEBUG - 1 change detected: {(<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\app\\services')}
+2025-05-17 12:38:48,786 - asyncio - DEBUG - Using selector: SelectSelector
+2025-05-17 12:38:48,896 - watchfiles.main - DEBUG - 1 change detected: {(<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\logs\\trading_bot.log')}
+2025-05-17 12:38:49,369 - watchfiles.main - DEBUG - 1 change detected: {(<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\logs\\trading_bot.log')}
+2025-05-17 12:38:49,914 - watchfiles.main - DEBUG - 1 change detected: {(<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\logs\\trading_bot.log')}
+2025-05-17 12:38:50,645 - watchfiles.main - DEBUG - 1 change detected: {(<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\logs\\trading_bot.log')}
+2025-05-17 12:38:51,412 - watchfiles.main - DEBUG - 1 change detected: {(<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\logs\\trading_bot.log')}
+2025-05-17 12:38:52,414 - watchfiles.main - DEBUG - 1 change detected: {(<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\logs\\trading_bot.log')}
+2025-05-17 12:38:52,826 - watchfiles.main - DEBUG - 1 change detected: {(<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\logs\\trading_bot.log')}
+2025-05-17 12:38:53,309 - watchfiles.main - DEBUG - 1 change detected: {(<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\logs\\trading_bot.log')}
+2025-05-17 12:38:53,744 - watchfiles.main - DEBUG - 1 change detected: {(<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\logs\\trading_bot.log')}
+2025-05-17 12:38:54,101 - watchfiles.main - DEBUG - 1 change detected: {(<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\logs\\trading_bot.log')}
+2025-05-17 12:38:54,521 - watchfiles.main - DEBUG - 1 change detected: {(<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\logs\\trading_bot.log')}
+2025-05-17 12:38:54,943 - watchfiles.main - DEBUG - 1 change detected: {(<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\logs\\trading_bot.log')}
+2025-05-17 12:38:55,370 - watchfiles.main - DEBUG - 1 change detected: {(<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\logs\\trading_bot.log')}
+2025-05-17 12:38:55,740 - watchfiles.main - DEBUG - 1 change detected: {(<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\logs\\trading_bot.log')}
+2025-05-17 12:38:56,179 - watchfiles.main - DEBUG - 1 change detected: {(<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\logs\\trading_bot.log')}
+2025-05-17 12:38:56,591 - watchfiles.main - DEBUG - 1 change detected: {(<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\logs\\trading_bot.log')}
+2025-05-17 12:38:56,969 - watchfiles.main - DEBUG - 1 change detected: {(<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\logs\\trading_bot.log')}
+2025-05-17 12:38:57,377 - watchfiles.main - DEBUG - 1 change detected: {(<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\logs\\trading_bot.log')}
+2025-05-17 12:38:57,794 - watchfiles.main - DEBUG - 1 change detected: {(<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\logs\\trading_bot.log')}
+2025-05-17 12:38:58,218 - watchfiles.main - DEBUG - 1 change detected: {(<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\logs\\trading_bot.log')}
+2025-05-17 12:38:58,623 - watchfiles.main - DEBUG - 1 change detected: {(<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\logs\\trading_bot.log')}
+2025-05-17 12:38:59,131 - watchfiles.main - DEBUG - 1 change detected: {(<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\logs\\trading_bot.log')}
+2025-05-17 12:39:00,960 - watchfiles.main - DEBUG - 1 change detected: {(<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\logs\\trading_bot.log')}
+2025-05-17 12:39:01,339 - watchfiles.main - DEBUG - 1 change detected: {(<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\logs\\trading_bot.log')}
+2025-05-17 12:39:01,835 - watchfiles.main - DEBUG - 1 change detected: {(<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\logs\\trading_bot.log')}
+2025-05-17 12:39:02,250 - watchfiles.main - DEBUG - 1 change detected: {(<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\logs\\trading_bot.log')}
+2025-05-17 12:39:02,660 - watchfiles.main - DEBUG - 1 change detected: {(<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\logs\\trading_bot.log')}
+2025-05-17 12:39:03,072 - watchfiles.main - DEBUG - 1 change detected: {(<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\logs\\trading_bot.log')}
+2025-05-17 12:39:03,483 - watchfiles.main - DEBUG - 1 change detected: {(<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\logs\\trading_bot.log')}
+2025-05-17 12:39:03,850 - watchfiles.main - DEBUG - 1 change detected: {(<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\logs\\trading_bot.log')}
+2025-05-17 12:39:04,275 - watchfiles.main - DEBUG - 1 change detected: {(<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\logs\\trading_bot.log')}
+2025-05-17 12:39:04,684 - watchfiles.main - DEBUG - 1 change detected: {(<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\logs\\trading_bot.log')}
+2025-05-17 12:39:05,063 - watchfiles.main - DEBUG - 1 change detected: {(<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\logs\\trading_bot.log')}
+2025-05-17 12:39:05,492 - watchfiles.main - DEBUG - 1 change detected: {(<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\logs\\trading_bot.log')}
+2025-05-17 12:39:05,898 - watchfiles.main - DEBUG - 1 change detected: {(<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\logs\\trading_bot.log')}
+2025-05-17 12:39:06,370 - watchfiles.main - DEBUG - 1 change detected: {(<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\logs\\trading_bot.log')}
+2025-05-17 12:39:06,775 - watchfiles.main - DEBUG - 1 change detected: {(<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\logs\\trading_bot.log')}
+2025-05-17 12:39:07,191 - watchfiles.main - DEBUG - 1 change detected: {(<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\logs\\trading_bot.log')}
+2025-05-17 12:40:19,868 - asyncio - DEBUG - Using selector: SelectSelector
+2025-05-17 12:40:20,256 - nicegui - ERROR - module 'nicegui.ui' has no attribute 'plotly_chart'
+  + Exception Group Traceback (most recent call last):
+  |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\_utils.py", line 76, in collapse_excgroups
+  |     yield
+  |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\base.py", line 181, in __call__
+  |     recv_stream.close()
+  |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\anyio\_backends\_asyncio.py", line 772, in __aexit__
+  |     raise BaseExceptionGroup(
+  | exceptiongroup.ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)
+  +-+---------------- 1 ----------------
+    | Traceback (most recent call last):
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\errors.py", line 165, in __call__
+    |     await self.app(scope, receive, _send)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\base.py", line 181, in __call__
+    |     recv_stream.close()
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\contextlib.py", line 135, in __exit__
+    |     self.gen.throw(type, value, traceback)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\_utils.py", line 82, in collapse_excgroups
+    |     raise exc
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\base.py", line 178, in __call__
+    |     response = await self.dispatch_func(request, call_next)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\nicegui\middlewares.py", line 10, in dispatch
+    |     response = await call_next(request)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\base.py", line 156, in call_next
+    |     raise app_exc
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\base.py", line 141, in coro
+    |     await self.app(scope, receive_or_disconnect, send_no_error)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\gzip.py", line 29, in __call__
+    |     await responder(scope, receive, send)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\gzip.py", line 126, in __call__
+    |     await super().__call__(scope, receive, send)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\gzip.py", line 46, in __call__
+    |     await self.app(scope, receive, self.send_with_compression)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
+    |     await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    |     raise exc
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    |     await app(scope, receive, sender)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\routing.py", line 714, in __call__
+    |     await self.middleware_stack(scope, receive, send)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\routing.py", line 734, in app
+    |     await route.handle(scope, receive, send)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\routing.py", line 288, in handle
+    |     await self.app(scope, receive, send)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\routing.py", line 76, in app
+    |     await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    |     raise exc
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    |     await app(scope, receive, sender)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\routing.py", line 73, in app
+    |     response = await f(request)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\fastapi\routing.py", line 301, in app
+    |     raw_response = await run_endpoint_function(
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    |     return await dependant.call(**values)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\nicegui\page.py", line 120, in decorated
+    |     result = func(*dec_args, **dec_kwargs)
+    |   File "C:\Users\thibl\Downloads\bitcoin_scalper-main\app\main.py", line 84, in main
+    |     price_chart = PriceChart()
+    |   File "C:\Users\thibl\Downloads\bitcoin_scalper-main\app\ui\components.py", line 12, in __init__
+    |     self.chart = ui.plotly_chart().classes('w-full h-96')
+    | AttributeError: module 'nicegui.ui' has no attribute 'plotly_chart'
+    +------------------------------------
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\errors.py", line 165, in __call__
+    await self.app(scope, receive, _send)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\base.py", line 181, in __call__
+    recv_stream.close()
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\contextlib.py", line 135, in __exit__
+    self.gen.throw(type, value, traceback)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\_utils.py", line 82, in collapse_excgroups
+    raise exc
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\base.py", line 178, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\nicegui\middlewares.py", line 10, in dispatch
+    response = await call_next(request)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\base.py", line 156, in call_next
+    raise app_exc
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\base.py", line 141, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\gzip.py", line 29, in __call__
+    await responder(scope, receive, send)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\gzip.py", line 126, in __call__
+    await super().__call__(scope, receive, send)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\gzip.py", line 46, in __call__
+    await self.app(scope, receive, self.send_with_compression)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\routing.py", line 714, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\routing.py", line 734, in app
+    await route.handle(scope, receive, send)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\routing.py", line 288, in handle
+    await self.app(scope, receive, send)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\routing.py", line 76, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\routing.py", line 73, in app
+    response = await f(request)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\fastapi\routing.py", line 301, in app
+    raw_response = await run_endpoint_function(
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    return await dependant.call(**values)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\nicegui\page.py", line 120, in decorated
+    result = func(*dec_args, **dec_kwargs)
+  File "C:\Users\thibl\Downloads\bitcoin_scalper-main\app\main.py", line 84, in main
+    price_chart = PriceChart()
+  File "C:\Users\thibl\Downloads\bitcoin_scalper-main\app\ui\components.py", line 12, in __init__
+    self.chart = ui.plotly_chart().classes('w-full h-96')
+AttributeError: module 'nicegui.ui' has no attribute 'plotly_chart'
+2025-05-17 12:40:20,603 - nicegui - ERROR - module 'nicegui.ui' has no attribute 'plotly_chart'
+  + Exception Group Traceback (most recent call last):
+  |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\_utils.py", line 76, in collapse_excgroups
+  |     yield
+  |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\base.py", line 181, in __call__
+  |     recv_stream.close()
+  |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\anyio\_backends\_asyncio.py", line 772, in __aexit__
+  |     raise BaseExceptionGroup(
+  | exceptiongroup.ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)
+  +-+---------------- 1 ----------------
+    | Traceback (most recent call last):
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\errors.py", line 165, in __call__
+    |     await self.app(scope, receive, _send)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\base.py", line 181, in __call__
+    |     recv_stream.close()
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\contextlib.py", line 135, in __exit__
+    |     self.gen.throw(type, value, traceback)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\_utils.py", line 82, in collapse_excgroups
+    |     raise exc
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\base.py", line 178, in __call__
+    |     response = await self.dispatch_func(request, call_next)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\nicegui\middlewares.py", line 10, in dispatch
+    |     response = await call_next(request)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\base.py", line 156, in call_next
+    |     raise app_exc
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\base.py", line 141, in coro
+    |     await self.app(scope, receive_or_disconnect, send_no_error)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\gzip.py", line 29, in __call__
+    |     await responder(scope, receive, send)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\gzip.py", line 126, in __call__
+    |     await super().__call__(scope, receive, send)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\gzip.py", line 46, in __call__
+    |     await self.app(scope, receive, self.send_with_compression)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
+    |     await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    |     raise exc
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    |     await app(scope, receive, sender)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\routing.py", line 714, in __call__
+    |     await self.middleware_stack(scope, receive, send)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\routing.py", line 734, in app
+    |     await route.handle(scope, receive, send)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\routing.py", line 288, in handle
+    |     await self.app(scope, receive, send)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\routing.py", line 76, in app
+    |     await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    |     raise exc
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    |     await app(scope, receive, sender)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\routing.py", line 73, in app
+    |     response = await f(request)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\fastapi\routing.py", line 301, in app
+    |     raw_response = await run_endpoint_function(
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    |     return await dependant.call(**values)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\nicegui\page.py", line 120, in decorated
+    |     result = func(*dec_args, **dec_kwargs)
+    |   File "C:\Users\thibl\Downloads\bitcoin_scalper-main\app\main.py", line 84, in main
+    |     price_chart = PriceChart()
+    |   File "C:\Users\thibl\Downloads\bitcoin_scalper-main\app\ui\components.py", line 12, in __init__
+    |     self.chart = ui.plotly_chart().classes('w-full h-96')
+    | AttributeError: module 'nicegui.ui' has no attribute 'plotly_chart'
+    +------------------------------------
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\errors.py", line 165, in __call__
+    await self.app(scope, receive, _send)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\base.py", line 181, in __call__
+    recv_stream.close()
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\contextlib.py", line 135, in __exit__
+    self.gen.throw(type, value, traceback)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\_utils.py", line 82, in collapse_excgroups
+    raise exc
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\base.py", line 178, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\nicegui\middlewares.py", line 10, in dispatch
+    response = await call_next(request)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\base.py", line 156, in call_next
+    raise app_exc
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\base.py", line 141, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\gzip.py", line 29, in __call__
+    await responder(scope, receive, send)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\gzip.py", line 126, in __call__
+    await super().__call__(scope, receive, send)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\gzip.py", line 46, in __call__
+    await self.app(scope, receive, self.send_with_compression)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\routing.py", line 714, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\routing.py", line 734, in app
+    await route.handle(scope, receive, send)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\routing.py", line 288, in handle
+    await self.app(scope, receive, send)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\routing.py", line 76, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\routing.py", line 73, in app
+    response = await f(request)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\fastapi\routing.py", line 301, in app
+    raw_response = await run_endpoint_function(
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    return await dependant.call(**values)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\nicegui\page.py", line 120, in decorated
+    result = func(*dec_args, **dec_kwargs)
+  File "C:\Users\thibl\Downloads\bitcoin_scalper-main\app\main.py", line 84, in main
+    price_chart = PriceChart()
+  File "C:\Users\thibl\Downloads\bitcoin_scalper-main\app\ui\components.py", line 12, in __init__
+    self.chart = ui.plotly_chart().classes('w-full h-96')
+AttributeError: module 'nicegui.ui' has no attribute 'plotly_chart'
+2025-05-17 12:42:23,700 - asyncio - DEBUG - Using selector: SelectSelector
+2025-05-17 12:42:23,845 - nicegui - ERROR - __init__() missing 1 required positional argument: 'figure'
+  + Exception Group Traceback (most recent call last):
+  |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\_utils.py", line 76, in collapse_excgroups
+  |     yield
+  |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\base.py", line 181, in __call__
+  |     recv_stream.close()
+  |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\anyio\_backends\_asyncio.py", line 772, in __aexit__
+  |     raise BaseExceptionGroup(
+  | exceptiongroup.ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)
+  +-+---------------- 1 ----------------
+    | Traceback (most recent call last):
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\errors.py", line 165, in __call__
+    |     await self.app(scope, receive, _send)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\base.py", line 181, in __call__
+    |     recv_stream.close()
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\contextlib.py", line 135, in __exit__
+    |     self.gen.throw(type, value, traceback)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\_utils.py", line 82, in collapse_excgroups
+    |     raise exc
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\base.py", line 178, in __call__
+    |     response = await self.dispatch_func(request, call_next)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\nicegui\middlewares.py", line 10, in dispatch
+    |     response = await call_next(request)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\base.py", line 156, in call_next
+    |     raise app_exc
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\base.py", line 141, in coro
+    |     await self.app(scope, receive_or_disconnect, send_no_error)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\gzip.py", line 29, in __call__
+    |     await responder(scope, receive, send)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\gzip.py", line 126, in __call__
+    |     await super().__call__(scope, receive, send)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\gzip.py", line 46, in __call__
+    |     await self.app(scope, receive, self.send_with_compression)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
+    |     await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    |     raise exc
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    |     await app(scope, receive, sender)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\routing.py", line 714, in __call__
+    |     await self.middleware_stack(scope, receive, send)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\routing.py", line 734, in app
+    |     await route.handle(scope, receive, send)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\routing.py", line 288, in handle
+    |     await self.app(scope, receive, send)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\routing.py", line 76, in app
+    |     await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    |     raise exc
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    |     await app(scope, receive, sender)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\routing.py", line 73, in app
+    |     response = await f(request)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\fastapi\routing.py", line 301, in app
+    |     raw_response = await run_endpoint_function(
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    |     return await dependant.call(**values)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\nicegui\page.py", line 120, in decorated
+    |     result = func(*dec_args, **dec_kwargs)
+    |   File "C:\Users\thibl\Downloads\bitcoin_scalper-main\app\main.py", line 84, in main
+    |     price_chart = PriceChart()
+    |   File "C:\Users\thibl\Downloads\bitcoin_scalper-main\app\ui\components.py", line 12, in __init__
+    |     self.chart = ui.plotly().classes('w-full h-96')
+    | TypeError: __init__() missing 1 required positional argument: 'figure'
+    +------------------------------------
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\errors.py", line 165, in __call__
+    await self.app(scope, receive, _send)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\base.py", line 181, in __call__
+    recv_stream.close()
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\contextlib.py", line 135, in __exit__
+    self.gen.throw(type, value, traceback)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\_utils.py", line 82, in collapse_excgroups
+    raise exc
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\base.py", line 178, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\nicegui\middlewares.py", line 10, in dispatch
+    response = await call_next(request)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\base.py", line 156, in call_next
+    raise app_exc
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\base.py", line 141, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\gzip.py", line 29, in __call__
+    await responder(scope, receive, send)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\gzip.py", line 126, in __call__
+    await super().__call__(scope, receive, send)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\gzip.py", line 46, in __call__
+    await self.app(scope, receive, self.send_with_compression)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\routing.py", line 714, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\routing.py", line 734, in app
+    await route.handle(scope, receive, send)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\routing.py", line 288, in handle
+    await self.app(scope, receive, send)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\routing.py", line 76, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\routing.py", line 73, in app
+    response = await f(request)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\fastapi\routing.py", line 301, in app
+    raw_response = await run_endpoint_function(
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    return await dependant.call(**values)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\nicegui\page.py", line 120, in decorated
+    result = func(*dec_args, **dec_kwargs)
+  File "C:\Users\thibl\Downloads\bitcoin_scalper-main\app\main.py", line 84, in main
+    price_chart = PriceChart()
+  File "C:\Users\thibl\Downloads\bitcoin_scalper-main\app\ui\components.py", line 12, in __init__
+    self.chart = ui.plotly().classes('w-full h-96')
+TypeError: __init__() missing 1 required positional argument: 'figure'
+2025-05-17 12:42:24,624 - nicegui - ERROR - __init__() missing 1 required positional argument: 'figure'
+  + Exception Group Traceback (most recent call last):
+  |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\_utils.py", line 76, in collapse_excgroups
+  |     yield
+  |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\base.py", line 181, in __call__
+  |     recv_stream.close()
+  |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\anyio\_backends\_asyncio.py", line 772, in __aexit__
+  |     raise BaseExceptionGroup(
+  | exceptiongroup.ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)
+  +-+---------------- 1 ----------------
+    | Traceback (most recent call last):
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\errors.py", line 165, in __call__
+    |     await self.app(scope, receive, _send)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\base.py", line 181, in __call__
+    |     recv_stream.close()
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\contextlib.py", line 135, in __exit__
+    |     self.gen.throw(type, value, traceback)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\_utils.py", line 82, in collapse_excgroups
+    |     raise exc
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\base.py", line 178, in __call__
+    |     response = await self.dispatch_func(request, call_next)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\nicegui\middlewares.py", line 10, in dispatch
+    |     response = await call_next(request)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\base.py", line 156, in call_next
+    |     raise app_exc
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\base.py", line 141, in coro
+    |     await self.app(scope, receive_or_disconnect, send_no_error)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\gzip.py", line 29, in __call__
+    |     await responder(scope, receive, send)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\gzip.py", line 126, in __call__
+    |     await super().__call__(scope, receive, send)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\gzip.py", line 46, in __call__
+    |     await self.app(scope, receive, self.send_with_compression)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
+    |     await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    |     raise exc
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    |     await app(scope, receive, sender)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\routing.py", line 714, in __call__
+    |     await self.middleware_stack(scope, receive, send)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\routing.py", line 734, in app
+    |     await route.handle(scope, receive, send)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\routing.py", line 288, in handle
+    |     await self.app(scope, receive, send)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\routing.py", line 76, in app
+    |     await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    |     raise exc
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    |     await app(scope, receive, sender)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\routing.py", line 73, in app
+    |     response = await f(request)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\fastapi\routing.py", line 301, in app
+    |     raw_response = await run_endpoint_function(
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    |     return await dependant.call(**values)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\nicegui\page.py", line 120, in decorated
+    |     result = func(*dec_args, **dec_kwargs)
+    |   File "C:\Users\thibl\Downloads\bitcoin_scalper-main\app\main.py", line 84, in main
+    |     price_chart = PriceChart()
+    |   File "C:\Users\thibl\Downloads\bitcoin_scalper-main\app\ui\components.py", line 12, in __init__
+    |     self.chart = ui.plotly().classes('w-full h-96')
+    | TypeError: __init__() missing 1 required positional argument: 'figure'
+    +------------------------------------
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\errors.py", line 165, in __call__
+    await self.app(scope, receive, _send)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\base.py", line 181, in __call__
+    recv_stream.close()
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\contextlib.py", line 135, in __exit__
+    self.gen.throw(type, value, traceback)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\_utils.py", line 82, in collapse_excgroups
+    raise exc
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\base.py", line 178, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\nicegui\middlewares.py", line 10, in dispatch
+    response = await call_next(request)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\base.py", line 156, in call_next
+    raise app_exc
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\base.py", line 141, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\gzip.py", line 29, in __call__
+    await responder(scope, receive, send)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\gzip.py", line 126, in __call__
+    await super().__call__(scope, receive, send)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\gzip.py", line 46, in __call__
+    await self.app(scope, receive, self.send_with_compression)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\routing.py", line 714, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\routing.py", line 734, in app
+    await route.handle(scope, receive, send)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\routing.py", line 288, in handle
+    await self.app(scope, receive, send)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\routing.py", line 76, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\routing.py", line 73, in app
+    response = await f(request)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\fastapi\routing.py", line 301, in app
+    raw_response = await run_endpoint_function(
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    return await dependant.call(**values)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\nicegui\page.py", line 120, in decorated
+    result = func(*dec_args, **dec_kwargs)
+  File "C:\Users\thibl\Downloads\bitcoin_scalper-main\app\main.py", line 84, in main
+    price_chart = PriceChart()
+  File "C:\Users\thibl\Downloads\bitcoin_scalper-main\app\ui\components.py", line 12, in __init__
+    self.chart = ui.plotly().classes('w-full h-96')
+TypeError: __init__() missing 1 required positional argument: 'figure'
+2025-05-17 12:45:33,448 - asyncio - DEBUG - Using selector: SelectSelector
+2025-05-17 12:45:33,825 - app.services.trading_service - INFO - Connexion MT5 réussie
+2025-05-17 12:45:34,857 - app.services.trading_service - INFO - Connexion MT5 réussie
