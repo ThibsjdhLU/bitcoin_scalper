@@ -1344,3 +1344,283 @@ TypeError: __init__() got an unexpected keyword argument 'label'
 2025-05-17 14:28:05,745 - watchfiles.main - DEBUG - 1 change detected: {(<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\logs\\trading_bot.log')}
 2025-05-17 14:28:06,150 - watchfiles.main - DEBUG - 1 change detected: {(<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\logs\\trading_bot.log')}
 2025-05-17 14:28:06,560 - watchfiles.main - DEBUG - 1 change detected: {(<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\logs\\trading_bot.log')}
+2025-05-17 14:28:07,027 - watchfiles.main - DEBUG - 11 changes detected: {(<Change.deleted: 3>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\.git\\index.lock'), (<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\.git\\objects\\44\\605f64ed9e132802312beef02d1ced873f53f7'), (<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\.git'), (<Change.deleted: 3>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\.git\\index'), (<Change.added: 1>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\.git\\objects\\a3\\907c8fbec321fa863e6375475d5c1ddda105d2'), (<Change.added: 1>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\.git\\index'), (<Change.deleted: 3>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\.git\\objects\\a3\\tmp_obj_iTk43j'), (<Change.added: 1>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\.git\\index.lock'), (<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\logs\\trading_bot.log'), (<Change.added: 1>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\.git\\objects\\a3\\tmp_obj_iTk43j'), (<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\.git\\objects\\a3')}
+2025-05-17 14:28:07,391 - watchfiles.main - DEBUG - 37 changes detected: {(<Change.deleted: 3>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\.git\\objects\\d0\\tmp_obj_I3QV1c'), (<Change.added: 1>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\.git\\refs\\heads\\main'), (<Change.deleted: 3>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\.git\\objects\\maintenance.lock'), (<Change.deleted: 3>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\.git\\AUTO_MERGE.lock'), (<Change.deleted: 3>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\.git\\objects\\c4\\tmp_obj_91Uonv'), (<Change.added: 1>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\.git\\index.lock'), (<Change.added: 1>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\.git\\HEAD.lock'), (<Change.added: 1>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\.git\\objects\\91\\tmp_obj_8k5IPQ'), (<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\.git\\objects\\82\\44c8abd2c7fa6d56bea06722d966d5cb31d213'), (<Change.added: 1>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\.git\\packed-refs.lock'), (<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\.git\\objects'), (<Change.deleted: 3>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\.git\\refs\\heads\\main'), (<Change.added: 1>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\.git\\objects\\c4\\7be8fb4da6d7eb1fc3fb8c618a5e9ebbb5cd91'), (<Change.deleted: 3>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\.git\\index.lock'), (<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\.git\\logs\\refs\\heads\\main'), (<Change.added: 1>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\.git\\objects\\c4'), (<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\.git'), (<Change.deleted: 3>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\.git\\HEAD.lock'), (<Change.added: 1>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\.git\\index'), (<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\.git\\logs\\HEAD'), (<Change.deleted: 3>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\.git\\packed-refs.lock'), (<Change.deleted: 3>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\.git\\objects\\91\\tmp_obj_8k5IPQ'), (<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\logs\\trading_bot.log'), (<Change.added: 1>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\.git\\refs\\heads\\main.lock'), (<Change.added: 1>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\.git\\objects\\91\\ea6fe708e1e4f5840a46938f551b6290ae4e33'), (<Change.deleted: 3>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\.git\\index'), (<Change.added: 1>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\.git\\objects\\d0\\21aca3316cfc8267eadb0d602d633e9cea658d'), (<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\.git\\objects\\91'), (<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\.git\\objects\\d0'), (<Change.deleted: 3>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\.git\\refs\\heads\\main.lock'), (<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\.git\\COMMIT_EDITMSG'), (<Change.added: 1>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\.git\\objects\\d0\\tmp_obj_I3QV1c'), (<Change.added: 1>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\.git\\objects\\maintenance.lock'), (<Change.added: 1>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\.git\\AUTO_MERGE.lock'), (<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\.git\\objects\\20\\4853cb6b8bc6215bc42452540c9a257013e587'), (<Change.added: 1>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\.git\\objects\\c4\\tmp_obj_91Uonv'), (<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\.git\\refs\\heads')}
+2025-05-17 14:28:07,784 - watchfiles.main - DEBUG - 1 change detected: {(<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\logs\\trading_bot.log')}
+2025-05-17 14:28:08,153 - watchfiles.main - DEBUG - 1 change detected: {(<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\logs\\trading_bot.log')}
+2025-05-17 14:28:08,523 - watchfiles.main - DEBUG - 1 change detected: {(<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\logs\\trading_bot.log')}
+2025-05-17 14:28:08,892 - watchfiles.main - DEBUG - 1 change detected: {(<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\logs\\trading_bot.log')}
+2025-05-17 14:28:09,259 - watchfiles.main - DEBUG - 1 change detected: {(<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\logs\\trading_bot.log')}
+2025-05-17 14:28:09,667 - watchfiles.main - DEBUG - 1 change detected: {(<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\logs\\trading_bot.log')}
+2025-05-17 14:28:10,079 - watchfiles.main - DEBUG - 1 change detected: {(<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\logs\\trading_bot.log')}
+2025-05-17 14:28:10,490 - watchfiles.main - DEBUG - 1 change detected: {(<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\logs\\trading_bot.log')}
+2025-05-17 14:28:10,898 - watchfiles.main - DEBUG - 1 change detected: {(<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\logs\\trading_bot.log')}
+2025-05-17 14:28:11,277 - watchfiles.main - DEBUG - 6 changes detected: {(<Change.added: 1>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\.git\\refs\\remotes\\origin\\main.lock'), (<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\.git\\refs\\remotes\\origin'), (<Change.deleted: 3>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\.git\\refs\\remotes\\origin\\main'), (<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\.git\\logs\\refs\\remotes\\origin\\main'), (<Change.deleted: 3>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\.git\\refs\\remotes\\origin\\main.lock'), (<Change.added: 1>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\.git\\refs\\remotes\\origin\\main')}
+2025-05-17 14:28:11,668 - watchfiles.main - DEBUG - 1 change detected: {(<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\logs\\trading_bot.log')}
+2025-05-17 14:28:12,040 - watchfiles.main - DEBUG - 1 change detected: {(<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\logs\\trading_bot.log')}
+2025-05-17 14:28:12,394 - watchfiles.main - DEBUG - 1 change detected: {(<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\logs\\trading_bot.log')}
+2025-05-17 14:28:12,751 - watchfiles.main - DEBUG - 1 change detected: {(<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\logs\\trading_bot.log')}
+2025-05-17 14:28:13,117 - watchfiles.main - DEBUG - 1 change detected: {(<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\logs\\trading_bot.log')}
+2025-05-17 14:28:13,570 - watchfiles.main - DEBUG - 1 change detected: {(<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\logs\\trading_bot.log')}
+2025-05-17 14:28:13,978 - watchfiles.main - DEBUG - 1 change detected: {(<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\logs\\trading_bot.log')}
+2025-05-17 14:28:14,390 - watchfiles.main - DEBUG - 1 change detected: {(<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\logs\\trading_bot.log')}
+2025-05-17 14:28:14,754 - watchfiles.main - DEBUG - 1 change detected: {(<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\logs\\trading_bot.log')}
+2025-05-17 14:28:15,174 - watchfiles.main - DEBUG - 1 change detected: {(<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\logs\\trading_bot.log')}
+2025-05-17 14:28:15,589 - watchfiles.main - DEBUG - 1 change detected: {(<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\logs\\trading_bot.log')}
+2025-05-17 14:28:16,068 - watchfiles.main - DEBUG - 1 change detected: {(<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\logs\\trading_bot.log')}
+2025-05-17 14:28:16,447 - watchfiles.main - DEBUG - 1 change detected: {(<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\logs\\trading_bot.log')}
+2025-05-17 14:28:16,852 - watchfiles.main - DEBUG - 1 change detected: {(<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\logs\\trading_bot.log')}
+2025-05-17 14:28:17,263 - watchfiles.main - DEBUG - 1 change detected: {(<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\logs\\trading_bot.log')}
+2025-05-17 14:28:17,639 - watchfiles.main - DEBUG - 1 change detected: {(<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\logs\\trading_bot.log')}
+2025-05-17 14:28:18,058 - watchfiles.main - DEBUG - 1 change detected: {(<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\logs\\trading_bot.log')}
+2025-05-17 14:28:18,467 - watchfiles.main - DEBUG - 1 change detected: {(<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\logs\\trading_bot.log')}
+2025-05-17 14:28:18,884 - watchfiles.main - DEBUG - 1 change detected: {(<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\logs\\trading_bot.log')}
+2025-05-17 14:28:19,297 - watchfiles.main - DEBUG - 1 change detected: {(<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\logs\\trading_bot.log')}
+2025-05-17 14:28:19,707 - watchfiles.main - DEBUG - 1 change detected: {(<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\logs\\trading_bot.log')}
+2025-05-17 14:28:20,119 - watchfiles.main - DEBUG - 1 change detected: {(<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\logs\\trading_bot.log')}
+2025-05-17 14:28:20,577 - watchfiles.main - DEBUG - 1 change detected: {(<Change.modified: 2>, 'C:\\Users\\thibl\\Downloads\\bitcoin_scalper-main\\logs\\trading_bot.log')}
+2025-05-17 14:28:29,667 - asyncio - DEBUG - Using selector: SelectSelector
+2025-05-17 14:28:30,509 - nicegui - ERROR - __init__() got an unexpected keyword argument 'label'
+  + Exception Group Traceback (most recent call last):
+  |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\_utils.py", line 76, in collapse_excgroups
+  |     yield
+  |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\base.py", line 181, in __call__
+  |     recv_stream.close()
+  |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\anyio\_backends\_asyncio.py", line 772, in __aexit__
+  |     raise BaseExceptionGroup(
+  | exceptiongroup.ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)
+  +-+---------------- 1 ----------------
+    | Traceback (most recent call last):
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\errors.py", line 165, in __call__
+    |     await self.app(scope, receive, _send)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\base.py", line 181, in __call__
+    |     recv_stream.close()
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\contextlib.py", line 135, in __exit__
+    |     self.gen.throw(type, value, traceback)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\_utils.py", line 82, in collapse_excgroups
+    |     raise exc
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\base.py", line 178, in __call__
+    |     response = await self.dispatch_func(request, call_next)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\nicegui\middlewares.py", line 10, in dispatch
+    |     response = await call_next(request)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\base.py", line 156, in call_next
+    |     raise app_exc
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\base.py", line 141, in coro
+    |     await self.app(scope, receive_or_disconnect, send_no_error)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\gzip.py", line 29, in __call__
+    |     await responder(scope, receive, send)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\gzip.py", line 126, in __call__
+    |     await super().__call__(scope, receive, send)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\gzip.py", line 46, in __call__
+    |     await self.app(scope, receive, self.send_with_compression)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
+    |     await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    |     raise exc
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    |     await app(scope, receive, sender)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\routing.py", line 714, in __call__
+    |     await self.middleware_stack(scope, receive, send)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\routing.py", line 734, in app
+    |     await route.handle(scope, receive, send)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\routing.py", line 288, in handle
+    |     await self.app(scope, receive, send)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\routing.py", line 76, in app
+    |     await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    |     raise exc
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    |     await app(scope, receive, sender)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\routing.py", line 73, in app
+    |     response = await f(request)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\fastapi\routing.py", line 301, in app
+    |     raw_response = await run_endpoint_function(
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    |     return await dependant.call(**values)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\nicegui\page.py", line 120, in decorated
+    |     result = func(*dec_args, **dec_kwargs)
+    |   File "C:\Users\thibl\Downloads\bitcoin_scalper-main\app\main.py", line 91, in main
+    |     price_chart = PriceChart()
+    |   File "C:\Users\thibl\Downloads\bitcoin_scalper-main\app\ui\components.py", line 53, in __init__
+    |     self.zoom_slider = ui.slider(min=10, max=200, value=100, step=10, label='Zoom')
+    | TypeError: __init__() got an unexpected keyword argument 'label'
+    +------------------------------------
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\errors.py", line 165, in __call__
+    await self.app(scope, receive, _send)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\base.py", line 181, in __call__
+    recv_stream.close()
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\contextlib.py", line 135, in __exit__
+    self.gen.throw(type, value, traceback)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\_utils.py", line 82, in collapse_excgroups
+    raise exc
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\base.py", line 178, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\nicegui\middlewares.py", line 10, in dispatch
+    response = await call_next(request)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\base.py", line 156, in call_next
+    raise app_exc
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\base.py", line 141, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\gzip.py", line 29, in __call__
+    await responder(scope, receive, send)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\gzip.py", line 126, in __call__
+    await super().__call__(scope, receive, send)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\gzip.py", line 46, in __call__
+    await self.app(scope, receive, self.send_with_compression)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\routing.py", line 714, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\routing.py", line 734, in app
+    await route.handle(scope, receive, send)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\routing.py", line 288, in handle
+    await self.app(scope, receive, send)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\routing.py", line 76, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\routing.py", line 73, in app
+    response = await f(request)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\fastapi\routing.py", line 301, in app
+    raw_response = await run_endpoint_function(
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    return await dependant.call(**values)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\nicegui\page.py", line 120, in decorated
+    result = func(*dec_args, **dec_kwargs)
+  File "C:\Users\thibl\Downloads\bitcoin_scalper-main\app\main.py", line 91, in main
+    price_chart = PriceChart()
+  File "C:\Users\thibl\Downloads\bitcoin_scalper-main\app\ui\components.py", line 53, in __init__
+    self.zoom_slider = ui.slider(min=10, max=200, value=100, step=10, label='Zoom')
+TypeError: __init__() got an unexpected keyword argument 'label'
+2025-05-17 14:28:33,290 - nicegui - ERROR - __init__() got an unexpected keyword argument 'label'
+  + Exception Group Traceback (most recent call last):
+  |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\_utils.py", line 76, in collapse_excgroups
+  |     yield
+  |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\base.py", line 181, in __call__
+  |     recv_stream.close()
+  |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\anyio\_backends\_asyncio.py", line 772, in __aexit__
+  |     raise BaseExceptionGroup(
+  | exceptiongroup.ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)
+  +-+---------------- 1 ----------------
+    | Traceback (most recent call last):
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\errors.py", line 165, in __call__
+    |     await self.app(scope, receive, _send)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\base.py", line 181, in __call__
+    |     recv_stream.close()
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\contextlib.py", line 135, in __exit__
+    |     self.gen.throw(type, value, traceback)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\_utils.py", line 82, in collapse_excgroups
+    |     raise exc
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\base.py", line 178, in __call__
+    |     response = await self.dispatch_func(request, call_next)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\nicegui\middlewares.py", line 10, in dispatch
+    |     response = await call_next(request)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\base.py", line 156, in call_next
+    |     raise app_exc
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\base.py", line 141, in coro
+    |     await self.app(scope, receive_or_disconnect, send_no_error)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\gzip.py", line 29, in __call__
+    |     await responder(scope, receive, send)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\gzip.py", line 126, in __call__
+    |     await super().__call__(scope, receive, send)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\gzip.py", line 46, in __call__
+    |     await self.app(scope, receive, self.send_with_compression)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
+    |     await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    |     raise exc
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    |     await app(scope, receive, sender)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\routing.py", line 714, in __call__
+    |     await self.middleware_stack(scope, receive, send)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\routing.py", line 734, in app
+    |     await route.handle(scope, receive, send)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\routing.py", line 288, in handle
+    |     await self.app(scope, receive, send)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\routing.py", line 76, in app
+    |     await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    |     raise exc
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    |     await app(scope, receive, sender)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\routing.py", line 73, in app
+    |     response = await f(request)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\fastapi\routing.py", line 301, in app
+    |     raw_response = await run_endpoint_function(
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    |     return await dependant.call(**values)
+    |   File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\nicegui\page.py", line 120, in decorated
+    |     result = func(*dec_args, **dec_kwargs)
+    |   File "C:\Users\thibl\Downloads\bitcoin_scalper-main\app\main.py", line 91, in main
+    |     price_chart = PriceChart()
+    |   File "C:\Users\thibl\Downloads\bitcoin_scalper-main\app\ui\components.py", line 53, in __init__
+    |     self.zoom_slider = ui.slider(min=10, max=200, value=100, step=10, label='Zoom')
+    | TypeError: __init__() got an unexpected keyword argument 'label'
+    +------------------------------------
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\errors.py", line 165, in __call__
+    await self.app(scope, receive, _send)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\base.py", line 181, in __call__
+    recv_stream.close()
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\contextlib.py", line 135, in __exit__
+    self.gen.throw(type, value, traceback)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\_utils.py", line 82, in collapse_excgroups
+    raise exc
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\base.py", line 178, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\nicegui\middlewares.py", line 10, in dispatch
+    response = await call_next(request)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\base.py", line 156, in call_next
+    raise app_exc
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\base.py", line 141, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\gzip.py", line 29, in __call__
+    await responder(scope, receive, send)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\gzip.py", line 126, in __call__
+    await super().__call__(scope, receive, send)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\gzip.py", line 46, in __call__
+    await self.app(scope, receive, self.send_with_compression)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\routing.py", line 714, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\routing.py", line 734, in app
+    await route.handle(scope, receive, send)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\routing.py", line 288, in handle
+    await self.app(scope, receive, send)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\routing.py", line 76, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\starlette\routing.py", line 73, in app
+    response = await f(request)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\fastapi\routing.py", line 301, in app
+    raw_response = await run_endpoint_function(
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    return await dependant.call(**values)
+  File "C:\Users\thibl\AppData\Local\Programs\Python\Python39\lib\site-packages\nicegui\page.py", line 120, in decorated
+    result = func(*dec_args, **dec_kwargs)
+  File "C:\Users\thibl\Downloads\bitcoin_scalper-main\app\main.py", line 91, in main
+    price_chart = PriceChart()
+  File "C:\Users\thibl\Downloads\bitcoin_scalper-main\app\ui\components.py", line 53, in __init__
+    self.zoom_slider = ui.slider(min=10, max=200, value=100, step=10, label='Zoom')
+TypeError: __init__() got an unexpected keyword argument 'label'
