@@ -1,3 +1,0 @@
-analysis
-backtest
-bitcoin_scalper
