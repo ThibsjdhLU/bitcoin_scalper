@@ -6,6 +6,7 @@ def apply_css():
     <style>
     .main {
         background-color: #0E1117;
+        color: white;  /* Texte en blanc pour le contraste */
     }
     .header-container {
         background-color: #1E1E1E;
