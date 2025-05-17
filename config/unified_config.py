@@ -48,7 +48,9 @@ class UnifiedConfig:
                     "server": "Ava-Demo 1-MT5",
                     "login": "101490774",
                     "password": "MatLB356&",
-                    "symbols": ["BTCUSD"],
+                    "symbols": [
+                        "BTCUSD"
+                    ],
                     "timeframe": "M5",
                     "initial_balance": 1000,
                     "leverage": 10,
@@ -77,7 +79,7 @@ class UnifiedConfig:
                         "max_daily_trades": 15
                     },
                     "ETHUSD": {
-                        "max_position_size": 0.20,
+                        "max_position_size": 0.2,
                         "min_position_size": 0.02,
                         "max_daily_trades": 12
                     },
@@ -141,8 +143,8 @@ class UnifiedConfig:
                     }
                 },
                 "trade_amount": 100.0,
-                "stop_loss": 2.0,
-                "take_profit": 4.0,
+                "stop_loss": 1.0,
+                "take_profit": 2.0,
                 "demo_mode": False,
                 "initial_capital": 10000.0,
                 "risk_per_trade": 1.0,
@@ -151,14 +153,25 @@ class UnifiedConfig:
                 "time_frame": "15m",
                 "max_trades": 3,
                 "leverage": 1.0,
-                "symbols": ["BTCUSD", "ETHUSD", "XRPUSD"],
+                "symbols": [
+                    "BTCUSD",
+                    "ETHUSD",
+                    "XRPUSD"
+                ],
                 "default_symbol": "BTCUSD",
                 "risk_percent": 1.0,
                 "volume_min": 0.01,
                 "volume_max": 1.0,
                 "max_daily_trades": 5,
                 "max_daily_loss": 5.0,
-                "timeframes": ["1m", "5m", "15m", "1h", "4h", "1d"]
+                "timeframes": [
+                    "1m",
+                    "5m",
+                    "15m",
+                    "1h",
+                    "4h",
+                    "1d"
+                ]
             },
             "logging": {
                 "level": "INFO",
@@ -169,26 +182,35 @@ class UnifiedConfig:
                     "version": 1,
                     "disable_existing_loggers": False,
                     "formatters": {
-                        "standard": {"format": "%(asctime)s [%(levelname)s] %(name)s: %(message)s"},
+                        "standard": {
+                            "format": "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+                        }
                     },
                     "handlers": {
                         "console": {
                             "class": "logging.StreamHandler",
                             "level": "INFO",
                             "formatter": "standard",
-                            "stream": "ext://sys.stdout",
+                            "stream": "ext://sys.stdout"
                         },
                         "file": {
                             "class": "logging.FileHandler",
                             "level": "DEBUG",
                             "formatter": "standard",
                             "filename": "bitcoin_scalper.log",
-                            "mode": "a",
-                        },
+                            "mode": "a"
+                        }
                     },
                     "loggers": {
-                        "": {"handlers": ["console", "file"], "level": "INFO", "propagate": True}
-                    },
+                        "": {
+                            "handlers": [
+                                "console",
+                                "file"
+                            ],
+                            "level": "INFO",
+                            "propagate": True
+                        }
+                    }
                 }
             },
             "backtest": {
@@ -197,8 +219,19 @@ class UnifiedConfig:
                 "initial_capital": 10000.0,
                 "commission": 0.1,
                 "data": {
-                    "timeframes": ["1m", "5m", "15m", "1h", "4h", "1d"],
-                    "symbols": ["BTCUSD", "ETHUSD", "BNBUSD"],
+                    "timeframes": [
+                        "1m",
+                        "5m",
+                        "15m",
+                        "1h",
+                        "4h",
+                        "1d"
+                    ],
+                    "symbols": [
+                        "BTCUSD",
+                        "ETHUSD",
+                        "BNBUSD"
+                    ],
                     "start_date": "2023-01-01",
                     "end_date": "2023-12-31"
                 },
@@ -219,8 +252,8 @@ class UnifiedConfig:
                 }
             },
             "optimization": {
-                "enabled": False,
-                "interval_hours": 24,
+                "enabled": True,
+                "interval_hours": 1,
                 "methods": [
                     "grid_search",
                     "random_search",
@@ -236,15 +269,45 @@ class UnifiedConfig:
                     "enabled": True,
                     "param_grid": {
                         "ema_crossover": {
-                            "fast_period": [5, 9, 12, 15],
-                            "slow_period": [20, 26, 30, 35],
-                            "min_crossover_strength": [0.0001, 0.0005, 0.001]
+                            "fast_period": [
+                                5,
+                                9,
+                                12,
+                                15
+                            ],
+                            "slow_period": [
+                                20,
+                                26,
+                                30,
+                                35
+                            ],
+                            "min_crossover_strength": [
+                                0.0001,
+                                0.0005,
+                                0.001
+                            ]
                         },
                         "rsi": {
-                            "rsi_period": [9, 14, 21],
-                            "oversold_threshold": [20, 25, 30],
-                            "overbought_threshold": [70, 75, 80],
-                            "trend_ema_period": [100, 200, 300]
+                            "rsi_period": [
+                                9,
+                                14,
+                                21
+                            ],
+                            "oversold_threshold": [
+                                20,
+                                25,
+                                30
+                            ],
+                            "overbought_threshold": [
+                                70,
+                                75,
+                                80
+                            ],
+                            "trend_ema_period": [
+                                100,
+                                200,
+                                300
+                            ]
                         }
                     }
                 },
@@ -253,15 +316,36 @@ class UnifiedConfig:
                     "n_iter": 100,
                     "param_ranges": {
                         "ema_crossover": {
-                            "fast_period": [5, 20],
-                            "slow_period": [20, 50],
-                            "min_crossover_strength": [0.0001, 0.01]
+                            "fast_period": [
+                                5,
+                                20
+                            ],
+                            "slow_period": [
+                                20,
+                                50
+                            ],
+                            "min_crossover_strength": [
+                                0.0001,
+                                0.01
+                            ]
                         },
                         "rsi": {
-                            "rsi_period": [5, 30],
-                            "oversold_threshold": [20, 40],
-                            "overbought_threshold": [60, 80],
-                            "trend_ema_period": [50, 500]
+                            "rsi_period": [
+                                5,
+                                30
+                            ],
+                            "oversold_threshold": [
+                                20,
+                                40
+                            ],
+                            "overbought_threshold": [
+                                60,
+                                80
+                            ],
+                            "trend_ema_period": [
+                                50,
+                                500
+                            ]
                         }
                     }
                 },
@@ -319,11 +403,29 @@ class UnifiedConfig:
                     }
                 },
                 "features": {
-                    "price": ["returns", "log_returns"],
-                    "moving_averages": [5, 10, 20, 50],
-                    "volatility": [5, 10, 20],
-                    "volume": [5, 20],
-                    "momentum": ["rsi", "macd"]
+                    "price": [
+                        "returns",
+                        "log_returns"
+                    ],
+                    "moving_averages": [
+                        5,
+                        10,
+                        20,
+                        50
+                    ],
+                    "volatility": [
+                        5,
+                        10,
+                        20
+                    ],
+                    "volume": [
+                        5,
+                        20
+                    ],
+                    "momentum": [
+                        "rsi",
+                        "macd"
+                    ]
                 },
                 "prediction": {
                     "feature_window": 20,
@@ -372,7 +474,7 @@ class UnifiedConfig:
                 "server": "Ava-Demo 1-MT5"
             },
             "interface": {
-                "refresh_interval": 60,
+                "refresh_interval": 15,
                 "theme": "dark",
                 "chart_height": 600,
                 "log_level": "info",

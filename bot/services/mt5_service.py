@@ -16,7 +16,7 @@ from threading import Lock
 import time
 import threading
 
-from unified_config import config
+from config.unified_config import config
 
 logger = logging.getLogger(__name__)
 

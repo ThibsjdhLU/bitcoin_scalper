@@ -20,9 +20,12 @@ from streamlit.runtime.scriptrunner import add_script_run_ctx, get_script_run_ct
 import MetaTrader5 as mt5
 import queue
 import traceback
+PROJECT_ROOT = Path(__file__).parent.parent
+sys.path.append(str(PROJECT_ROOT))
 
-# Ajouter en haut de app.py
-from config.unified_config import UnifiedConfig
+from config.unified_config import config  # Modifiez l'importation pour utiliser le package
+
+
 
 from bot.services import DashboardService
 from ui.style import apply_css
