@@ -1,0 +1,62 @@
+{
+    "risk": {
+        "max_position_size": 0.20,
+        "max_daily_trades": 20,
+        "max_daily_loss": 0.05,
+        "max_drawdown": 0.15,
+        "risk_per_trade": 0.02
+    },
+    "general": {
+        "initial_capital": 10000.0,
+        "min_position_size": 0.01,
+        "max_open_positions": 5,
+        "max_correlation": 0.7
+    },
+    "strategies": {
+        "ema_crossover": {
+            "max_daily_trades": 10,
+            "max_daily_loss": 0.03,
+            "max_daily_profit": 0.06,
+            "max_position_size": 0.15,
+            "min_position_size": 0.01
+        },
+        "rsi": {
+            "max_daily_trades": 8,
+            "max_daily_loss": 0.02,
+            "max_daily_profit": 0.04,
+            "max_position_size": 0.10,
+            "min_position_size": 0.01
+        },
+        "macd": {
+            "max_daily_trades": 12,
+            "max_daily_loss": 0.04,
+            "max_daily_profit": 0.08,
+            "max_position_size": 0.18,
+            "min_position_size": 0.01
+        },
+        "bollinger_bands": {
+            "max_daily_trades": 15,
+            "max_daily_loss": 0.03,
+            "max_daily_profit": 0.07,
+            "max_position_size": 0.12,
+            "min_position_size": 0.01
+        }
+    },
+    "symbols": {
+        "BTCUSD": {
+            "max_position_size": 0.25,
+            "min_position_size": 0.02,
+            "max_daily_trades": 15
+        },
+        "ETHUSD": {
+            "max_position_size": 0.20,
+            "min_position_size": 0.02,
+            "max_daily_trades": 12
+        },
+        "BNBUSD": {
+            "max_position_size": 0.15,
+            "min_position_size": 0.01,
+            "max_daily_trades": 10
+        }
+    }
+} 

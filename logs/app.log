@@ -1,0 +1,346 @@
+2025-05-09 10:36:12,632 - exchange.avatrader_mt5 - ERROR - Échec de l'authentification MT5
+2025-05-09 10:36:12,634 - services.mt5_service - ERROR - Erreur lors de la récupération des symboles: 'AvatraderMT5' object has no attribute 'get_available_symbols'
+2025-05-09 10:36:13,313 - services.dashboard_service - INFO - Données rafraîchies avec succès
+2025-05-09 10:39:36,834 - exchange.avatrader_mt5 - ERROR - Échec de l'authentification MT5
+2025-05-09 10:39:37,970 - services.dashboard_service - INFO - Données rafraîchies avec succès
+2025-05-09 10:39:50,998 - services.dashboard_service - INFO - Bot démarré
+2025-05-09 10:40:53,847 - services.dashboard_service - INFO - Données rafraîchies avec succès
+2025-05-09 10:46:45,970 - exchange.avatrader_mt5 - ERROR - Échec de l'authentification MT5
+2025-05-09 10:46:46,467 - services.dashboard_service - INFO - Données rafraîchies avec succès
+2025-05-09 10:46:54,775 - services.dashboard_service - INFO - Données rafraîchies avec succès
+2025-05-09 10:46:57,516 - services.dashboard_service - INFO - Bot démarré
+2025-05-09 10:49:08,061 - services.mt5_service - INFO - Mode démo désactivé
+2025-05-09 10:49:08,209 - exchange.avatrader_mt5 - ERROR - Échec de l'authentification MT5
+2025-05-09 10:49:08,237 - services.dashboard_service - INFO - Données rafraîchies avec succès
+2025-05-09 10:49:08,434 - exchange.avatrader_mt5 - ERROR - Échec de l'authentification MT5
+2025-05-09 10:49:08,448 - root - ERROR - Non connecté à MT5, impossible de récupérer les symboles
+2025-05-09 10:49:09,254 - services.dashboard_service - INFO - Données rafraîchies avec succès
+2025-05-09 10:49:16,504 - services.dashboard_service - INFO - Données rafraîchies avec succès
+2025-05-09 10:49:19,678 - services.dashboard_service - INFO - Bot démarré
+2025-05-09 10:51:39,719 - services.mt5_service - INFO - Mode démo désactivé
+2025-05-09 10:51:39,808 - exchange.avatrader_mt5 - ERROR - Échec de l'authentification MT5
+2025-05-09 10:51:39,825 - services.dashboard_service - INFO - Données rafraîchies avec succès
+2025-05-09 10:51:40,025 - exchange.avatrader_mt5 - ERROR - Échec de l'authentification MT5
+2025-05-09 10:51:40,026 - root - ERROR - Non connecté à MT5, impossible de récupérer les symboles
+2025-05-09 10:51:40,069 - services.mt5_service - INFO - Mode démo désactivé
+2025-05-09 10:51:40,082 - services.dashboard_service - INFO - Données rafraîchies avec succès
+2025-05-09 10:51:41,073 - services.dashboard_service - INFO - Données rafraîchies avec succès
+2025-05-09 10:58:17,574 - services.mt5_service - ERROR - Erreur lors du chargement de la configuration: [Errno 2] No such file or directory: 'config\\config.json'
+2025-05-09 10:58:17,823 - services.mt5_service - INFO - Mode démo désactivé
+2025-05-09 10:58:17,845 - exchange.avatrader_mt5 - ERROR - Échec de l'authentification MT5
+2025-05-09 10:58:17,847 - services.dashboard_service - INFO - Données rafraîchies avec succès
+2025-05-09 10:58:17,887 - exchange.avatrader_mt5 - ERROR - Échec de l'authentification MT5
+2025-05-09 10:58:17,887 - root - ERROR - Non connecté à MT5, impossible de récupérer les symboles
+2025-05-09 10:58:18,445 - services.dashboard_service - INFO - Données rafraîchies avec succès
+2025-05-09 10:59:14,316 - services.mt5_service - INFO - Configuration chargée avec succès
+2025-05-09 10:59:14,701 - services.mt5_service - INFO - Mode démo désactivé
+2025-05-09 10:59:14,706 - UnifiedConfig - INFO - Configuration sauvegardée dans config\unified_config.json
+2025-05-09 10:59:14,738 - exchange.avatrader_mt5 - ERROR - Échec de l'authentification MT5
+2025-05-09 10:59:14,742 - services.dashboard_service - INFO - Données rafraîchies avec succès
+2025-05-09 10:59:14,771 - exchange.avatrader_mt5 - ERROR - Échec de l'authentification MT5
+2025-05-09 10:59:14,788 - root - ERROR - Non connecté à MT5, impossible de récupérer les symboles
+2025-05-09 10:59:15,541 - services.dashboard_service - INFO - Données rafraîchies avec succès
+2025-05-09 10:59:31,013 - services.mt5_service - INFO - Configuration chargée avec succès
+2025-05-09 10:59:31,417 - services.mt5_service - INFO - Mode démo désactivé
+2025-05-09 10:59:31,425 - UnifiedConfig - INFO - Configuration sauvegardée dans config\unified_config.json
+2025-05-09 10:59:31,484 - exchange.avatrader_mt5 - ERROR - Échec de l'authentification MT5
+2025-05-09 10:59:31,515 - services.dashboard_service - INFO - Données rafraîchies avec succès
+2025-05-09 10:59:31,639 - exchange.avatrader_mt5 - ERROR - Échec de l'authentification MT5
+2025-05-09 10:59:31,640 - root - ERROR - Non connecté à MT5, impossible de récupérer les symboles
+2025-05-09 10:59:32,763 - services.dashboard_service - INFO - Données rafraîchies avec succès
+2025-05-09 10:59:33,605 - services.mt5_service - INFO - Mode démo activé
+2025-05-09 10:59:33,608 - UnifiedConfig - INFO - Configuration sauvegardée dans config\unified_config.json
+2025-05-09 10:59:36,753 - services.mt5_service - INFO - Mode démo désactivé
+2025-05-09 10:59:36,764 - UnifiedConfig - INFO - Configuration sauvegardée dans config\unified_config.json
+2025-05-09 10:59:36,768 - services.dashboard_service - INFO - Données rafraîchies avec succès
+2025-05-09 10:59:41,248 - services.dashboard_service - INFO - Bot démarré
+2025-05-09 10:59:45,996 - services.dashboard_service - INFO - Données rafraîchies avec succès
+2025-05-09 10:59:46,831 - services.dashboard_service - INFO - Données rafraîchies avec succès
+2025-05-09 11:02:13,201 - services.mt5_service - INFO - Configuration chargée avec succès
+2025-05-09 11:02:13,599 - services.mt5_service - INFO - Mode démo désactivé
+2025-05-09 11:02:13,604 - UnifiedConfig - INFO - Configuration sauvegardée dans config\unified_config.json
+2025-05-09 11:02:13,630 - exchange.avatrader_mt5 - ERROR - Échec de l'authentification MT5
+2025-05-09 11:02:13,637 - services.dashboard_service - INFO - Données rafraîchies avec succès
+2025-05-09 11:02:13,697 - exchange.avatrader_mt5 - ERROR - Échec de l'authentification MT5
+2025-05-09 11:02:13,698 - root - ERROR - Non connecté à MT5, impossible de récupérer les symboles
+2025-05-09 11:02:14,386 - services.dashboard_service - INFO - Données rafraîchies avec succès
+2025-05-09 11:02:21,451 - services.dashboard_service - INFO - Bot démarré
+2025-05-09 11:02:22,982 - services.dashboard_service - INFO - Données rafraîchies avec succès
+2025-05-09 11:02:29,949 - services.dashboard_service - INFO - Données rafraîchies avec succès
+2025-05-09 11:02:43,032 - services.dashboard_service - INFO - Données rafraîchies avec succès
+2025-05-09 11:02:48,590 - services.dashboard_service - INFO - Données rafraîchies avec succès
+2025-05-09 11:02:51,653 - services.dashboard_service - INFO - Paramètres de trading sauvegardés
+2025-05-09 11:12:47,843 - services.mt5_service - INFO - Configuration chargée avec succès
+2025-05-09 11:12:48,078 - services.mt5_service - INFO - Mode démo désactivé
+2025-05-09 11:12:48,082 - UnifiedConfig - INFO - Configuration sauvegardée dans config\unified_config.json
+2025-05-09 11:12:48,093 - exchange.avatrader_mt5 - INFO - Initialisation de MT5...
+2025-05-09 11:12:48,095 - exchange.avatrader_mt5 - ERROR - Échec de l'authentification MT5: Code (-2, 'Invalid "login" argument')
+2025-05-09 11:12:48,095 - exchange.avatrader_mt5 - ERROR - Erreur de connexion à MT5: code (-2, 'Invalid "login" argument')
+2025-05-09 11:12:48,096 - services.mt5_service - ERROR - Échec de la connexion à MT5: AvatraderMT5 n'a pas pu se connecter
+2025-05-09 11:12:48,098 - exchange.avatrader_mt5 - INFO - Initialisation de MT5...
+2025-05-09 11:12:48,099 - exchange.avatrader_mt5 - ERROR - Échec de l'authentification MT5: Code (-2, 'Invalid "login" argument')
+2025-05-09 11:12:48,100 - exchange.avatrader_mt5 - ERROR - Erreur de connexion à MT5: code (-2, 'Invalid "login" argument')
+2025-05-09 11:12:48,101 - exchange.avatrader_mt5 - INFO - Initialisation de MT5...
+2025-05-09 11:12:48,102 - exchange.avatrader_mt5 - ERROR - Échec de l'authentification MT5: Code (-2, 'Invalid "login" argument')
+2025-05-09 11:12:48,102 - exchange.avatrader_mt5 - ERROR - Erreur de connexion à MT5: code (-2, 'Invalid "login" argument')
+2025-05-09 11:12:48,102 - exchange.avatrader_mt5 - INFO - Initialisation de MT5...
+2025-05-09 11:12:48,103 - exchange.avatrader_mt5 - ERROR - Échec de l'authentification MT5: Code (-2, 'Invalid "login" argument')
+2025-05-09 11:12:48,103 - exchange.avatrader_mt5 - ERROR - Erreur de connexion à MT5: code (-2, 'Invalid "login" argument')
+2025-05-09 11:12:48,104 - services.dashboard_service - INFO - Données rafraîchies avec succès
+2025-05-09 11:12:48,130 - exchange.avatrader_mt5 - INFO - Initialisation de MT5...
+2025-05-09 11:12:48,131 - exchange.avatrader_mt5 - ERROR - Échec de l'authentification MT5: Code (-2, 'Invalid "login" argument')
+2025-05-09 11:12:48,131 - exchange.avatrader_mt5 - ERROR - Erreur de connexion à MT5: code (-2, 'Invalid "login" argument')
+2025-05-09 11:12:48,132 - root - ERROR - Non connecté à MT5, impossible de récupérer les symboles
+2025-05-09 11:12:48,751 - exchange.avatrader_mt5 - INFO - Initialisation de MT5...
+2025-05-09 11:12:48,752 - exchange.avatrader_mt5 - ERROR - Échec de l'authentification MT5: Code (-2, 'Invalid "login" argument')
+2025-05-09 11:12:48,753 - exchange.avatrader_mt5 - ERROR - Erreur de connexion à MT5: code (-2, 'Invalid "login" argument')
+2025-05-09 11:12:48,754 - exchange.avatrader_mt5 - INFO - Initialisation de MT5...
+2025-05-09 11:12:48,756 - exchange.avatrader_mt5 - ERROR - Échec de l'authentification MT5: Code (-2, 'Invalid "login" argument')
+2025-05-09 11:12:48,757 - exchange.avatrader_mt5 - ERROR - Erreur de connexion à MT5: code (-2, 'Invalid "login" argument')
+2025-05-09 11:12:48,757 - exchange.avatrader_mt5 - INFO - Initialisation de MT5...
+2025-05-09 11:12:48,758 - exchange.avatrader_mt5 - ERROR - Échec de l'authentification MT5: Code (-2, 'Invalid "login" argument')
+2025-05-09 11:12:48,758 - exchange.avatrader_mt5 - ERROR - Erreur de connexion à MT5: code (-2, 'Invalid "login" argument')
+2025-05-09 11:12:48,758 - services.dashboard_service - INFO - Données rafraîchies avec succès
+2025-05-09 11:12:57,820 - services.dashboard_service - INFO - Bot démarré
+2025-05-09 11:14:44,832 - services.mt5_service - INFO - Configuration chargée avec succès
+2025-05-09 11:14:45,098 - services.mt5_service - INFO - Mode démo désactivé
+2025-05-09 11:14:45,106 - UnifiedConfig - INFO - Configuration sauvegardée dans config\unified_config.json
+2025-05-09 11:14:45,168 - exchange.avatrader_mt5 - INFO - Initialisation de MT5...
+2025-05-09 11:14:45,185 - exchange.avatrader_mt5 - INFO - Connexion MT5 établie au serveur Ava-Demo 1-MT5
+2025-05-09 11:14:45,195 - exchange.avatrader_mt5 - INFO - Version MT5: (500, 4885, '28 Feb 2025')
+2025-05-09 11:14:45,240 - exchange.avatrader_mt5 - INFO - Compte: 101490774, Nom: 17307552
+2025-05-09 11:14:45,262 - exchange.avatrader_mt5 - INFO - Solde: 9797.2, Equity: 9797.2
+2025-05-09 11:14:45,301 - services.dashboard_service - INFO - Données rafraîchies avec succès
+2025-05-09 11:14:46,237 - services.dashboard_service - INFO - Données rafraîchies avec succès
+2025-05-09 11:14:50,979 - services.dashboard_service - INFO - Bot démarré
+2025-05-09 11:14:52,807 - services.dashboard_service - INFO - Données rafraîchies avec succès
+2025-05-09 11:16:06,474 - services.dashboard_service - INFO - Données rafraîchies avec succès
+2025-05-09 11:17:08,320 - services.mt5_service - INFO - Configuration chargée avec succès
+2025-05-09 11:17:08,537 - services.mt5_service - INFO - Mode démo désactivé
+2025-05-09 11:17:08,543 - UnifiedConfig - INFO - Configuration sauvegardée dans config\unified_config.json
+2025-05-09 11:17:08,551 - exchange.avatrader_mt5 - INFO - Initialisation de MT5...
+2025-05-09 11:17:08,556 - exchange.avatrader_mt5 - INFO - Connexion MT5 établie au serveur Ava-Demo 1-MT5
+2025-05-09 11:17:08,557 - exchange.avatrader_mt5 - INFO - Version MT5: (500, 4885, '28 Feb 2025')
+2025-05-09 11:17:08,557 - exchange.avatrader_mt5 - INFO - Compte: 101490774, Nom: 17307552
+2025-05-09 11:17:08,557 - exchange.avatrader_mt5 - INFO - Solde: 9797.2, Equity: 9797.2
+2025-05-09 11:17:08,564 - services.dashboard_service - INFO - Données rafraîchies avec succès
+2025-05-09 11:17:09,129 - services.dashboard_service - INFO - Données rafraîchies avec succès
+2025-05-09 11:17:12,228 - services.dashboard_service - INFO - Bot démarré
+2025-05-09 11:18:29,918 - services.dashboard_service - INFO - Données rafraîchies avec succès
+2025-05-09 11:27:53,647 - services.mt5_service - INFO - Configuration chargée avec succès
+2025-05-09 11:27:53,647 - services.mt5_service - INFO - Configuration chargée avec succès
+2025-05-09 11:27:53,747 - services.mt5_service - INFO - Mode démo désactivé
+2025-05-09 11:27:53,752 - UnifiedConfig - INFO - Configuration sauvegardée dans config\unified_config.json
+2025-05-09 11:27:53,785 - exchange.avatrader_mt5 - INFO - Initialisation de MT5...
+2025-05-09 11:27:53,800 - exchange.avatrader_mt5 - INFO - Connexion MT5 établie au serveur Ava-Demo 1-MT5
+2025-05-09 11:27:53,819 - exchange.avatrader_mt5 - INFO - Version MT5: (500, 4885, '28 Feb 2025')
+2025-05-09 11:27:53,830 - exchange.avatrader_mt5 - INFO - Compte: 101490774, Nom: 17307552
+2025-05-09 11:27:53,830 - exchange.avatrader_mt5 - INFO - Solde: 9797.2, Equity: 9797.2
+2025-05-09 11:27:53,853 - services.dashboard_service - INFO - Données rafraîchies avec succès
+2025-05-09 11:27:54,512 - services.mt5_service - INFO - Mode démo désactivé
+2025-05-09 11:27:54,654 - UnifiedConfig - INFO - Configuration sauvegardée dans config\unified_config.json
+2025-05-09 11:27:54,693 - services.dashboard_service - INFO - Données rafraîchies avec succès
+2025-05-09 11:27:55,669 - services.dashboard_service - INFO - Données rafraîchies avec succès
+2025-05-09 11:28:17,955 - services.dashboard_service - INFO - Paramètres de trading sauvegardés
+2025-05-09 11:28:22,970 - services.dashboard_service - INFO - Données rafraîchies avec succès
+2025-05-09 11:28:26,727 - services.dashboard_service - INFO - Bot démarré
+2025-05-09 11:28:26,729 - services.dashboard_service - INFO - Stratégies activées: EMA Crossover, MACD, Bollinger Bands, RSI, Combinaison
+2025-05-09 11:28:26,730 - services.storage_service - ERROR - Erreur lors de la sauvegarde du log: 'charmap' codec can't encode character '\U0001f4c8' in position 18: character maps to <undefined>
+2025-05-09 11:28:26,813 - services.storage_service - ERROR - Erreur lors de la sauvegarde du log: 'charmap' codec can't encode character '\U0001f50d' in position 18: character maps to <undefined>
+2025-05-09 11:28:26,815 - services.storage_service - ERROR - Erreur lors de la sauvegarde du log: 'charmap' codec can't encode character '\U0001f4cf' in position 18: character maps to <undefined>
+2025-05-09 11:28:26,816 - services.storage_service - ERROR - Erreur lors de la sauvegarde du log: 'charmap' codec can't encode character '\U0001f4ca' in position 18: character maps to <undefined>
+2025-05-09 11:28:26,817 - services.storage_service - ERROR - Erreur lors de la sauvegarde du log: 'charmap' codec can't encode character '\U0001f504' in position 18: character maps to <undefined>
+2025-05-09 11:28:26,819 - services.dashboard_service - INFO - Capital initial: $10000.0
+2025-05-09 11:28:26,819 - services.dashboard_service - INFO - Risque par trade: 1.0%
+2025-05-09 11:28:26,819 - services.dashboard_service - INFO - Take Profit: 2.0%
+2025-05-09 11:28:26,821 - services.dashboard_service - INFO - Stop Loss: 1.0%
+2025-05-09 11:28:26,823 - services.dashboard_service - INFO - Prix actuel: $102444.00
+2025-05-09 11:28:26,825 - services.storage_service - ERROR - Erreur lors de la sauvegarde du log: 'charmap' codec can't encode character '\U0001f4c8' in position 18: character maps to <undefined>
+2025-05-09 11:28:26,832 - services.storage_service - ERROR - Erreur lors de la sauvegarde du log: 'charmap' codec can't encode character '\U0001f50d' in position 18: character maps to <undefined>
+2025-05-09 11:28:26,841 - services.storage_service - ERROR - Erreur lors de la sauvegarde du log: 'charmap' codec can't encode character '\U0001f4cf' in position 18: character maps to <undefined>
+2025-05-09 11:28:26,848 - services.storage_service - ERROR - Erreur lors de la sauvegarde du log: 'charmap' codec can't encode character '\U0001f4ca' in position 18: character maps to <undefined>
+2025-05-09 11:28:26,850 - services.storage_service - ERROR - Erreur lors de la sauvegarde du log: 'charmap' codec can't encode character '\U0001f504' in position 18: character maps to <undefined>
+2025-05-09 11:28:26,851 - services.storage_service - ERROR - Erreur lors de la sauvegarde du log: 'charmap' codec can't encode characters in position 18-19: character maps to <undefined>
+2025-05-09 11:31:17,757 - services.mt5_service - INFO - Configuration chargée avec succès
+2025-05-09 11:31:18,051 - services.mt5_service - INFO - Mode démo désactivé
+2025-05-09 11:31:18,059 - UnifiedConfig - INFO - Configuration sauvegardée dans config\unified_config.json
+2025-05-09 11:31:18,085 - exchange.avatrader_mt5 - INFO - Initialisation de MT5...
+2025-05-09 11:31:18,108 - exchange.avatrader_mt5 - INFO - Connexion MT5 établie au serveur Ava-Demo 1-MT5
+2025-05-09 11:31:18,115 - exchange.avatrader_mt5 - INFO - Version MT5: (500, 4885, '28 Feb 2025')
+2025-05-09 11:31:18,115 - services.mt5_service - INFO - Mode démo désactivé
+2025-05-09 11:31:18,116 - exchange.avatrader_mt5 - INFO - Compte: 101490774, Nom: 17307552
+2025-05-09 11:31:18,129 - UnifiedConfig - INFO - Configuration sauvegardée dans config\unified_config.json
+2025-05-09 11:31:18,131 - exchange.avatrader_mt5 - INFO - Solde: 9797.2, Equity: 9797.2
+2025-05-09 11:31:18,333 - exchange.avatrader_mt5 - INFO - Connexion MT5 établie au serveur Ava-Demo 1-MT5
+2025-05-09 11:31:18,344 - services.dashboard_service - INFO - Données rafraîchies avec succès
+2025-05-09 11:31:18,372 - exchange.avatrader_mt5 - INFO - Version MT5: (500, 4885, '28 Feb 2025')
+2025-05-09 11:31:18,437 - exchange.avatrader_mt5 - INFO - Compte: 101490774, Nom: 17307552
+2025-05-09 11:31:18,450 - exchange.avatrader_mt5 - INFO - Solde: 9797.2, Equity: 9797.2
+2025-05-09 11:31:18,607 - services.dashboard_service - INFO - Données rafraîchies avec succès
+2025-05-09 11:31:19,897 - services.dashboard_service - INFO - Données rafraîchies avec succès
+2025-05-09 11:31:19,897 - services.dashboard_service - INFO - Données rafraîchies avec succès
+2025-05-09 11:31:34,143 - services.dashboard_service - INFO - Données rafraîchies avec succès
+2025-05-09 11:31:42,511 - services.dashboard_service - INFO - Paramètres de trading sauvegardés
+2025-05-09 11:31:46,700 - services.dashboard_service - INFO - Données rafraîchies avec succès
+2025-05-09 11:31:49,182 - services.dashboard_service - INFO - Bot démarré
+2025-05-09 11:31:49,187 - services.dashboard_service - INFO - Stratégies activées: EMA Crossover, MACD, RSI, Bollinger Bands, Combinaison
+2025-05-09 11:31:49,189 - services.storage_service - ERROR - Erreur lors de la sauvegarde du log: 'charmap' codec can't encode character '\U0001f4c8' in position 18: character maps to <undefined>
+2025-05-09 11:31:49,200 - services.storage_service - ERROR - Erreur lors de la sauvegarde du log: 'charmap' codec can't encode character '\U0001f50d' in position 18: character maps to <undefined>
+2025-05-09 11:31:49,205 - services.storage_service - ERROR - Erreur lors de la sauvegarde du log: 'charmap' codec can't encode character '\U0001f4ca' in position 18: character maps to <undefined>
+2025-05-09 11:31:49,209 - services.storage_service - ERROR - Erreur lors de la sauvegarde du log: 'charmap' codec can't encode character '\U0001f4cf' in position 18: character maps to <undefined>
+2025-05-09 11:31:49,213 - services.storage_service - ERROR - Erreur lors de la sauvegarde du log: 'charmap' codec can't encode character '\U0001f504' in position 18: character maps to <undefined>
+2025-05-09 11:31:49,216 - services.dashboard_service - INFO - Capital initial: $10000.0
+2025-05-09 11:31:49,217 - services.dashboard_service - INFO - Risque par trade: 1.0%
+2025-05-09 11:31:49,217 - services.dashboard_service - INFO - Take Profit: 2.0%
+2025-05-09 11:31:49,218 - services.dashboard_service - INFO - Stop Loss: 1.0%
+2025-05-09 11:31:49,219 - services.dashboard_service - INFO - Prix actuel: $102551.41
+2025-05-09 11:31:49,222 - services.storage_service - ERROR - Erreur lors de la sauvegarde du log: 'charmap' codec can't encode character '\U0001f4c8' in position 18: character maps to <undefined>
+2025-05-09 11:31:49,224 - services.storage_service - ERROR - Erreur lors de la sauvegarde du log: 'charmap' codec can't encode character '\U0001f50d' in position 18: character maps to <undefined>
+2025-05-09 11:31:49,231 - services.storage_service - ERROR - Erreur lors de la sauvegarde du log: 'charmap' codec can't encode character '\U0001f4ca' in position 18: character maps to <undefined>
+2025-05-09 11:31:49,234 - services.storage_service - ERROR - Erreur lors de la sauvegarde du log: 'charmap' codec can't encode character '\U0001f4cf' in position 18: character maps to <undefined>
+2025-05-09 11:31:49,235 - services.storage_service - ERROR - Erreur lors de la sauvegarde du log: 'charmap' codec can't encode character '\U0001f504' in position 18: character maps to <undefined>
+2025-05-09 11:31:49,237 - services.storage_service - ERROR - Erreur lors de la sauvegarde du log: 'charmap' codec can't encode characters in position 18-19: character maps to <undefined>
+2025-05-09 11:32:02,458 - services.dashboard_service - INFO - Données rafraîchies avec succès
+2025-05-09 11:32:02,461 - services.dashboard_service - INFO - Analyse des signaux de trading en cours...
+2025-05-09 11:32:02,464 - services.dashboard_service - INFO - Prix actuel: $102586.94
+2025-05-09 11:32:02,470 - services.storage_service - ERROR - Erreur lors de la sauvegarde du log: 'charmap' codec can't encode character '\U0001f4c8' in position 18: character maps to <undefined>
+2025-05-09 11:32:02,481 - services.storage_service - ERROR - Erreur lors de la sauvegarde du log: 'charmap' codec can't encode character '\U0001f50d' in position 18: character maps to <undefined>
+2025-05-09 11:32:02,488 - services.storage_service - ERROR - Erreur lors de la sauvegarde du log: 'charmap' codec can't encode character '\U0001f4ca' in position 18: character maps to <undefined>
+2025-05-09 11:32:02,496 - services.storage_service - ERROR - Erreur lors de la sauvegarde du log: 'charmap' codec can't encode character '\U0001f4cf' in position 18: character maps to <undefined>
+2025-05-09 11:32:02,497 - services.storage_service - ERROR - Erreur lors de la sauvegarde du log: 'charmap' codec can't encode character '\U0001f504' in position 18: character maps to <undefined>
+2025-05-09 11:32:02,499 - services.storage_service - ERROR - Erreur lors de la sauvegarde du log: 'charmap' codec can't encode characters in position 18-19: character maps to <undefined>
+2025-05-09 11:33:10,936 - services.dashboard_service - INFO - Données rafraîchies avec succès
+2025-05-09 11:33:10,948 - services.dashboard_service - INFO - Analyse des signaux de trading en cours...
+2025-05-09 11:33:10,950 - services.dashboard_service - INFO - Prix actuel: $102714.19
+2025-05-09 11:33:10,955 - services.storage_service - ERROR - Erreur lors de la sauvegarde du log: 'charmap' codec can't encode character '\U0001f4c8' in position 18: character maps to <undefined>
+2025-05-09 11:33:10,969 - services.storage_service - ERROR - Erreur lors de la sauvegarde du log: 'charmap' codec can't encode character '\U0001f50d' in position 18: character maps to <undefined>
+2025-05-09 11:33:10,976 - services.storage_service - ERROR - Erreur lors de la sauvegarde du log: 'charmap' codec can't encode character '\U0001f4ca' in position 18: character maps to <undefined>
+2025-05-09 11:33:10,980 - services.storage_service - ERROR - Erreur lors de la sauvegarde du log: 'charmap' codec can't encode character '\U0001f4cf' in position 18: character maps to <undefined>
+2025-05-09 11:33:10,983 - services.storage_service - ERROR - Erreur lors de la sauvegarde du log: 'charmap' codec can't encode character '\U0001f504' in position 18: character maps to <undefined>
+2025-05-09 11:33:10,985 - services.storage_service - ERROR - Erreur lors de la sauvegarde du log: 'charmap' codec can't encode characters in position 18-19: character maps to <undefined>
+2025-05-09 11:35:57,605 - services.dashboard_service - INFO - Bot arrêté
+2025-05-09 11:35:57,666 - UnifiedConfig - INFO - Configuration chargée depuis config\unified_config.json
+2025-05-09 11:35:57,779 - services.mt5_service - INFO - Configuration chargée avec succès
+2025-05-09 11:35:57,839 - exchange.avatrader_mt5 - INFO - Connexion MT5 établie au serveur Ava-Demo 1-MT5
+2025-05-09 11:35:57,840 - exchange.avatrader_mt5 - INFO - Version MT5: (500, 4885, '28 Feb 2025')
+2025-05-09 11:35:57,841 - exchange.avatrader_mt5 - INFO - Compte: 101490774, Nom: 17307552
+2025-05-09 11:35:57,841 - exchange.avatrader_mt5 - INFO - Solde: 9797.2, Equity: 9797.2
+2025-05-09 11:35:57,861 - services.dashboard_service - INFO - Donnes rafrachies avec succs
+2025-05-09 11:36:01,886 - services.dashboard_service - INFO - Bot dmarr
+2025-05-09 11:36:01,887 - services.dashboard_service - INFO - Stratgies actives: EMA Crossover, MACD, RSI, Bollinger Bands, Combinaison
+2025-05-09 11:36:01,888 - services.dashboard_service - INFO -  EMA Crossover: Surveille le croisement de moyennes mobiles exponentielles
+2025-05-09 11:36:01,890 - services.dashboard_service - INFO -  MACD: Surveille les croisements et divergences
+2025-05-09 11:36:01,897 - services.dashboard_service - INFO -  RSI: Surveille les conditions de surachat/survente
+2025-05-09 11:36:01,898 - services.dashboard_service - INFO -  Bollinger Bands: Surveille les dpassements des bandes
+2025-05-09 11:36:01,899 - services.dashboard_service - INFO -  Combinaison: Utilise plusieurs indicateurs pour confirmer les signaux
+2025-05-09 11:36:01,900 - services.dashboard_service - INFO - Capital initial: $10000.0
+2025-05-09 11:36:01,901 - services.dashboard_service - INFO - Risque par trade: 1.0%
+2025-05-09 11:36:01,901 - services.dashboard_service - INFO - Take Profit: 2.0%
+2025-05-09 11:36:01,902 - services.dashboard_service - INFO - Stop Loss: 1.0%
+2025-05-09 11:36:01,904 - services.dashboard_service - INFO - Prix actuel: $102709.89
+2025-05-09 11:36:01,906 - services.dashboard_service - INFO -  EMA Crossover: Pas de signal clair (EMA9: 102665.36, EMA21: 102701.09)
+2025-05-09 11:36:01,916 - services.dashboard_service - INFO -  MACD: Pas de signal clair (MACD: -55.78, Signal: -74.72)
+2025-05-09 11:36:01,927 - services.dashboard_service - INFO -  RSI: Pas de signal clair (RSI: 45.37)
+2025-05-09 11:36:01,930 - services.dashboard_service - INFO -  Bollinger: Pas de signal clair (Prix entre les bandes)
+2025-05-09 11:36:01,932 - services.dashboard_service - INFO -  Combinaison: Pas de consensus entre les stratgies
+2025-05-09 11:36:01,933 - services.dashboard_service - INFO -  DCISION FINALE: CONSERVER (pas de signal clair)
+2025-05-09 11:38:08,679 - services.dashboard_service - INFO - Donnes rafrachies avec succs
+2025-05-09 11:38:08,685 - services.dashboard_service - INFO - Analyse des signaux de trading en cours...
+2025-05-09 11:38:08,689 - services.dashboard_service - INFO - Prix actuel: $102713.39
+2025-05-09 11:38:08,693 - services.dashboard_service - INFO -  EMA Crossover: Pas de signal clair (EMA9: 102682.95, EMA21: 102700.46)
+2025-05-09 11:38:08,696 - services.dashboard_service - INFO -  MACD: Pas de signal clair (MACD: -37.94, Signal: -59.84)
+2025-05-09 11:38:08,840 - services.dashboard_service - INFO -  RSI: Pas de signal clair (RSI: 47.17)
+2025-05-09 11:38:08,851 - services.dashboard_service - INFO -  Bollinger: Pas de signal clair (Prix entre les bandes)
+2025-05-09 11:38:08,859 - services.dashboard_service - INFO -  Combinaison: Pas de consensus entre les stratgies
+2025-05-09 11:38:08,860 - services.dashboard_service - INFO -  DCISION FINALE: CONSERVER (pas de signal clair)
+2025-05-09 11:38:11,266 - services.dashboard_service - INFO - Donnes rafrachies avec succs
+2025-05-09 11:38:11,275 - services.dashboard_service - INFO - Analyse des signaux de trading en cours...
+2025-05-09 11:38:11,277 - services.dashboard_service - INFO - Prix actuel: $102729.39
+2025-05-09 11:38:11,280 - services.dashboard_service - INFO -  EMA Crossover: Pas de signal clair (EMA9: 102686.15, EMA21: 102701.91)
+2025-05-09 11:38:11,287 - services.dashboard_service - INFO -  MACD: Pas de signal clair (MACD: -36.66, Signal: -59.58)
+2025-05-09 11:38:11,293 - services.dashboard_service - INFO -  RSI: Pas de signal clair (RSI: 47.85)
+2025-05-09 11:38:11,295 - services.dashboard_service - INFO -  Bollinger: Pas de signal clair (Prix entre les bandes)
+2025-05-09 11:38:11,298 - services.dashboard_service - INFO -  Combinaison: Pas de consensus entre les stratgies
+2025-05-09 11:38:11,300 - services.dashboard_service - INFO -  DCISION FINALE: CONSERVER (pas de signal clair)
+2025-05-09 11:38:49,502 - services.dashboard_service - INFO - Donnes rafrachies avec succs
+2025-05-09 11:38:49,543 - services.dashboard_service - INFO - Analyse des signaux de trading en cours...
+2025-05-09 11:38:49,547 - services.dashboard_service - INFO - Prix actuel: $102762.38
+2025-05-09 11:38:49,559 - services.dashboard_service - INFO -  EMA Crossover: Pas de signal clair (EMA9: 102692.75, EMA21: 102704.91)
+2025-05-09 11:38:49,574 - services.dashboard_service - INFO -  MACD: Pas de signal clair (MACD: -34.03, Signal: -59.06)
+2025-05-09 11:38:49,617 - services.dashboard_service - INFO -  RSI: Pas de signal clair (RSI: 49.36)
+2025-05-09 11:38:49,631 - services.dashboard_service - INFO -  Bollinger: Pas de signal clair (Prix entre les bandes)
+2025-05-09 11:38:49,637 - services.dashboard_service - INFO -  Combinaison: Pas de consensus entre les stratgies
+2025-05-09 11:38:49,639 - services.dashboard_service - INFO -  DCISION FINALE: CONSERVER (pas de signal clair)
+2025-05-09 11:38:56,052 - services.dashboard_service - INFO - Donnes rafrachies avec succs
+2025-05-09 11:38:56,053 - services.dashboard_service - INFO - Analyse des signaux de trading en cours...
+2025-05-09 11:38:56,054 - services.dashboard_service - INFO - Prix actuel: $102753.38
+2025-05-09 11:38:56,055 - services.dashboard_service - INFO -  EMA Crossover: Pas de signal clair (EMA9: 102690.95, EMA21: 102704.09)
+2025-05-09 11:38:56,057 - services.dashboard_service - INFO -  MACD: Pas de signal clair (MACD: -34.75, Signal: -59.20)
+2025-05-09 11:38:56,061 - services.dashboard_service - INFO -  RSI: Pas de signal clair (RSI: 48.95)
+2025-05-09 11:38:56,063 - services.dashboard_service - INFO -  Bollinger: Pas de signal clair (Prix entre les bandes)
+2025-05-09 11:38:56,064 - services.dashboard_service - INFO -  Combinaison: Pas de consensus entre les stratgies
+2025-05-09 11:38:56,064 - services.dashboard_service - INFO -  DCISION FINALE: CONSERVER (pas de signal clair)
+2025-05-09 11:40:12,594 - services.mt5_service - INFO - Configuration chargée avec succès
+2025-05-09 11:40:12,595 - services.mt5_service - INFO - Configuration chargée avec succès
+2025-05-09 11:40:12,626 - services.mt5_service - INFO - Mode démo désactivé
+2025-05-09 11:40:12,631 - UnifiedConfig - INFO - Configuration sauvegardée dans config\unified_config.json
+2025-05-09 11:40:12,648 - exchange.avatrader_mt5 - INFO - Initialisation de MT5...
+2025-05-09 11:40:12,665 - exchange.avatrader_mt5 - INFO - Connexion MT5 établie au serveur Ava-Demo 1-MT5
+2025-05-09 11:40:12,666 - exchange.avatrader_mt5 - INFO - Version MT5: (500, 4885, '28 Feb 2025')
+2025-05-09 11:40:12,666 - exchange.avatrader_mt5 - INFO - Compte: 101490774, Nom: 17307552
+2025-05-09 11:40:12,666 - exchange.avatrader_mt5 - INFO - Solde: 9797.2, Equity: 9797.2
+2025-05-09 11:40:12,685 - services.dashboard_service - INFO - Donnes rafrachies avec succs
+2025-05-09 11:40:14,045 - services.dashboard_service - INFO - Donnes rafrachies avec succs
+2025-05-09 11:40:24,759 - services.dashboard_service - INFO - Donnes rafrachies avec succs
+2025-05-09 11:40:30,968 - services.dashboard_service - INFO - Paramtres de trading sauvegards
+2025-05-09 11:40:34,806 - services.dashboard_service - INFO - Donnes rafrachies avec succs
+2025-05-09 11:40:37,266 - services.dashboard_service - INFO - Bot dmarr
+2025-05-09 11:40:37,267 - services.dashboard_service - INFO - Stratgies actives: EMA Crossover, RSI, MACD, Bollinger Bands, Combinaison
+2025-05-09 11:40:37,268 - services.dashboard_service - INFO -  EMA Crossover: Surveille le croisement de moyennes mobiles exponentielles
+2025-05-09 11:40:37,269 - services.dashboard_service - INFO -  RSI: Surveille les conditions de surachat/survente
+2025-05-09 11:40:37,269 - services.dashboard_service - INFO -  MACD: Surveille les croisements et divergences
+2025-05-09 11:40:37,270 - services.dashboard_service - INFO -  Bollinger Bands: Surveille les dpassements des bandes
+2025-05-09 11:40:37,271 - services.dashboard_service - INFO -  Combinaison: Utilise plusieurs indicateurs pour confirmer les signaux
+2025-05-09 11:40:37,271 - services.dashboard_service - INFO - Capital initial: $10000.0
+2025-05-09 11:40:37,275 - services.dashboard_service - INFO - Risque par trade: 1.0%
+2025-05-09 11:40:37,276 - services.dashboard_service - INFO - Take Profit: 2.0%
+2025-05-09 11:40:37,276 - services.dashboard_service - INFO - Stop Loss: 1.0%
+2025-05-09 11:40:37,278 - services.dashboard_service - INFO - Prix actuel: $102753.87
+2025-05-09 11:40:37,279 - services.dashboard_service - INFO -  EMA Crossover: Signal d'ACHAT dtect! EMA9 a crois EMA21 par le haut
+2025-05-09 11:40:37,283 - services.dashboard_service - INFO -  RSI: Pas de signal clair (RSI: 54.18)
+2025-05-09 11:40:37,284 - services.dashboard_service - INFO -  MACD: Pas de signal clair (MACD: -20.11, Signal: -46.16)
+2025-05-09 11:40:37,293 - services.dashboard_service - INFO -  Bollinger: Pas de signal clair (Prix entre les bandes)
+2025-05-09 11:40:37,294 - services.dashboard_service - INFO -  Combinaison: Pas de consensus entre les stratgies
+2025-05-09 11:40:37,296 - services.dashboard_service - INFO -  DCISION FINALE: CONSERVER (pas de signal clair)
+2025-05-09 11:41:01,994 - services.dashboard_service - INFO - Donnes rafrachies avec succs
+2025-05-09 11:41:02,006 - services.dashboard_service - INFO - Analyse des signaux de trading en cours...
+2025-05-09 11:41:02,011 - services.dashboard_service - INFO - Prix actuel: $102721.89
+2025-05-09 11:41:02,021 - services.dashboard_service - INFO -  EMA Crossover: Pas de signal clair (EMA9: 102707.17, EMA21: 102709.42)
+2025-05-09 11:41:02,035 - services.dashboard_service - INFO -  RSI: Pas de signal clair (RSI: 62.82)
+2025-05-09 11:41:02,040 - services.dashboard_service - INFO -  MACD: Pas de signal clair (MACD: -20.73, Signal: -41.77)
+2025-05-09 11:41:02,045 - services.dashboard_service - INFO -  Bollinger: Pas de signal clair (Prix entre les bandes)
+2025-05-09 11:41:02,046 - services.dashboard_service - INFO -  Combinaison: Pas de consensus entre les stratgies
+2025-05-09 11:41:02,047 - services.dashboard_service - INFO -  DCISION FINALE: CONSERVER (pas de signal clair)
+2025-05-09 11:43:17,087 - services.mt5_service - INFO - Configuration chargée avec succès
+2025-05-09 11:43:17,093 - services.mt5_service - INFO - Configuration chargée avec succès
+2025-05-09 11:43:17,136 - services.mt5_service - INFO - Mode démo désactivé
+2025-05-09 11:43:17,141 - UnifiedConfig - INFO - Configuration sauvegardée dans config\unified_config.json
+2025-05-09 11:43:17,154 - exchange.avatrader_mt5 - INFO - Initialisation de MT5...
+2025-05-09 11:43:17,173 - exchange.avatrader_mt5 - INFO - Connexion MT5 établie au serveur Ava-Demo 1-MT5
+2025-05-09 11:43:17,181 - exchange.avatrader_mt5 - INFO - Version MT5: (500, 4885, '28 Feb 2025')
+2025-05-09 11:43:17,181 - exchange.avatrader_mt5 - INFO - Compte: 101490774, Nom: 17307552
+2025-05-09 11:43:17,181 - exchange.avatrader_mt5 - INFO - Solde: 9797.2, Equity: 9797.2
+2025-05-09 11:43:17,197 - services.dashboard_service - INFO - Donnes rafrachies avec succs
+2025-05-09 11:43:17,813 - services.mt5_service - INFO - Mode démo désactivé
+2025-05-09 11:43:17,822 - UnifiedConfig - INFO - Configuration sauvegardée dans config\unified_config.json
+2025-05-09 11:43:17,835 - services.dashboard_service - INFO - Donnes rafrachies avec succs
+2025-05-09 11:44:03,853 - services.mt5_service - INFO - Configuration chargée avec succès
+2025-05-09 11:44:04,274 - services.mt5_service - INFO - Mode démo désactivé
+2025-05-09 11:44:04,280 - UnifiedConfig - INFO - Configuration sauvegardée dans config\unified_config.json
+2025-05-09 11:44:04,290 - exchange.avatrader_mt5 - INFO - Initialisation de MT5...
+2025-05-09 11:44:04,293 - exchange.avatrader_mt5 - INFO - Connexion MT5 établie au serveur Ava-Demo 1-MT5
+2025-05-09 11:44:04,294 - exchange.avatrader_mt5 - INFO - Version MT5: (500, 4885, '28 Feb 2025')
+2025-05-09 11:44:04,295 - exchange.avatrader_mt5 - INFO - Compte: 101490774, Nom: 17307552
+2025-05-09 11:44:04,295 - exchange.avatrader_mt5 - INFO - Solde: 9797.2, Equity: 9797.2
+2025-05-09 11:44:04,315 - services.dashboard_service - INFO - Donnes rafrachies avec succs
+2025-05-09 11:44:05,154 - services.dashboard_service - INFO - Donnes rafrachies avec succs

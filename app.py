@@ -19,9 +19,10 @@ import warnings
 from streamlit.runtime.scriptrunner import add_script_run_ctx, get_script_run_ctx
 import MetaTrader5 as mt5
 import queue
+import traceback
 
 # Ajouter en haut de app.py
-from config.unified_config import config  # Import manquant
+from unified_config import config
 
 from src.bitcoin_scalper.services import DashboardService
 
@@ -61,10 +62,6 @@ except Exception as e:
 # Ensure the login is an integer
 os.environ['MT5_LOGIN'] = '101490774' # Replace with your actual login ID
 logger.info("Variables d'environnement configurées")
-
-# At the beginning of app.py, add:
-if not hasattr(st, 'experimental_rerun'):
-    st.experimental_rerun = st.rerun
 
 class RefreshManager:
     def __init__(self):
@@ -127,24 +124,22 @@ class RefreshManager:
     def _refresh_loop(self):
         while not self._stop_event.is_set():
             try:
-                if not get_script_run_ctx():
-                    break
-                    
-                if not self._data_loaded:
-                    logger.info("Chargement initial des données...")
-                    dashboard_service.update_data()
-                    self._data_loaded = True
-                else:
-                    logger.debug("Rafraîchissement des données...")
-                    dashboard_service.update_data()
-                self._last_refresh = time.time()
+                ctx = get_script_run_ctx()
+                if not ctx:
+                    self._create_new_context()  # Nouvelle méthode critique
+                
+                # Déplacer le traitement lourd hors du main thread
+                self.data_queue.put(dashboard_service.update_data)
+                
                 time.sleep(self._refresh_interval)
+                
             except Exception as e:
-                    logger.error(f"Erreur: {str(e)}")
-                    time.sleep(5)
-                
-                
-        logger.info("Boucle de rafraîchissement terminée")
+                logger.error(f"Crash boucle: {traceback.format_exc()}")
+                self.stop()
+
+    def _create_new_context(self):
+        # Implementation of _create_new_context method
+        pass
 
     def _load_data(self):
         try:
@@ -421,7 +416,7 @@ def refresh_controls():
             try:
                 dashboard_service.update_data()
                 st.session_state.last_refresh = datetime.now()
-                st.experimental_rerun()
+                st.rerun()
             except Exception as e:
                 st.error(f"Erreur lors du rafraîchissement: {e}")
     
@@ -782,7 +777,7 @@ def logs_console():
             
         if 'log_messages' not in st.session_state or len(current_logs) > len(st.session_state.log_messages):
             st.session_state.log_messages = current_logs
-            st.experimental_rerun()
+            st.rerun()
     except Exception as e:
         st.error(f"Erreur lors de la lecture des logs: {e}")
         current_logs = []
@@ -1011,6 +1006,9 @@ def main():
         if 'log_messages' not in st.session_state:
             st.session_state.log_messages = []
 
+        if 'task_queue' not in st.session_state:
+            st.session_state.task_queue = queue.PriorityQueue(maxsize=100)
+
         # Interface utilisateur
         with st.container():
             # Section de débogage
@@ -1068,4 +1066,6 @@ def main():
         time.sleep(0.2)
 
 if __name__ == "__main__":
+    # Ensure session state is initialized
+    dashboard_service = DashboardService()  # This will call _initialize_session_state
     main()

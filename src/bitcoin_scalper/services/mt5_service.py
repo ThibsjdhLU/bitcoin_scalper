@@ -16,7 +16,7 @@ from threading import Lock
 import time
 import threading
 
-from config.unified_config import config
+from unified_config import config
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +48,16 @@ class MT5Service:
         logger.info("Configuration chargée avec succès")
         
     def connect(self) -> bool:
+        """Connecte au serveur MT5 avec reprise sur erreur.
+        
+        Stratégie de reconnexion :
+        - Backoff exponentiel (2^échecs consécutifs)
+        - Max 3 tentatives
+        - Cooldown 30s entre les batches
+        
+        Returns:
+            bool: True si connexion réussie
+        """
         with self.connected_lock:
             if self.connected:
                 return True
@@ -176,8 +186,7 @@ class MT5Service:
         with self.lock:
             if not self.connected:
                 if not self.connect():
-                    logger.error("Impossible de se connecter à MT5")
-                    return None
+                    raise MT5ConnectionError(f"Échec connexion MT5 pour {symbol}")
             
             # Si mode démo
             if self._demo_mode:
