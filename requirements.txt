@@ -1,0 +1,15 @@
+# Ce fichier est généré automatiquement par Poetry. Ne pas éditer manuellement.
+pytest
+pytest-cov
+numpy
+pandas
+scikit-learn
+xgboost
+torch
+requests
+fastapi
+uvicorn
+joblib
+matplotlib
+seaborn
+psycopg2-binary 

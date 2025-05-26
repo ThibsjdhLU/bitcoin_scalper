@@ -91,3 +91,19 @@ Les contributions sont les bienvenues ! N'hésitez pas à :
 ## Licence
 
 MIT
+
+## Lancement en mode développement sans surveiller les logs
+
+Pour éviter la boucle de reload causée par l'écriture dans les logs, lancez le serveur avec :
+
+```
+watchfiles app.main --ignore-paths logs/
+```
+
+Ou, si vous utilisez uvicorn :
+
+```
+uvicorn app.main:app --reload --reload-exclude logs/*
+```
+
+Cela empêchera la surveillance du dossier `logs/` et évitera les rechargements/reloads inutiles.

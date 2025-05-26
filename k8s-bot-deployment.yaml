@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: btc-bot
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: btc-bot
+  template:
+    metadata:
+      labels:
+        app: btc-bot
+    spec:
+      containers:
+        - name: btc-bot
+          image: <REGISTRY>/btc-bot:latest # À builder/pusher par CI
+          env:
+            - name: CONFIG_AES_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: bot-secrets
+                  key: CONFIG_AES_KEY
+          ports:
+            - containerPort: 8000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: btc-bot
+spec:
+  selector:
+    app: btc-bot
+  ports:
+    - protocol: TCP
+      port: 8000
+      targetPort: 8000
+  type: ClusterIP 

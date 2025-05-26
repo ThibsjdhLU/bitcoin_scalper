@@ -1,10 +1,9 @@
-import yaml
 import os
+import json
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives import padding
-from base64 import b64encode, b64decode
-from typing import Any
+from base64 import b64decode
+from typing import Dict
 
 class ConfigError(Exception):
     """Exception personnalisée pour la configuration."""
@@ -12,59 +11,52 @@ class ConfigError(Exception):
 
 class SecureConfig:
     """
-    Gestionnaire de configuration sécurisée avec chiffrement AES-256 pour les clés sensibles.
+    Gère le chargement et le déchiffrement sécurisé de la configuration (clé API, login MT5, etc).
+    Les secrets sont stockés dans un fichier JSON chiffré avec AES-256.
     """
-    def __init__(self, config_path: str, encryption_key: bytes):
-        self.config_path = config_path
-        self.encryption_key = encryption_key
-        self._config = self._load_config()
+    def __init__(self, encrypted_config_path: str, aes_key):
+        self.encrypted_config_path = encrypted_config_path
+        if isinstance(aes_key, str):
+            if len(aes_key) == 64:
+                self.aes_key = bytes.fromhex(aes_key)
+            else:
+                raise ConfigError("La clé AES doit être une chaîne hexadécimale de 64 caractères (256 bits)")
+        elif isinstance(aes_key, bytes):
+            self.aes_key = aes_key
+        else:
+            raise ConfigError("Format de clé AES non supporté")
+        if len(self.aes_key) != 32:
+            raise ConfigError("La clé AES doit faire 32 bytes (256 bits)")
+        self._config = self._load_and_decrypt()
 
-    def _load_config(self) -> dict:
-        if not os.path.exists(self.config_path):
-            raise ConfigError(f"Fichier de configuration introuvable : {self.config_path}")
-        with open(self.config_path, 'r') as f:
-            try:
-                config = yaml.safe_load(f)
-            except Exception as e:
-                raise ConfigError(f"Erreur de lecture YAML : {e}")
-        return config
+    def _load_and_decrypt(self) -> Dict:
+        if not os.path.exists(self.encrypted_config_path):
+            raise ConfigError(f"Fichier de configuration introuvable: {self.encrypted_config_path}")
+        with open(self.encrypted_config_path, "rb") as f:
+            data = f.read()
+        try:
+            # Format attendu: IV (16 bytes) + données chiffrées (base64)
+            iv = data[:16]
+            encrypted = b64decode(data[16:])
+            cipher = Cipher(algorithms.AES(self.aes_key), modes.CBC(iv), backend=default_backend())
+            decryptor = cipher.decryptor()
+            decrypted = decryptor.update(encrypted) + decryptor.finalize()
+            # Padding PKCS7: retirer les bytes de padding
+            pad_len = decrypted[-1]
+            decrypted = decrypted[:-pad_len]
+            config = json.loads(decrypted.decode())
+            return config
+        except Exception as e:
+            raise ConfigError(f"Erreur de déchiffrement: {e}")
 
-    def get(self, key: str, default: Any = None) -> Any:
+    def get(self, key: str, default=None):
         return self._config.get(key, default)
 
-    def get_encrypted(self, key: str) -> str:
-        value = self._config.get(key)
-        if value is None:
-            raise ConfigError(f"Clé {key} absente de la configuration.")
-        return self.decrypt(value)
+    def as_dict(self) -> Dict:
+        return self._config
 
-    def set_encrypted(self, key: str, value: str):
-        encrypted = self.encrypt(value)
-        self._config[key] = encrypted
-        self._save_config()
-
-    def _save_config(self):
-        with open(self.config_path, 'w') as f:
-            yaml.safe_dump(self._config, f)
-
-    def encrypt(self, plaintext: str) -> str:
-        backend = default_backend()
-        iv = os.urandom(16)
-        cipher = Cipher(algorithms.AES(self.encryption_key), modes.CBC(iv), backend=backend)
-        padder = padding.PKCS7(128).padder()
-        padded_data = padder.update(plaintext.encode()) + padder.finalize()
-        encryptor = cipher.encryptor()
-        ct = encryptor.update(padded_data) + encryptor.finalize()
-        return b64encode(iv + ct).decode()
-
-    def decrypt(self, ciphertext: str) -> str:
-        backend = default_backend()
-        data = b64decode(ciphertext)
-        iv = data[:16]
-        ct = data[16:]
-        cipher = Cipher(algorithms.AES(self.encryption_key), modes.CBC(iv), backend=backend)
-        decryptor = cipher.decryptor()
-        padded_plaintext = decryptor.update(ct) + decryptor.finalize()
-        unpadder = padding.PKCS7(128).unpadder()
-        plaintext = unpadder.update(padded_plaintext) + unpadder.finalize()
-        return plaintext.decode() 
+"""
+Exemple d'utilisation:
+config = SecureConfig("/chemin/vers/config.enc", os.environ["CONFIG_AES_KEY"])
+mt5_login = config.get("mt5_login")
+""" 

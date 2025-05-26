@@ -1,8 +1,0 @@
-__pycache__/
-*.pyc
-logs/
-data/
-*.log
-.env
-.streamlit/
-.DS_Store

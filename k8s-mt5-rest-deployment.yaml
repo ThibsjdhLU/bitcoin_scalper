@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mt5-rest
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mt5-rest
+  template:
+    metadata:
+      labels:
+        app: mt5-rest
+    spec:
+      containers:
+        - name: mt5-rest
+          image: <REGISTRY>/mt5-rest:latest # À builder/pusher par CI
+          env:
+            - name: MT5_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: mt5-secrets
+                  key: MT5_API_KEY
+          ports:
+            - containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mt5-rest
+spec:
+  selector:
+    app: mt5-rest
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 8080
+  type: ClusterIP 
