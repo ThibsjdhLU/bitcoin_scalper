@@ -1,0 +1,14 @@
+Archive/data/*
+!Archive/data/*.dvc
+!Archive/data/*/
+data/*
+!data/*.dvc
+!data/*/
+.coverage
+htmlcov/
+coverage.xml
+.cache/
+pytest_cache/
+*.egg-info/
+dist/
+build/

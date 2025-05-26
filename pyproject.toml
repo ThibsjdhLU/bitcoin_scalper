@@ -1,0 +1,48 @@
+[tool.poetry]
+name = "bitcoin_scalper"
+version = "0.1.0"
+description = "Bot de trading algorithmique BTC/USD avec pipeline ML, gestion du risque, et supervision."
+authors = ["Auteur <email@example.com>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.11,<3.12"
+numpy = "*"
+pandas = "*"
+scikit-learn = "*"
+xgboost = "*"
+torch = "*"
+requests = "*"
+fastapi = "*"
+uvicorn = "*"
+joblib = "*"
+matplotlib = "*"
+seaborn = "*"
+psycopg2-binary = "*"
+pyotp = "*"
+prometheus_client = "*"
+cryptography = "^45.0.2"
+ta = "^0.11.0"
+python-multipart = "*"
+MetaTrader5 = "*"
+shap = "*"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "*"
+pytest-cov = "*"
+ruff = "*"
+httpx = "*"
+
+[tool.poetry.scripts]
+lint = "ruff ."
+test = "pytest"
+coverage = "pytest --cov=app --cov=bot --cov=windows --cov-report=xml --cov-report=term-missing"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+addopts = "--cov=app/core --cov=bot/connectors --cov-report=term-missing --cov-fail-under=95"
+pythonpath = "." 

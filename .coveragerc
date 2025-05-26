@@ -1,0 +1,7 @@
+[run]
+omit =
+    bot/connectors/mt5_connector.py
+    windows/*
+    app/web/dashboard.py
+    tests/*
+    */__init__.py 
