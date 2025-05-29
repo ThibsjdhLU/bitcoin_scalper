@@ -1,14 +1,22 @@
-Archive/data/*
-!Archive/data/*.dvc
-!Archive/data/*/
-data/*
-!data/*.dvc
-!data/*/
-.coverage
-htmlcov/
-coverage.xml
-.cache/
-pytest_cache/
-*.egg-info/
-dist/
-build/
+# Environnements virtuels
+.venv/
+# Caches Python
+__pycache__/
+app/core/__pycache__/
+app/web/__pycache__/
+bot/connectors/__pycache__/
+tests/core/__pycache__/
+tests/connectors/__pycache__/
+tests/security/__pycache__/
+# Caches de tests
+.pytest_cache/
+# DVC
+.dvc/
+# Logs
+logs/
+# Fichiers temporaires
+*.tmp
+*.bak
+*~
+# Fichiers d’indexation Cursor
+.cursor/ 

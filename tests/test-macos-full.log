@@ -1,0 +1,406 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.11.12, pytest-8.3.5, pluggy-1.6.0
+rootdir: /Users/thibaultleray-beer/bitcoin_scalper
+configfile: pyproject.toml
+plugins: anyio-4.9.0, timeout-2.4.0, cov-6.1.1
+collected 172 items
+
+tests/core/mac/test_backtesting.py ...                                   [  1%]
+tests/core/mac/test_config.py ........                                   [  6%]
+tests/core/mac/test_data_cleaner.py ...............                      [ 15%]
+tests/core/mac/test_data_ingestor.py ...                                 [ 16%]
+tests/core/mac/test_dvc_manager.py .........                             [ 22%]
+tests/core/mac/test_feature_engineering.py ..............                [ 30%]
+tests/core/mac/test_main.py ......x                                      [ 34%]
+tests/core/mac/test_ml_pipeline.py ............F....FFF........          [ 50%]
+tests/core/mac/test_order_execution.py .....                             [ 53%]
+tests/core/mac/test_orderbook_monitor.py .........                       [ 58%]
+tests/core/mac/test_risk_management.py ........................          [ 72%]
+tests/core/mac/test_strategies.py ......                                 [ 76%]
+tests/core/mac/test_strategies_hybrid.py ...........                     [ 82%]
+tests/core/mac/test_timescaledb_client.py .........                      [ 87%]
+tests/core/win/test_mt5_rest_client.py .........                         [ 93%]
+tests/core/win/test_order_algos.py XXX.........
+ERROR: Coverage failure: total of 83 is less than fail-under=95
+                                                                         [100%]
+
+=================================== FAILURES ===================================
+________________________ test_dnn_fit_predict_save_load ________________________
+
+mock_load = <MagicMock name='load' id='5390522896'>
+mock_save = <MagicMock name='save' id='5388284688'>
+
+    @pytest.mark.timeout(5)
+    @patch("bitcoin_scalper.core.ml_pipeline.torch.save")
+    @patch("bitcoin_scalper.core.ml_pipeline.torch.load")
+    def test_dnn_fit_predict_save_load(mock_load, mock_save):
+        X = pd.DataFrame(np.random.randn(5, 4), columns=[f"f{i}" for i in range(4)])
+        y = pd.Series(np.random.randint(0, 2, 5))
+        def mock_fit(self, X, y, **kwargs):
+            self.model = MagicMock()
+            return {"val_accuracy": 0.99}
+        def mock_predict(self, X):
+            return np.zeros(X.shape[0], dtype=int)
+        with patch.object(MLPipeline, "fit", new=mock_fit), \
+             patch.object(MLPipeline, "predict", new=mock_predict):
+            pipe = MLPipeline(model_type="dnn", params={"hidden_dim": 4, "output_dim": 2}, random_state=42)
+            metrics = pipe.fit(X, y, epochs=1, batch_size=2)
+            preds = pipe.predict(X)
+            assert preds.shape == (5,)
+            pipe.save("dnn_test_model.pth")
+            pipe2 = MLPipeline(model_type="dnn", params={"hidden_dim": 4, "output_dim": 2}, random_state=42)
+>           pipe2.load("dnn_test_model.pth", input_dim=4)
+
+tests/core/mac/test_ml_pipeline.py:311: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+bitcoin_scalper/core/ml_pipeline.py:330: in load
+    self.model.load_state_dict(torch.load(path, map_location=self.device))
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = DNNClassifier(
+  (net): Sequential(
+    (0): Linear(in_features=4, out_features=4, bias=True)
+    (1): ReLU()
+    (2): Linear(in_features=4, out_features=2, bias=True)
+  )
+)
+state_dict = <MagicMock name='load()' id='5392702224'>, strict = True
+assign = False
+
+    def load_state_dict(
+        self, state_dict: Mapping[str, Any], strict: bool = True, assign: bool = False
+    ):
+        r"""Copy parameters and buffers from :attr:`state_dict` into this module and its descendants.
+    
+        If :attr:`strict` is ``True``, then
+        the keys of :attr:`state_dict` must exactly match the keys returned
+        by this module's :meth:`~torch.nn.Module.state_dict` function.
+    
+        .. warning::
+            If :attr:`assign` is ``True`` the optimizer must be created after
+            the call to :attr:`load_state_dict` unless
+            :func:`~torch.__future__.get_swap_module_params_on_conversion` is ``True``.
+    
+        Args:
+            state_dict (dict): a dict containing parameters and
+                persistent buffers.
+            strict (bool, optional): whether to strictly enforce that the keys
+                in :attr:`state_dict` match the keys returned by this module's
+                :meth:`~torch.nn.Module.state_dict` function. Default: ``True``
+            assign (bool, optional): When set to ``False``, the properties of the tensors
+                in the current module are preserved whereas setting it to ``True`` preserves
+                properties of the Tensors in the state dict. The only
+                exception is the ``requires_grad`` field of :class:`~torch.nn.Parameter`s
+                for which the value from the module is preserved.
+                Default: ``False``
+    
+        Returns:
+            ``NamedTuple`` with ``missing_keys`` and ``unexpected_keys`` fields:
+                * **missing_keys** is a list of str containing any keys that are expected
+                    by this module but missing from the provided ``state_dict``.
+                * **unexpected_keys** is a list of str containing the keys that are not
+                    expected by this module but present in the provided ``state_dict``.
+    
+        Note:
+            If a parameter or buffer is registered as ``None`` and its corresponding key
+            exists in :attr:`state_dict`, :meth:`load_state_dict` will raise a
+            ``RuntimeError``.
+        """
+        if not isinstance(state_dict, Mapping):
+>           raise TypeError(
+                f"Expected state_dict to be dict-like, got {type(state_dict)}."
+            )
+E           TypeError: Expected state_dict to be dict-like, got <class 'unittest.mock.MagicMock'>.
+
+.venv/lib/python3.11/site-packages/torch/nn/modules/module.py:2525: TypeError
+_______________________ test_lstm_fit_predict_save_load ________________________
+
+mock_load = <MagicMock name='load' id='5390622928'>
+mock_save = <MagicMock name='save' id='5390489936'>
+
+    @pytest.mark.timeout(5)
+    @patch("bitcoin_scalper.core.ml_pipeline.torch.save")
+    @patch("bitcoin_scalper.core.ml_pipeline.torch.load")
+    def test_lstm_fit_predict_save_load(mock_load, mock_save):
+        X = pd.DataFrame(np.random.randn(5, 4), columns=[f"f{i}" for i in range(4)])
+        y = pd.Series(np.random.randint(0, 2, 5))
+        def mock_fit(self, X, y, **kwargs):
+            self.model = MagicMock()
+            return {"val_accuracy": 0.99}
+        def mock_predict(self, X):
+            return np.zeros(X.shape[0], dtype=int)
+        with patch.object(MLPipeline, "fit", new=mock_fit), \
+             patch.object(MLPipeline, "predict", new=mock_predict):
+            pipe = MLPipeline(model_type="lstm", params={"hidden_dim": 4, "output_dim": 2}, random_state=42)
+            metrics = pipe.fit(X, y, epochs=1, batch_size=2)
+            preds = pipe.predict(X)
+            assert preds.shape == (5,)
+            pipe.save("lstm_test_model.pth")
+            pipe2 = MLPipeline(model_type="lstm", params={"hidden_dim": 4, "output_dim": 2}, random_state=42)
+>           pipe2.load("lstm_test_model.pth", input_dim=4)
+
+tests/core/mac/test_ml_pipeline.py:435: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+bitcoin_scalper/core/ml_pipeline.py:330: in load
+    self.model.load_state_dict(torch.load(path, map_location=self.device))
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = LSTMClassifier(
+  (lstm): LSTM(4, 4, batch_first=True)
+  (fc): Linear(in_features=4, out_features=2, bias=True)
+)
+state_dict = <MagicMock name='load()' id='5391783056'>, strict = True
+assign = False
+
+    def load_state_dict(
+        self, state_dict: Mapping[str, Any], strict: bool = True, assign: bool = False
+    ):
+        r"""Copy parameters and buffers from :attr:`state_dict` into this module and its descendants.
+    
+        If :attr:`strict` is ``True``, then
+        the keys of :attr:`state_dict` must exactly match the keys returned
+        by this module's :meth:`~torch.nn.Module.state_dict` function.
+    
+        .. warning::
+            If :attr:`assign` is ``True`` the optimizer must be created after
+            the call to :attr:`load_state_dict` unless
+            :func:`~torch.__future__.get_swap_module_params_on_conversion` is ``True``.
+    
+        Args:
+            state_dict (dict): a dict containing parameters and
+                persistent buffers.
+            strict (bool, optional): whether to strictly enforce that the keys
+                in :attr:`state_dict` match the keys returned by this module's
+                :meth:`~torch.nn.Module.state_dict` function. Default: ``True``
+            assign (bool, optional): When set to ``False``, the properties of the tensors
+                in the current module are preserved whereas setting it to ``True`` preserves
+                properties of the Tensors in the state dict. The only
+                exception is the ``requires_grad`` field of :class:`~torch.nn.Parameter`s
+                for which the value from the module is preserved.
+                Default: ``False``
+    
+        Returns:
+            ``NamedTuple`` with ``missing_keys`` and ``unexpected_keys`` fields:
+                * **missing_keys** is a list of str containing any keys that are expected
+                    by this module but missing from the provided ``state_dict``.
+                * **unexpected_keys** is a list of str containing the keys that are not
+                    expected by this module but present in the provided ``state_dict``.
+    
+        Note:
+            If a parameter or buffer is registered as ``None`` and its corresponding key
+            exists in :attr:`state_dict`, :meth:`load_state_dict` will raise a
+            ``RuntimeError``.
+        """
+        if not isinstance(state_dict, Mapping):
+>           raise TypeError(
+                f"Expected state_dict to be dict-like, got {type(state_dict)}."
+            )
+E           TypeError: Expected state_dict to be dict-like, got <class 'unittest.mock.MagicMock'>.
+
+.venv/lib/python3.11/site-packages/torch/nn/modules/module.py:2525: TypeError
+____________________ test_transformer_fit_predict_save_load ____________________
+
+mock_load = <MagicMock name='load' id='4379569424'>
+mock_save = <MagicMock name='save' id='5392123536'>
+
+    @pytest.mark.timeout(5)
+    @patch("bitcoin_scalper.core.ml_pipeline.torch.save")
+    @patch("bitcoin_scalper.core.ml_pipeline.torch.load")
+    def test_transformer_fit_predict_save_load(mock_load, mock_save):
+        X = pd.DataFrame(np.random.randn(5, 4), columns=[f"f{i}" for i in range(4)])
+        y = pd.Series(np.random.randint(0, 2, 5))
+        def mock_fit(self, X, y, **kwargs):
+            self.model = MagicMock()
+            return {"val_accuracy": 0.99}
+        def mock_predict(self, X):
+            return np.zeros(X.shape[0], dtype=int)
+        with patch.object(MLPipeline, "fit", new=mock_fit), \
+             patch.object(MLPipeline, "predict", new=mock_predict):
+            pipe = MLPipeline(model_type="transformer", params={"hidden_dim": 4, "output_dim": 2}, random_state=42)
+            metrics = pipe.fit(X, y, epochs=1, batch_size=2)
+            preds = pipe.predict(X)
+            assert preds.shape == (5,)
+            pipe.save("transformer_test_model.pth")
+            pipe2 = MLPipeline(model_type="transformer", params={"hidden_dim": 4, "output_dim": 2}, random_state=42)
+>           pipe2.load("transformer_test_model.pth", input_dim=4)
+
+tests/core/mac/test_ml_pipeline.py:459: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+bitcoin_scalper/core/ml_pipeline.py:330: in load
+    self.model.load_state_dict(torch.load(path, map_location=self.device))
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = TransformerClassifier(
+  (transformer): TransformerEncoder(
+    (layers): ModuleList(
+      (0): TransformerEncoderLay... (dropout2): Dropout(p=0.1, inplace=False)
+      )
+    )
+  )
+  (fc): Linear(in_features=4, out_features=2, bias=True)
+)
+state_dict = <MagicMock name='load()' id='5390203088'>, strict = True
+assign = False
+
+    def load_state_dict(
+        self, state_dict: Mapping[str, Any], strict: bool = True, assign: bool = False
+    ):
+        r"""Copy parameters and buffers from :attr:`state_dict` into this module and its descendants.
+    
+        If :attr:`strict` is ``True``, then
+        the keys of :attr:`state_dict` must exactly match the keys returned
+        by this module's :meth:`~torch.nn.Module.state_dict` function.
+    
+        .. warning::
+            If :attr:`assign` is ``True`` the optimizer must be created after
+            the call to :attr:`load_state_dict` unless
+            :func:`~torch.__future__.get_swap_module_params_on_conversion` is ``True``.
+    
+        Args:
+            state_dict (dict): a dict containing parameters and
+                persistent buffers.
+            strict (bool, optional): whether to strictly enforce that the keys
+                in :attr:`state_dict` match the keys returned by this module's
+                :meth:`~torch.nn.Module.state_dict` function. Default: ``True``
+            assign (bool, optional): When set to ``False``, the properties of the tensors
+                in the current module are preserved whereas setting it to ``True`` preserves
+                properties of the Tensors in the state dict. The only
+                exception is the ``requires_grad`` field of :class:`~torch.nn.Parameter`s
+                for which the value from the module is preserved.
+                Default: ``False``
+    
+        Returns:
+            ``NamedTuple`` with ``missing_keys`` and ``unexpected_keys`` fields:
+                * **missing_keys** is a list of str containing any keys that are expected
+                    by this module but missing from the provided ``state_dict``.
+                * **unexpected_keys** is a list of str containing the keys that are not
+                    expected by this module but present in the provided ``state_dict``.
+    
+        Note:
+            If a parameter or buffer is registered as ``None`` and its corresponding key
+            exists in :attr:`state_dict`, :meth:`load_state_dict` will raise a
+            ``RuntimeError``.
+        """
+        if not isinstance(state_dict, Mapping):
+>           raise TypeError(
+                f"Expected state_dict to be dict-like, got {type(state_dict)}."
+            )
+E           TypeError: Expected state_dict to be dict-like, got <class 'unittest.mock.MagicMock'>.
+
+.venv/lib/python3.11/site-packages/torch/nn/modules/module.py:2525: TypeError
+_______________________ test_cnn1d_fit_predict_save_load _______________________
+
+mock_load = <MagicMock name='load' id='5392869776'>
+mock_save = <MagicMock name='save' id='5388296656'>
+
+    @pytest.mark.timeout(5)
+    @patch("bitcoin_scalper.core.ml_pipeline.torch.save")
+    @patch("bitcoin_scalper.core.ml_pipeline.torch.load")
+    def test_cnn1d_fit_predict_save_load(mock_load, mock_save):
+        X = pd.DataFrame(np.random.randn(5, 4), columns=[f"f{i}" for i in range(4)])
+        y = pd.Series(np.random.randint(0, 2, 5))
+        def mock_fit(self, X, y, **kwargs):
+            self.model = MagicMock()
+            return {"val_accuracy": 0.99}
+        def mock_predict(self, X):
+            return np.zeros(X.shape[0], dtype=int)
+        with patch.object(MLPipeline, "fit", new=mock_fit), \
+             patch.object(MLPipeline, "predict", new=mock_predict):
+            pipe = MLPipeline(model_type="cnn1d", params={"num_filters": 2, "output_dim": 2}, random_state=42)
+            metrics = pipe.fit(X, y, epochs=1, batch_size=2)
+            preds = pipe.predict(X)
+            assert preds.shape == (5,)
+            pipe.save("cnn1d_test_model.pth")
+            pipe2 = MLPipeline(model_type="cnn1d", params={"num_filters": 2, "output_dim": 2}, random_state=42)
+>           pipe2.load("cnn1d_test_model.pth", input_dim=4)
+
+tests/core/mac/test_ml_pipeline.py:483: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+bitcoin_scalper/core/ml_pipeline.py:330: in load
+    self.model.load_state_dict(torch.load(path, map_location=self.device))
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = CNN1DClassifier(
+  (conv): Conv1d(4, 2, kernel_size=(3,), stride=(1,))
+  (pool): AdaptiveMaxPool1d(output_size=1)
+  (fc): Linear(in_features=2, out_features=2, bias=True)
+)
+state_dict = <MagicMock name='load()' id='5388228560'>, strict = True
+assign = False
+
+    def load_state_dict(
+        self, state_dict: Mapping[str, Any], strict: bool = True, assign: bool = False
+    ):
+        r"""Copy parameters and buffers from :attr:`state_dict` into this module and its descendants.
+    
+        If :attr:`strict` is ``True``, then
+        the keys of :attr:`state_dict` must exactly match the keys returned
+        by this module's :meth:`~torch.nn.Module.state_dict` function.
+    
+        .. warning::
+            If :attr:`assign` is ``True`` the optimizer must be created after
+            the call to :attr:`load_state_dict` unless
+            :func:`~torch.__future__.get_swap_module_params_on_conversion` is ``True``.
+    
+        Args:
+            state_dict (dict): a dict containing parameters and
+                persistent buffers.
+            strict (bool, optional): whether to strictly enforce that the keys
+                in :attr:`state_dict` match the keys returned by this module's
+                :meth:`~torch.nn.Module.state_dict` function. Default: ``True``
+            assign (bool, optional): When set to ``False``, the properties of the tensors
+                in the current module are preserved whereas setting it to ``True`` preserves
+                properties of the Tensors in the state dict. The only
+                exception is the ``requires_grad`` field of :class:`~torch.nn.Parameter`s
+                for which the value from the module is preserved.
+                Default: ``False``
+    
+        Returns:
+            ``NamedTuple`` with ``missing_keys`` and ``unexpected_keys`` fields:
+                * **missing_keys** is a list of str containing any keys that are expected
+                    by this module but missing from the provided ``state_dict``.
+                * **unexpected_keys** is a list of str containing the keys that are not
+                    expected by this module but present in the provided ``state_dict``.
+    
+        Note:
+            If a parameter or buffer is registered as ``None`` and its corresponding key
+            exists in :attr:`state_dict`, :meth:`load_state_dict` will raise a
+            ``RuntimeError``.
+        """
+        if not isinstance(state_dict, Mapping):
+>           raise TypeError(
+                f"Expected state_dict to be dict-like, got {type(state_dict)}."
+            )
+E           TypeError: Expected state_dict to be dict-like, got <class 'unittest.mock.MagicMock'>.
+
+.venv/lib/python3.11/site-packages/torch/nn/modules/module.py:2525: TypeError
+================================ tests coverage ================================
+______________ coverage: platform darwin, python 3.11.12-final-0 _______________
+
+Name                                          Stmts   Miss  Cover   Missing
+---------------------------------------------------------------------------
+bitcoin_scalper/core/backtesting.py              56      1    98%   65
+bitcoin_scalper/core/config.py                   43      2    95%   25, 29
+bitcoin_scalper/core/data_cleaner.py             56      1    98%   67
+bitcoin_scalper/core/data_ingestor.py            69      7    90%   33-34, 52-53, 62, 74, 76
+bitcoin_scalper/core/dvc_manager.py              50      0   100%
+bitcoin_scalper/core/feature_engineering.py      51      0   100%
+bitcoin_scalper/core/ml_pipeline.py             295    109    63%   51, 63-66, 77-79, 91-94, 144, 150-151, 161-215, 229, 236-246, 251-278, 328, 331
+bitcoin_scalper/core/order_algos.py              39      0   100%
+bitcoin_scalper/core/order_execution.py          16      0   100%
+bitcoin_scalper/core/orderbook_monitor.py        39      7    82%   25, 43-45, 55-57
+bitcoin_scalper/core/risk_management.py          86      4    95%   60, 91-93
+bitcoin_scalper/core/strategies.py               37      0   100%
+bitcoin_scalper/core/strategies_hybrid.py        93      1    99%   81
+bitcoin_scalper/core/timescaledb_client.py       70      5    93%   33-35, 81, 101
+bitcoin_scalper/main.py                         263     78    70%   62-70, 88, 125-127, 130-132, 148-150, 157-158, 165-177, 184-187, 204-205, 217-218, 278-279, 284-286, 291-292, 311-313, 320-322, 333-334, 336-337, 344-346, 355-356, 364-365, 372-373, 410-423
+bot/connectors/mt5_rest_client.py                47      4    91%   35-37, 62
+---------------------------------------------------------------------------
+TOTAL                                          1310    219    83%
+FAIL Required test coverage of 95% not reached. Total coverage: 83.28%
+=========================== short test summary info ============================
+FAILED tests/core/mac/test_ml_pipeline.py::test_dnn_fit_predict_save_load - T...
+FAILED tests/core/mac/test_ml_pipeline.py::test_lstm_fit_predict_save_load - ...
+FAILED tests/core/mac/test_ml_pipeline.py::test_transformer_fit_predict_save_load
+FAILED tests/core/mac/test_ml_pipeline.py::test_cnn1d_fit_predict_save_load
+======= 4 failed, 164 passed, 1 xfailed, 3 xpassed, 5 warnings in 3.01s ========

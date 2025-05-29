@@ -1,0 +1,135 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.11.12, pytest-8.3.5, pluggy-1.6.0
+rootdir: /Users/thibaultleray-beer/bitcoin_scalper
+configfile: pyproject.toml
+plugins: anyio-4.9.0, timeout-2.4.0, cov-6.1.1
+collected 172 items
+
+tests/core/mac/test_backtesting.py ...                                   [  1%]
+tests/core/mac/test_config.py ........                                   [  6%]
+tests/core/mac/test_data_cleaner.py ...............                      [ 15%]
+tests/core/mac/test_data_ingestor.py ...                                 [ 16%]
+tests/core/mac/test_dvc_manager.py .........                             [ 22%]
+tests/core/mac/test_feature_engineering.py ..............                [ 30%]
+tests/core/mac/test_main.py ......x                                      [ 34%]
+tests/core/mac/test_ml_pipeline.py ............F
+ERROR: Coverage failure: total of 58 is less than fail-under=95
+
+
+=================================== FAILURES ===================================
+________________________ test_dnn_fit_predict_save_load ________________________
+
+mock_load = <MagicMock name='load' id='5373350096'>
+mock_save = <MagicMock name='save' id='5373207376'>
+
+    @pytest.mark.timeout(5)
+    @patch("bitcoin_scalper.core.ml_pipeline.torch.save")
+    @patch("bitcoin_scalper.core.ml_pipeline.torch.load")
+    def test_dnn_fit_predict_save_load(mock_load, mock_save):
+        X = pd.DataFrame(np.random.randn(5, 4), columns=[f"f{i}" for i in range(4)])
+        y = pd.Series(np.random.randint(0, 2, 5))
+        def mock_fit(self, X, y, **kwargs):
+            self.model = MagicMock()
+            return {"val_accuracy": 0.99}
+        def mock_predict(self, X):
+            return np.zeros(X.shape[0], dtype=int)
+        with patch.object(MLPipeline, "fit", new=mock_fit), \
+             patch.object(MLPipeline, "predict", new=mock_predict):
+            pipe = MLPipeline(model_type="dnn", params={"hidden_dim": 4, "output_dim": 2}, random_state=42)
+            metrics = pipe.fit(X, y, epochs=1, batch_size=2)
+            preds = pipe.predict(X)
+            assert preds.shape == (5,)
+            pipe.save("dnn_test_model.pth")
+            pipe2 = MLPipeline(model_type="dnn", params={"hidden_dim": 4, "output_dim": 2}, random_state=42)
+>           pipe2.load("dnn_test_model.pth", input_dim=4)
+
+tests/core/mac/test_ml_pipeline.py:311: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+bitcoin_scalper/core/ml_pipeline.py:330: in load
+    self.model.load_state_dict(torch.load(path, map_location=self.device))
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = DNNClassifier(
+  (net): Sequential(
+    (0): Linear(in_features=4, out_features=4, bias=True)
+    (1): ReLU()
+    (2): Linear(in_features=4, out_features=2, bias=True)
+  )
+)
+state_dict = <MagicMock name='load()' id='5413255568'>, strict = True
+assign = False
+
+    def load_state_dict(
+        self, state_dict: Mapping[str, Any], strict: bool = True, assign: bool = False
+    ):
+        r"""Copy parameters and buffers from :attr:`state_dict` into this module and its descendants.
+    
+        If :attr:`strict` is ``True``, then
+        the keys of :attr:`state_dict` must exactly match the keys returned
+        by this module's :meth:`~torch.nn.Module.state_dict` function.
+    
+        .. warning::
+            If :attr:`assign` is ``True`` the optimizer must be created after
+            the call to :attr:`load_state_dict` unless
+            :func:`~torch.__future__.get_swap_module_params_on_conversion` is ``True``.
+    
+        Args:
+            state_dict (dict): a dict containing parameters and
+                persistent buffers.
+            strict (bool, optional): whether to strictly enforce that the keys
+                in :attr:`state_dict` match the keys returned by this module's
+                :meth:`~torch.nn.Module.state_dict` function. Default: ``True``
+            assign (bool, optional): When set to ``False``, the properties of the tensors
+                in the current module are preserved whereas setting it to ``True`` preserves
+                properties of the Tensors in the state dict. The only
+                exception is the ``requires_grad`` field of :class:`~torch.nn.Parameter`s
+                for which the value from the module is preserved.
+                Default: ``False``
+    
+        Returns:
+            ``NamedTuple`` with ``missing_keys`` and ``unexpected_keys`` fields:
+                * **missing_keys** is a list of str containing any keys that are expected
+                    by this module but missing from the provided ``state_dict``.
+                * **unexpected_keys** is a list of str containing the keys that are not
+                    expected by this module but present in the provided ``state_dict``.
+    
+        Note:
+            If a parameter or buffer is registered as ``None`` and its corresponding key
+            exists in :attr:`state_dict`, :meth:`load_state_dict` will raise a
+            ``RuntimeError``.
+        """
+        if not isinstance(state_dict, Mapping):
+>           raise TypeError(
+                f"Expected state_dict to be dict-like, got {type(state_dict)}."
+            )
+E           TypeError: Expected state_dict to be dict-like, got <class 'unittest.mock.MagicMock'>.
+
+.venv/lib/python3.11/site-packages/torch/nn/modules/module.py:2525: TypeError
+================================ tests coverage ================================
+______________ coverage: platform darwin, python 3.11.12-final-0 _______________
+
+Name                                          Stmts   Miss  Cover   Missing
+---------------------------------------------------------------------------
+bitcoin_scalper/core/backtesting.py              56      1    98%   65
+bitcoin_scalper/core/config.py                   43      2    95%   25, 29
+bitcoin_scalper/core/data_cleaner.py             56      1    98%   67
+bitcoin_scalper/core/data_ingestor.py            69      7    90%   33-34, 52-53, 62, 74, 76
+bitcoin_scalper/core/dvc_manager.py              50      0   100%
+bitcoin_scalper/core/feature_engineering.py      51      0   100%
+bitcoin_scalper/core/ml_pipeline.py             295    160    46%   30-37, 51, 58-61, 63-66, 73-75, 77-79, 86-89, 91-94, 137-144, 150-151, 161-215, 220-229, 236-246, 251-278, 293-305, 328, 331, 344-349
+bitcoin_scalper/core/order_algos.py              39     31    21%   14-24, 31-39, 46-56
+bitcoin_scalper/core/order_execution.py          16     11    31%   18-28
+bitcoin_scalper/core/orderbook_monitor.py        39     31    21%   11, 17-33, 40-45, 51-57
+bitcoin_scalper/core/risk_management.py          86     76    12%   32-39, 50-93, 104-116, 124-132, 140-152
+bitcoin_scalper/core/strategies.py               37     17    54%   6-7, 10, 14, 16, 20, 22, 26, 28, 32, 34, 38, 40-44
+bitcoin_scalper/core/strategies_hybrid.py        93     49    47%   6-7, 9, 13, 15, 19, 21, 25, 27, 31, 34-35, 39, 41-42, 46-49, 53, 57, 59-67, 72-73, 76, 79-83, 87, 89, 91, 93, 95, 97, 99-106
+bitcoin_scalper/core/timescaledb_client.py       70     54    23%   18-20, 23-28, 31-35, 39-75, 79-95, 99-115, 118-120
+bitcoin_scalper/main.py                         263     78    70%   62-70, 88, 125-127, 130-132, 148-150, 157-158, 165-177, 184-187, 204-205, 217-218, 278-279, 284-286, 291-292, 311-313, 320-322, 333-334, 336-337, 344-346, 355-356, 364-365, 372-373, 410-423
+bot/connectors/mt5_rest_client.py                47     33    30%   17-23, 26-41, 45-46, 50-51, 55-64, 68
+---------------------------------------------------------------------------
+TOTAL                                          1310    551    58%
+FAIL Required test coverage of 95% not reached. Total coverage: 57.94%
+=========================== short test summary info ============================
+FAILED tests/core/mac/test_ml_pipeline.py::test_dnn_fit_predict_save_load - T...
+!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!!
+============= 1 failed, 70 passed, 1 xfailed, 4 warnings in 2.83s ==============

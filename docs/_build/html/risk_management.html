@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+
+<html lang="fr" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>risk_management module &#8212; Documentation bitcoin_scalper 1.0</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=27fed22d" />
+    <script src="_static/documentation_options.js?v=7a28dfa3"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/translations.js?v=e6b791cb"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Recherche" href="search.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="module-risk_management">
+<span id="risk-management-module"></span><h1>risk_management module<a class="headerlink" href="#module-risk_management" title="Lien vers cette rubrique">¶</a></h1>
+<p>Gestionnaire de risques REST multiplateforme pour trading BTC/USD.
+Utilise exclusivement MT5RestClient (aucune dépendance native MT5, compatible macOS).</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="risk_management.RiskManager">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">risk_management.</span></span><span class="sig-name descname"><span class="pre">RiskManager</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">client</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">MT5RestClient</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_drawdown</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.05</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_daily_loss</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.05</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">risk_per_trade</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.01</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_position_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/risk_management.html#RiskManager"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#risk_management.RiskManager" title="Lien vers cette définition">¶</a></dt>
+<dd><p>Bases : <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Gestionnaire de risques : drawdown, VaR, stops dynamiques, limites de perte, taille de position.
+Toutes les interactions broker passent par MT5RestClient (REST).</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="risk_management.RiskManager.calculate_position_size">
+<span class="sig-name descname"><span class="pre">calculate_position_size</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">symbol</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stop_loss</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">float</span></span></span><a class="reference internal" href="_modules/risk_management.html#RiskManager.calculate_position_size"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#risk_management.RiskManager.calculate_position_size" title="Lien vers cette définition">¶</a></dt>
+<dd><p>Calcule la taille de position optimale selon le risque par trade et le stop loss.
+Args:</p>
+<blockquote>
+<div><p>symbol (str): Symbole à trader.
+stop_loss (float): Distance stop loss (en points/pips).</p>
+</div></blockquote>
+<dl class="simple">
+<dt>Returns:</dt><dd><p>float: Taille de position (lots)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="risk_management.RiskManager.can_open_position">
+<span class="sig-name descname"><span class="pre">can_open_position</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">symbol</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">volume</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/risk_management.html#RiskManager.can_open_position"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#risk_management.RiskManager.can_open_position" title="Lien vers cette définition">¶</a></dt>
+<dd><p>Vérifie si une nouvelle position peut être ouverte selon les règles de risque.
+Args:</p>
+<blockquote>
+<div><p>symbol (str): Symbole à trader.
+volume (float): Volume souhaité.</p>
+</div></blockquote>
+<dl class="simple">
+<dt>Returns:</dt><dd><p>dict: {“allowed”: bool, “reason”: str}</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="risk_management.RiskManager.get_risk_metrics">
+<span class="sig-name descname"><span class="pre">get_risk_metrics</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/risk_management.html#RiskManager.get_risk_metrics"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#risk_management.RiskManager.get_risk_metrics" title="Lien vers cette définition">¶</a></dt>
+<dd><p>Retourne les métriques de risque courantes (drawdown, PnL, etc).
+Returns:</p>
+<blockquote>
+<div><p>dict: Métriques de risque</p>
+</div></blockquote>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="risk_management.RiskManager.update_after_trade">
+<span class="sig-name descname"><span class="pre">update_after_trade</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">profit</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/risk_management.html#RiskManager.update_after_trade"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#risk_management.RiskManager.update_after_trade" title="Lien vers cette définition">¶</a></dt>
+<dd><p>Met à jour les métriques de risque après un trade (PnL, peak balance).
+Args:</p>
+<blockquote>
+<div><p>profit (float): Profit du trade (peut être négatif).</p>
+</div></blockquote>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">bitcoin_scalper</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2025, Thibault Leray.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="_sources/risk_management.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

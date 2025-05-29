@@ -59,4 +59,55 @@ Ce projet utilise DVC pour le versioning des datasets, features, modèles et art
 - Automatisation CLI via `scripts/dvc_utils.py`
 - Intégration CI/CD : chaque PR vérifie le statut DVC et la reproductibilité pipeline
 
-Voir [app/core/README.md](app/core/README.md) pour la documentation détaillée et des exemples d'usage. 
+Voir [app/core/README.md](app/core/README.md) pour la documentation détaillée et des exemples d'usage.
+
+## Nettoyage et structure
+
+Ce projet applique une politique stricte de nettoyage et d'exclusion des fichiers/dossiers inutiles :
+- Les caches Python (`__pycache__`), environnements virtuels (`.venv/`), logs, fichiers temporaires et dossiers d'indexation sont exclus du dépôt (voir `.gitignore` et `.dvcignore`).
+- Les dossiers vides ou non utilisés sont supprimés régulièrement.
+- Les scripts d'administration sont séparés des modules métiers.
+- Les fichiers de configuration par défaut sont adaptés ou supprimés s'ils ne sont pas utilisés.
+
+Pour toute contribution, merci de respecter ces règles afin de garantir la maintenabilité et la sécurité du projet.
+
+# bitcoin_scalper
+
+## Structure du projet
+
+```
+bitcoin_scalper/
+│
+├── README.md
+├── LICENSE
+├── setup.py / pyproject.toml
+├── requirements.txt
+├── .gitignore
+├── .coveragerc
+├── Makefile
+│
+├── docs/                # Documentation Sphinx/MkDocs
+├── docker/              # Dockerfile, docker-compose.yml
+├── k8s/                 # Manifestes Kubernetes
+│
+├── bitcoin_scalper/     # Code source principal (anciennement app/)
+│   ├── core/
+│   ├── web/
+│   └── ...
+├── bot/
+├── data/
+├── scripts/
+├── tests/               # Tests unitaires et d'intégration
+└── .github/
+```
+
+## Commandes utiles
+
+- `make init` : Installer les dépendances
+- `make test` : Lancer les tests avec couverture
+- `make lint` : Linter le code
+- `make docs` : Générer la documentation
+
+## Contribution
+
+Merci de respecter PEP8, d'ajouter des tests unitaires (>95% coverage) et de ne jamais exposer de secrets en clair. 

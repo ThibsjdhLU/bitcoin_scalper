@@ -1,0 +1,16 @@
+core
+====
+
+.. toctree::
+   :maxdepth: 4
+
+   backtesting
+   config
+   data_cleaner
+   data_ingestor
+   dvc_manager
+   feature_engineering
+   ml_pipeline
+   order_algos
+   risk_management
+   timescaledb_client

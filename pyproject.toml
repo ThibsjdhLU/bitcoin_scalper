@@ -25,8 +25,9 @@ prometheus_client = "*"
 cryptography = "^45.0.2"
 ta = "^0.11.0"
 python-multipart = "*"
-MetaTrader5 = "*"
+# MetaTrader5 = "*" # Commenté car non compatible macOS et non nécessaire pour les tests actuels
 shap = "*"
+optuna = "^4.3.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "*"
@@ -35,9 +36,9 @@ ruff = "*"
 httpx = "*"
 
 [tool.poetry.scripts]
-lint = "ruff ."
-test = "pytest"
-coverage = "pytest --cov=app --cov=bot --cov=windows --cov-report=xml --cov-report=term-missing"
+# lint = "ruff ." # Ligne supprimée car non supportée par Poetry
+# test = "pytest" # Ligne supprimée car non supportée par Poetry
+# coverage = "pytest --cov=app --cov=bot --cov=windows --cov-report=xml --cov-report=term-missing"  # Ligne supprimée car non supportée par Poetry
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

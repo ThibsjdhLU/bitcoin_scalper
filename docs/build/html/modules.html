@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+
+<html lang="fr" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>core &#8212; Documentation bitcoin_scalper 1.0</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=27fed22d" />
+    <script src="_static/documentation_options.js?v=7a28dfa3"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/translations.js?v=e6b791cb"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Recherche" href="search.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="core">
+<h1>core<a class="headerlink" href="#core" title="Lien vers cette rubrique">¶</a></h1>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="backtesting.html">backtesting module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="backtesting.html#backtesting.Backtester"><code class="docutils literal notranslate"><span class="pre">Backtester</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="backtesting.html#backtesting.Backtester.run"><code class="docutils literal notranslate"><span class="pre">Backtester.run()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="config.html">config module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="config.html#config.ConfigError"><code class="docutils literal notranslate"><span class="pre">ConfigError</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="config.html#config.SecureConfig"><code class="docutils literal notranslate"><span class="pre">SecureConfig</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="config.html#config.SecureConfig.as_dict"><code class="docutils literal notranslate"><span class="pre">SecureConfig.as_dict()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="config.html#config.SecureConfig.get"><code class="docutils literal notranslate"><span class="pre">SecureConfig.get()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="data_cleaner.html">data_cleaner module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="data_cleaner.html#data_cleaner.DataCleaner"><code class="docutils literal notranslate"><span class="pre">DataCleaner</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="data_cleaner.html#data_cleaner.DataCleaner.clean_ohlcv"><code class="docutils literal notranslate"><span class="pre">DataCleaner.clean_ohlcv()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="data_cleaner.html#data_cleaner.DataCleaner.clean_ticks"><code class="docutils literal notranslate"><span class="pre">DataCleaner.clean_ticks()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="data_ingestor.html">data_ingestor module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dvc_manager.html">dvc_manager module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="dvc_manager.html#dvc_manager.DVCManager"><code class="docutils literal notranslate"><span class="pre">DVCManager</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="dvc_manager.html#dvc_manager.DVCManager.add"><code class="docutils literal notranslate"><span class="pre">DVCManager.add()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="dvc_manager.html#dvc_manager.DVCManager.commit"><code class="docutils literal notranslate"><span class="pre">DVCManager.commit()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="dvc_manager.html#dvc_manager.DVCManager.diff"><code class="docutils literal notranslate"><span class="pre">DVCManager.diff()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="dvc_manager.html#dvc_manager.DVCManager.gc"><code class="docutils literal notranslate"><span class="pre">DVCManager.gc()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="dvc_manager.html#dvc_manager.DVCManager.init"><code class="docutils literal notranslate"><span class="pre">DVCManager.init()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="dvc_manager.html#dvc_manager.DVCManager.pull"><code class="docutils literal notranslate"><span class="pre">DVCManager.pull()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="dvc_manager.html#dvc_manager.DVCManager.push"><code class="docutils literal notranslate"><span class="pre">DVCManager.push()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="dvc_manager.html#dvc_manager.DVCManager.remote"><code class="docutils literal notranslate"><span class="pre">DVCManager.remote()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="dvc_manager.html#dvc_manager.DVCManager.repro"><code class="docutils literal notranslate"><span class="pre">DVCManager.repro()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="dvc_manager.html#dvc_manager.DVCManager.status"><code class="docutils literal notranslate"><span class="pre">DVCManager.status()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="feature_engineering.html">feature_engineering module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="feature_engineering.html#feature_engineering.FeatureEngineering"><code class="docutils literal notranslate"><span class="pre">FeatureEngineering</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="feature_engineering.html#feature_engineering.FeatureEngineering.add_features"><code class="docutils literal notranslate"><span class="pre">FeatureEngineering.add_features()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="feature_engineering.html#feature_engineering.FeatureEngineering.add_indicators"><code class="docutils literal notranslate"><span class="pre">FeatureEngineering.add_indicators()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="feature_engineering.html#feature_engineering.FeatureEngineering.multi_timeframe"><code class="docutils literal notranslate"><span class="pre">FeatureEngineering.multi_timeframe()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="ml_pipeline.html">ml_pipeline module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="order_algos.html">order_algos module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="order_algos.html#order_algos.execute_iceberg"><code class="docutils literal notranslate"><span class="pre">execute_iceberg()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="order_algos.html#order_algos.execute_twap"><code class="docutils literal notranslate"><span class="pre">execute_twap()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="order_algos.html#order_algos.execute_vwap"><code class="docutils literal notranslate"><span class="pre">execute_vwap()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="risk_management.html">risk_management module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="timescaledb_client.html">timescaledb_client module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="timescaledb_client.html#timescaledb_client.TimescaleDBClient"><code class="docutils literal notranslate"><span class="pre">TimescaleDBClient</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="timescaledb_client.html#timescaledb_client.TimescaleDBClient.close"><code class="docutils literal notranslate"><span class="pre">TimescaleDBClient.close()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="timescaledb_client.html#timescaledb_client.TimescaleDBClient.connect"><code class="docutils literal notranslate"><span class="pre">TimescaleDBClient.connect()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="timescaledb_client.html#timescaledb_client.TimescaleDBClient.create_schema"><code class="docutils literal notranslate"><span class="pre">TimescaleDBClient.create_schema()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="timescaledb_client.html#timescaledb_client.TimescaleDBClient.ensure_connection"><code class="docutils literal notranslate"><span class="pre">TimescaleDBClient.ensure_connection()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="timescaledb_client.html#timescaledb_client.TimescaleDBClient.insert_ohlcv"><code class="docutils literal notranslate"><span class="pre">TimescaleDBClient.insert_ohlcv()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="timescaledb_client.html#timescaledb_client.TimescaleDBClient.insert_ticks"><code class="docutils literal notranslate"><span class="pre">TimescaleDBClient.insert_ticks()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="timescaledb_client.html#timescaledb_client.TimescaleDBError"><code class="docutils literal notranslate"><span class="pre">TimescaleDBError</span></code></a></li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">bitcoin_scalper</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2025, Thibault Leray.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="_sources/modules.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

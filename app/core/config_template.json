@@ -1,8 +1,0 @@
-{
-  "MT5_REST_URL": "http://192.168.1.10:8000",  // URL de votre serveur REST MT5
-  "MT5_REST_API_KEY": "votre_cle_api",           // Clé API pour authentification
-  "MT5_LOGIN": "101490774",
-  "MT5_PASSWORD": "MatLB356&",
-  "MT5_SERVER": "Ava-Demo 1-MT5"
-}
-// Supprimez ce commentaire avant chiffrement. Ajoutez d'autres secrets si besoin. 

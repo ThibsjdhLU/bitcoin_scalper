@@ -13,7 +13,7 @@ class MT5RestClient:
     Client REST multiplateforme pour interagir avec un serveur MT5 distant (API REST).
     Permet de récupérer les ticks, OHLCV, exécuter des ordres, etc.
     """
-    def __init__(self, base_url: str, api_key: Optional[str] = None, timeout: float = 5.0, max_retries: int = 3):
+    def __init__(self, base_url: str, api_key: Optional[str] = None, timeout: float = 30.0, max_retries: int = 3):
         self.base_url = base_url.rstrip("/")
         self.api_key = api_key
         self.timeout = timeout
@@ -35,11 +35,15 @@ class MT5RestClient:
                 logger.warning(f"Erreur réseau (tentative {attempt}): {e}")
                 if attempt == self.max_retries:
                     raise MT5RestClientError(f"Erreur réseau persistante: {e}")
+            except Exception as e:
+                logger.error(f"Erreur inattendue (tentative {attempt}): {e}")
+                if attempt == self.max_retries:
+                    raise MT5RestClientError(f"Erreur réseau persistante: {e}")
 
     def get_ticks(self, symbol: str, limit: int = 100) -> List[Dict[str, Any]]:
         """Récupère les derniers ticks pour un symbole donné."""
-        params = {"symbol": symbol, "limit": limit}
-        return self._request("GET", "/ticks", params=params)
+        params = {"limit": limit}
+        return self._request("GET", f"/ticks/{symbol}", params=params)
 
     def get_ohlcv(self, symbol: str, timeframe: str = "M1", limit: int = 100) -> List[Dict[str, Any]]:
         """Récupère les dernières bougies OHLCV pour un symbole et timeframe donnés."""
