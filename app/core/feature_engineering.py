@@ -1,4 +1,5 @@
 import pandas as pd
+import pandas_ta as ta
 import numpy as np
 from ta.momentum import RSIIndicator
 from ta.trend import MACD, EMAIndicator, SMAIndicator
@@ -27,7 +28,8 @@ class FeatureEngineering:
         df[f"{prefix}macd_signal"] = macd.macd_signal()
         df[f"{prefix}macd_diff"] = macd.macd_diff()
         # EMA/SMA
-        df[f"{prefix}ema_20"] = EMAIndicator(df[price_col], window=20, fillna=True).ema_indicator()
+        df[f"{prefix}ema_21"] = EMAIndicator(df[price_col], window=21, fillna=True).ema_indicator()
+        df[f"{prefix}ema_50"] = EMAIndicator(df[price_col], window=50, fillna=True).ema_indicator()
         df[f"{prefix}sma_20"] = SMAIndicator(df[price_col], window=20, fillna=True).sma_indicator()
         # Bollinger Bands
         bb = BollingerBands(df[price_col], window=20, window_dev=2, fillna=True)
@@ -40,6 +42,23 @@ class FeatureEngineering:
             df[f"{prefix}atr"] = atr.average_true_range()
         else:
             df[f"{prefix}atr"] = np.nan
+        
+        # Supertrend
+        # The strategy specifies Supertrend (3, 7) which likely means multiplier 3 and period 7.
+        # pandas-ta uses period (length) and multiplier.
+        supertrend_df = df.ta.supertrend(length=7, multiplier=3.0, high=high_col, low=low_col, close=price_col)
+        if supertrend_df is not None and not supertrend_df.empty:
+             # supertrend_df may contain multiple columns, e.g., SUPERT_7_3.0, SUPERTd_7_3.0, SUPERTl_7_3.0, SUPERTs_7_3.0
+             # We are interested in the main supertrend line, often named SUPERT_length_multiplier
+            supertrend_col_name = f'SUPERT_7_3.0' # Adjust if pandas-ta names it differently
+            if supertrend_col_name in supertrend_df.columns:
+                df[f"{prefix}supertrend"] = supertrend_df[supertrend_col_name]
+            else:
+                # Fallback or error if the expected column is not found
+                df[f"{prefix}supertrend"] = np.nan
+        else:
+            df[f"{prefix}supertrend"] = np.nan
+
         # VWAP (rolling)
         df[f"{prefix}vwap"] = (df[price_col] * df[volume_col]).rolling(window=20, min_periods=1).sum() / df[volume_col].rolling(window=20, min_periods=1).sum()
         return df
