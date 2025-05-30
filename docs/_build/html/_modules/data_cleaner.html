@@ -59,17 +59,21 @@
 <div class="viewcode-block" id="DataCleaner.clean_ticks">
 <a class="viewcode-back" href="../data_cleaner.html#data_cleaner.DataCleaner.clean_ticks">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">clean_ticks</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ticks</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Nettoie une liste de ticks (suppression outliers, valeurs manquantes, anomalies).&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Nettoie une liste de ticks (suppression outliers, valeurs manquantes, anomalies).</span>
+<span class="sd">        - Si &#39;timestamp&#39; est absent mais &#39;time&#39; ou &#39;time_msc&#39; est présent, il est ajouté automatiquement.</span>
+<span class="sd">        - Supprime les ticks incomplets ou aberrants.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">ticks</span><span class="p">:</span>
             <span class="k">return</span> <span class="p">[]</span>
         <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">ticks</span><span class="p">)</span>
         <span class="c1"># Gestion valeurs manquantes : suppression lignes incomplètes</span>
-        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">dropna</span><span class="p">(</span><span class="n">subset</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;bid&quot;</span><span class="p">,</span> <span class="s2">&quot;ask&quot;</span><span class="p">,</span> <span class="s2">&quot;volume&quot;</span><span class="p">,</span> <span class="s2">&quot;timestamp&quot;</span><span class="p">])</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">dropna</span><span class="p">(</span><span class="n">subset</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;bid&quot;</span><span class="p">,</span> <span class="s2">&quot;ask&quot;</span><span class="p">,</span> <span class="s2">&quot;volume&quot;</span><span class="p">,</span> <span class="s2">&quot;timestamp&quot;</span><span class="p">])</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         <span class="c1"># Suppression stricte des outliers z-score robuste (MAD) sur bid/ask/volume</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">df</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
             <span class="n">mad_zscores</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="n">col</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_mad_zscore</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="n">col</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">))</span> <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;bid&quot;</span><span class="p">,</span> <span class="s2">&quot;ask&quot;</span><span class="p">,</span> <span class="s2">&quot;volume&quot;</span><span class="p">]})</span>
             <span class="n">mask</span> <span class="o">=</span> <span class="p">(</span><span class="n">mad_zscores</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">zscore_thresh</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-            <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span>
+            <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         <span class="c1"># Détection anomalies (Isolation Forest)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">anomaly_method</span> <span class="o">==</span> <span class="s2">&quot;isoforest&quot;</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">10</span><span class="p">:</span>
             <span class="n">clf</span> <span class="o">=</span> <span class="n">IsolationForest</span><span class="p">(</span><span class="n">contamination</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">contamination</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">42</span><span class="p">)</span>
@@ -118,6 +122,34 @@
 </div>
 
 
+<div class="viewcode-block" id="test_clean_ticks_timestamp_fallback">
+<a class="viewcode-back" href="../data_cleaner.html#data_cleaner.test_clean_ticks_timestamp_fallback">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">test_clean_ticks_timestamp_fallback</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Vérifie que clean_ticks ajoute &#39;timestamp&#39; à partir de &#39;time&#39; ou &#39;time_msc&#39; et supprime les ticks incomplets.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">cleaner</span> <span class="o">=</span> <span class="n">DataCleaner</span><span class="p">()</span>
+    <span class="n">ticks</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="p">{</span><span class="s2">&quot;bid&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;ask&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="s2">&quot;volume&quot;</span><span class="p">:</span> <span class="mf">0.1</span><span class="p">,</span> <span class="s2">&quot;time&quot;</span><span class="p">:</span> <span class="mi">1234567890</span><span class="p">},</span>
+        <span class="p">{</span><span class="s2">&quot;bid&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;ask&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="s2">&quot;volume&quot;</span><span class="p">:</span> <span class="mf">0.1</span><span class="p">,</span> <span class="s2">&quot;time_msc&quot;</span><span class="p">:</span> <span class="mi">1234567890123</span><span class="p">},</span>
+        <span class="p">{</span><span class="s2">&quot;bid&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;ask&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="s2">&quot;volume&quot;</span><span class="p">:</span> <span class="mf">0.1</span><span class="p">},</span>  <span class="c1"># Incomplet</span>
+        <span class="p">{</span><span class="s2">&quot;bid&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;ask&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="s2">&quot;volume&quot;</span><span class="p">:</span> <span class="mf">0.1</span><span class="p">,</span> <span class="s2">&quot;timestamp&quot;</span><span class="p">:</span> <span class="mi">1234567890</span><span class="p">},</span>
+    <span class="p">]</span>
+    <span class="c1"># On simule l&#39;ajout du champ timestamp dans l&#39;ingestor, mais on vérifie la robustesse ici aussi</span>
+    <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">ticks</span><span class="p">:</span>
+        <span class="k">if</span> <span class="s1">&#39;timestamp&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">t</span><span class="p">:</span>
+            <span class="k">if</span> <span class="s1">&#39;time&#39;</span> <span class="ow">in</span> <span class="n">t</span><span class="p">:</span>
+                <span class="n">t</span><span class="p">[</span><span class="s1">&#39;timestamp&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">t</span><span class="p">[</span><span class="s1">&#39;time&#39;</span><span class="p">]</span>
+            <span class="k">elif</span> <span class="s1">&#39;time_msc&#39;</span> <span class="ow">in</span> <span class="n">t</span><span class="p">:</span>
+                <span class="n">t</span><span class="p">[</span><span class="s1">&#39;timestamp&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">t</span><span class="p">[</span><span class="s1">&#39;time_msc&#39;</span><span class="p">]</span> <span class="o">//</span> <span class="mi">1000</span><span class="p">)</span>
+    <span class="n">cleaned</span> <span class="o">=</span> <span class="n">cleaner</span><span class="o">.</span><span class="n">clean_ticks</span><span class="p">(</span><span class="n">ticks</span><span class="p">)</span>
+    <span class="c1"># Seuls les ticks avec tous les champs requis doivent rester</span>
+    <span class="k">assert</span> <span class="nb">all</span><span class="p">(</span><span class="s1">&#39;timestamp&#39;</span> <span class="ow">in</span> <span class="n">t</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">cleaned</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="nb">all</span><span class="p">(</span><span class="s1">&#39;bid&#39;</span> <span class="ow">in</span> <span class="n">t</span> <span class="ow">and</span> <span class="s1">&#39;ask&#39;</span> <span class="ow">in</span> <span class="n">t</span> <span class="ow">and</span> <span class="s1">&#39;volume&#39;</span> <span class="ow">in</span> <span class="n">t</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">cleaned</span><span class="p">)</span>
+    <span class="c1"># Le tick incomplet doit être supprimé</span>
+    <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">cleaned</span><span class="p">)</span> <span class="o">==</span> <span class="mi">3</span></div>
+
+
 <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">Exemple d&#39;utilisation :</span>
 <span class="sd">cleaner = DataCleaner()</span>
@@ -151,6 +183,24 @@
     </div>
 </search>
 <script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../web_api.html">Web API (FastAPI)</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Modules</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../config.html">config module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../config.html#gestion-securisee-de-la-configuration">Gestion sécurisée de la configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../data_cleaner.html">data_cleaner module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../data_ingestor.html">data_ingestor module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dvc_manager.html">dvc_manager module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../feature_engineering.html">feature_engineering module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml_pipeline.html">ml_pipeline module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../order_algos.html">order_algos module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../risk_management.html">risk_management module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../timescaledb_client.html">timescaledb_client module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../backtesting.html">backtesting module</a></li>
+</ul>
 
 <div class="relations">
 <h3>Related Topics</h3>

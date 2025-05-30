@@ -19,6 +19,7 @@ def send_order(symbol: str, volume: float, action: str, client: MT5RestClient = 
         raise ValueError("Un client MT5RestClient doit être fourni pour l'envoi d'ordre.")
     try:
         res = client.send_order(symbol, volume=volume, action=action, **kwargs)
+        logger.info(f"[order_execution] Réponse brute API /order : {res}")
         return {"success": True, "data": res}
     except MT5RestClientError as e:
         logger.error(f"Erreur MT5RestClient lors de l'envoi d'ordre: {e}")

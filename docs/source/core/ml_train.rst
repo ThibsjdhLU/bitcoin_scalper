@@ -27,3 +27,10 @@ Exemple d'appel Python
     )
 
 .. autofunction:: bitcoin_scalper.core.ml_train.analyse_label_balance 
+
+Sécurité et bonnes pratiques
+---------------------------
+
+- Split temporel AVANT calcul des labels pour éviter toute fuite de données.
+- Rééquilibrage combiné (SMOTE + UnderSampling) pour gérer les déséquilibres extrêmes.
+- Métriques adaptées (AUPRC, Sharpe corrigé, etc). 

@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 import os
 import sys
+from sklearn.preprocessing import MinMaxScaler
 
 # Ajouter le chemin du répertoire racine du projet pour pouvoir importer les modules locaux
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -14,16 +15,67 @@ from bitcoin_scalper.core.feature_engineering import FeatureEngineering
 INPUT_CSV_PATH = "data/features/BTCUSD_M1_201812120809_202505271849.csv" # User provided path, ensure it's accessible or make it a placeholder if not.
 OUTPUT_CSV_PATH = "data/features/BTCUSD_M1_features_trend_following.csv" # New output file name
 
-# --- Pipeline de Préparation des Features et du Label ---
+def check_temporal_integrity(df: pd.DataFrame, indicator_cols=None) -> bool:
+    """
+    Vérifie l'absence de look-ahead bias : chaque indicateur doit être décalé d'une bougie.
+    Retourne True si aucune erreur, False sinon.
+    """
+    if indicator_cols is None:
+        indicator_cols = [
+            'ema_21', 'ema_50', 'rsi', 'atr', 'supertrend',
+            'close_sma_3', 'atr_sma_20'
+        ]
+    errors = 0
+    for col in indicator_cols:
+        if col in df.columns:
+            shifted = df[col].shift(1)
+            # On ignore la première ligne (toujours NaN après shift)
+            if not (df[col].iloc[1:] == shifted.iloc[1:]).all():
+                errors += 1
+                print(f"[ERREUR] Look-ahead détecté sur la colonne {col}")
+    if errors == 0:
+        print("[OK] Intégrité temporelle validée (aucun look-ahead bias détecté)")
+        return True
+    else:
+        print(f"[ERREUR] {errors} colonnes présentent un look-ahead bias !")
+        return False
+
+def generate_signal(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Génère la colonne 'signal' (1=long, -1=short, 0=neutre) sur la base des indicateurs décalés.
+    Stratégie très permissive : seulement EMA et RSI, seuils larges, pas de supertrend ni ATR.
+    """
+    df = df.copy()
+    df['rsi_mean'] = df['rsi'].rolling(100, min_periods=10).mean()
+    long_condition = (
+        (df['ema_21'].fillna(0) > df['ema_50'].fillna(0)) &
+        (df['rsi'].fillna(0) > df['rsi_mean'].fillna(0) * 0.95)
+    )
+    short_condition = (
+        (df['ema_21'].fillna(0) < df['ema_50'].fillna(0)) &
+        (df['rsi'].fillna(0) < df['rsi_mean'].fillna(0) * 1.05)
+    )
+    df['signal'] = 0
+    df.loc[long_condition, 'signal'] = 1
+    df.loc[short_condition, 'signal'] = -1
+    df['signal_binary'] = (df['signal'] == 1).astype(int)
+    print("[DEBUG] Distribution des signaux (signal) :\n", df['signal'].value_counts(normalize=True))
+    return df
+
 def prepare_dataset(input_path: str, output_path: str):
     """
-    Charge les données brutes, ajoute les features et indicateurs, génère le label 'signal',
-    et exporte le dataset complet dans un nouveau fichier CSV.
+    Pipeline complet :
+    1. Chargement brut
+    2. Ajout indicateurs (décalés)
+    3. Calcul features dérivées (décalées)
+    4. Génération du signal
+    5. Gestion NaN ciblée
+    6. Validation intégrité temporelle
+    7. Export CSV sécurisé
+    8. Normalisation + pondération des classes
     """
     print(f"Chargement des données brutes depuis {input_path}...")
     try:
-        # 1. Chargement du CSV brut
-        # Changed separator to comma to match dummy data creation and subtask description for dummy CSV.
         df = pd.read_csv(input_path, sep='\t', engine='python')
     except FileNotFoundError:
         print(f"Erreur : Fichier non trouvé à {input_path}")
@@ -43,151 +95,121 @@ def prepare_dataset(input_path: str, output_path: str):
         '<VOL>': 'volume_zero',
         '<SPREAD>': 'spread'
     })
-
     df.dropna(subset=['timestamp'], inplace=True)
     df.set_index('timestamp', inplace=True)
     df.sort_index(inplace=True)
-
     if 'volume_zero' in df.columns:
         df = df.drop(columns=['volume_zero'])
 
     print("Ajout des indicateurs techniques et features...")
-    # --- OPTIMIZATION PLACEHOLDER ---
-    # The parameters for the indicators used below are candidates for future optimization.
-    # Techniques like Grid Search, Random Search, or Bayesian Optimization can be applied
-    # within a backtesting framework to find optimal values.
-    # Key parameters to consider for optimization:
-    #   - EMA fast period (currently 21, e.g., range 10-30)
-    #   - EMA slow period (currently 50, e.g., range 40-100)
-    #   - RSI period (currently 14, e.g., range 7-21)
-    #   - Supertrend period (currently 7, e.g., range 5-15)
-    #   - Supertrend multiplier (currently 3.0, e.g., range 1.5-4.0)
-    #   - ATR period for ATR threshold calculation (currently 14 for ATR, 20 for its SMA, e.g., range 7-30 for both)
-    #   - The logic for 'atr > atr_sma_20' itself could be optimized (e.g., different SMA period, or ATR > fixed_value * ATR.rolling(n).std())
     fe = FeatureEngineering()
-    # Use the correct column names as per the CSV structure for volume
     df = fe.add_indicators(df, price_col='close', high_col='high', low_col='low', volume_col='tickvol')
-    # df = fe.add_features(df, price_col='close', volume_col='tickvol') # Keep or remove based on strategy needs
+    # Calcul des features dérivées avec shift(1) après le rolling
+    df['close_sma_3'] = df['close'].rolling(window=3, min_periods=1).mean().shift(1)
+    df['atr_sma_20'] = df['atr'].rolling(window=20, min_periods=1).mean().shift(1)
 
-    # --- START OF MODIFICATIONS FOR NEW STRATEGY ---
+    # Génération du signal robuste (stratégie assouplie)
+    df = generate_signal(df)
 
-    # 1. Ensure all required indicators are present (from FeatureEngineering class)
-    # EMA 21, EMA 50, RSI 14, ATR 14, Supertrend (7,3)
-    # These should be named: 'ema_21', 'ema_50', 'rsi', 'atr', 'supertrend' (or 'SUPERT_7_3.0' if that's the actual name from pandas-ta, then rename it to 'supertrend')
-    # If 'supertrend' is not the direct output name from pandas-ta, add a line to rename it:
-    # For example: if df.ta.supertrend outputs 'SUPERT_7_3.0', 'SUPERTd_7_3.0', etc.
-    # We need the main trend line. Let's assume it's 'SUPERT_7_3.0'.
-    # df['supertrend'] = df['SUPERT_7_3.0'] # Add this if 'supertrend' is not the direct name
-    # The worker reported assigning the main supertrend line to df[f"{prefix}supertrend"], so it should be 'supertrend' already.
+    # Gestion NaN ciblée (seulement sur les colonnes critiques)
+    indicator_cols = [
+        'ema_21', 'ema_50', 'rsi', 'atr', 'supertrend',
+        'close_sma_3', 'atr_sma_20', 'signal', 'signal_binary'
+    ]
+    initial_count = len(df)
+    df.dropna(subset=indicator_cols, inplace=True)
+    print(f"Suppression de {initial_count - len(df)}/{initial_count} lignes ({(initial_count - len(df)) / initial_count * 100:.2f}%)")
 
-    # 2. Calculate additional required features
-    df['close_sma_3'] = df['close'].rolling(window=3).mean()
-    # Placeholder for ATR threshold - for now, let's use ATR > its rolling mean or a fixed small value.
-    # This needs to be defined more concretely or optimized later.
-    df['atr_sma_20'] = df['atr'].rolling(window=20).mean() # Example: ATR compared to its 20-period SMA
+    # Validation intégrité temporelle
+    check_temporal_integrity(df, indicator_cols=indicator_cols)
 
-    # 3. Remove or comment out the "Phoenix" strategy logic for 'signal' generation.
-    # This includes all 'buy_condition_*' and 'sell_condition_*' for Phoenix.
+    # Statistiques sur la cible
+    print("Distribution des signaux (signal) :\n", df['signal'].value_counts(normalize=True))
+    print("Distribution binaire (signal_binary) :\n", df['signal_binary'].value_counts(normalize=True))
+    prop_long = df['signal_binary'].mean()
+    if prop_long < 0.05:
+        print("[AVERTISSEMENT] Proportion de signaux LONG très faible (<5%). Le modèle risque d'être biaisé.")
 
-    # 4. Implement new "Trend-Following Intelligent" strategy logic
-    print("Génération du label 'signal' pour la stratégie Trend-Following Intelligent...")
-    df['signal'] = 0 # Neutral signal by default
+    # Pondération des classes pour le ML (inverse de la fréquence)
+    class_counts = df['signal_binary'].value_counts()
+    total = len(df)
+    weights = {k: total/v for k, v in class_counts.items()}
+    df['weight'] = df['signal_binary'].map(weights)
 
-    # Conditions for Long (achat)
-    long_condition_ema = df['ema_21'] > df['ema_50']
-    long_condition_rsi = df['rsi'] > 50
-    long_condition_supertrend = df['close'] > df['supertrend'] # Assumes 'supertrend' column exists
-    long_condition_close_avg = df['close'] > df['close_sma_3']
-    long_condition_atr = df['atr'] > df['atr_sma_20'] # Example: ATR above its 20-period SMA as a minimum threshold
+    # Normalisation des features numériques (hors cible, hors timestamp)
+    features_to_normalize = [
+        'open', 'high', 'low', 'close', 'tickvol',
+        'ema_21', 'ema_50', 'rsi', 'atr', 'supertrend',
+        'close_sma_3', 'atr_sma_20'
+    ]
+    features_to_normalize = [col for col in features_to_normalize if col in df.columns]
+    scaler = MinMaxScaler()
+    df_norm = df.copy()
+    df_norm[features_to_normalize] = scaler.fit_transform(df[features_to_normalize])
+    # Export version normalisée et brute
+    df['timestamp_str'] = df.index.astype(str)
+    df_norm['timestamp_str'] = df.index.astype(str)
+    cols_utiles = [
+        'open', 'high', 'low', 'close', 'tickvol',
+        'ema_21', 'ema_50', 'rsi', 'atr', 'supertrend',
+        'close_sma_3', 'atr_sma_20', 'signal', 'signal_binary', 'weight', 'timestamp_str'
+    ]
+    cols_utiles = [col for col in cols_utiles if col in df.columns]
+    df_to_export = df[cols_utiles].copy()
+    df_norm_to_export = df_norm[cols_utiles].copy()
+    df_to_export.to_csv(output_path, index=False)
+    df_norm_to_export.to_csv(output_path.replace('.csv', '_norm.csv'), index=False)
+    print("Préparation terminée.")
+    print(f"Dataset filtré enregistré sous {output_path} (brut) et {output_path.replace('.csv', '_norm.csv')} (normalisé).")
+    print(f"Shape du dataset final : {df_to_export.shape}")
+    print("Aperçu des premières lignes :")
+    print(df_to_export.head())
 
-    combined_long_conditions = (
-        long_condition_ema &
-        long_condition_rsi &
-        long_condition_supertrend &
-        long_condition_close_avg &
-        long_condition_atr
-    )
-    df.loc[combined_long_conditions, 'signal'] = 1
+def prepare_ml_csv(input_path: str, output_path: str):
+    """
+    Prépare un CSV compatible ML à partir d'un CSV brut issu de MetaTrader ou autre.
+    - Renomme les colonnes pour qu'elles soient compatibles avec XGBoost/sklearn
+    - Ajoute les colonnes de features techniques manquantes (valeurs NaN ou calculées)
+    - Sauvegarde le CSV prêt pour l'entraînement ML
+    """
+    # Mapping des noms bruts vers noms ML
+    col_map = {
+        '<DATE>': 'date',
+        '<TIME>': 'time',
+        '<OPEN>': 'open',
+        '<HIGH>': 'high',
+        '<LOW>': 'low',
+        '<CLOSE>': 'close',
+        '<TICKVOL>': 'tickvol',
+        '<VOL>': 'vol',
+        '<SPREAD>': 'spread',
+    }
+    df = pd.read_csv(input_path, sep='\t')
+    df = df.rename(columns=col_map)
 
-    # Conditions for Short (vente à découvert)
-    short_condition_ema = df['ema_21'] < df['ema_50']
-    short_condition_rsi = df['rsi'] < 50
-    short_condition_supertrend = df['close'] < df['supertrend'] # Assumes 'supertrend' column exists
-    short_condition_close_avg = df['close'] < df['close_sma_3']
-    # For "ATR élevé", let's use the same condition as for long for now (ATR > ATR_SMA_20)
-    # This should be refined based on what "élevé" (high) means in context.
-    short_condition_atr = df['atr'] > df['atr_sma_20']
-
-    combined_short_conditions = (
-        short_condition_ema &
-        short_condition_rsi &
-        short_condition_supertrend &
-        short_condition_close_avg &
-        short_condition_atr
-    )
-    df.loc[combined_short_conditions, 'signal'] = -1
-
-
-    # 5. Handle NaNs introduced by rolling windows or shifts AFTER all calculations.
-    # The original script had a good approach for this.
-    # df.replace([np.inf, -np.inf], np.nan, inplace=True) # Already in original if needed
-    initial_rows_with_nan = df.isnull().any(axis=1).sum()
-    if initial_rows_with_nan > 0:
-        print(f"Suppression des lignes contenant des NaNs après calculs de stratégie ({initial_rows_with_nan} lignes)...")
-        df.dropna(inplace=True)
-        if df.empty:
-            print("Erreur: Plus de données restantes après suppression des NaNs post-stratégie.")
-            return
-    else:
-        print("Aucun NaN détecté dans les features calculées pour la stratégie.")
-
-    # 6. Exit Conditions (Placeholders / Notes)
-    # As discussed, full implementation of dynamic exits is complex here.
-    # This script focuses on generating entry signals.
-    # Stop-loss, take-profit, and alternative exits (RSI to 50, EMA crossover)
-    # would typically be handled by a backtesting engine or execution bot that tracks individual trades.
-    # For now, we are only generating the primary entry signal (1 for buy, -1 for sell, 0 for hold).
-    # We can add columns for SL/TP levels if needed for external systems, but the logic to *act* on them is separate.
-    # df['stop_loss_price'] = np.nan
-    # df['take_profit_price'] = np.nan
-    # if 'atr' in df.columns:
-    #    df.loc[df['signal'] == 1, 'stop_loss_price'] = df['close'] - (df['atr'] * 1.5)
-    #    df.loc[df['signal'] == 1, 'take_profit_price'] = df['close'] + (df['atr'] * 1.5 * 2) # SL * 2
-    #    df.loc[df['signal'] == -1, 'stop_loss_price'] = df['close'] + (df['atr'] * 1.5)
-    #    df.loc[df['signal'] == -1, 'take_profit_price'] = df['close'] - (df['atr'] * 1.5 * 2) # SL * 2
-
-    # --- END OF MODIFICATIONS FOR NEW STRATEGY ---
-
-    # --- RISK MANAGEMENT PLACEHOLDER ---
-    # The 'signal' column generated by this script is intended for consumption by a separate
-    # trading execution system or backtesting engine. That system would be responsible for
-    # implementing actual risk management rules, such as:
-    #   1. Position Sizing: e.g., Max 2% of total capital engaged per trade.
-    #   2. Daily Drawdown Limits: e.g., If daily drawdown (realized or unrealized) exceeds 5%,
-    #      pause all new trading activity for the bot until the next trading day/session.
-    #   3. Circuit Breakers: e.g., If 3 consecutive losing trades occur, temporarily pause
-    #      the strategy or specific asset trading.
-    #   4. Stop-Loss / Take-Profit: While SL/TP levels can be calculated here (as shown in commented
-    #      out section above), their actual execution and management during a trade's lifecycle
-    #      are handled by the execution engine.
-    # This script focuses on generating the potential entry signals based on technical analysis.
-
-    print(f"Export du dataset complet vers {output_path}...")
-    # Colonnes utiles pour le ML
+    # Colonnes attendues pour le ML (voir scripts/prepare_features.py et core/ml_train.py)
     cols_utiles = [
         'open', 'high', 'low', 'close', 'tickvol',
         'ema_21', 'ema_50', 'rsi', 'atr', 'supertrend',
         'close_sma_3', 'atr_sma_20', 'signal', 'timestamp'
     ]
-    # On garde seulement les colonnes présentes dans le DataFrame
-    cols_utiles = [col for col in cols_utiles if col in df.columns]
-    df_to_export = df[cols_utiles].copy()
-    df_to_export.to_csv(output_path, index=True)
-    print("Préparation terminée.")
-    print(f"Dataset filtré enregistré sous {output_path}.")
-    print(f"Shape du dataset final : {df_to_export.shape}")
-    print("Aperçu des premières lignes :")
-    print(df_to_export.head())
+    # Ajoute les colonnes manquantes avec NaN
+    for col in cols_utiles:
+        if col not in df.columns:
+            df[col] = np.nan
+    # Optionnel : générer les features techniques ici si besoin
+    # fe = FeatureEngineering()
+    # df = fe.transform(df)
+    # Ajoute une colonne timestamp si absente
+    if 'timestamp' not in df.columns:
+        df['timestamp'] = df['date'].astype(str) + ' ' + df['time'].astype(str)
+    # Ajoute une colonne signal par défaut (0)
+    if 'signal' not in df.columns:
+        df['signal'] = 0
+    # Réordonne les colonnes
+    df = df[cols_utiles]
+    df.to_csv(output_path, index=False)
+    print(f"Nouveau CSV ML prêt : {output_path}")
 
 if __name__ == "__main__":
     # Ensure the input file exists or adjust path.

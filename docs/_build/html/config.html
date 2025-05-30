@@ -15,6 +15,8 @@
     <script src="_static/translations.js?v=e6b791cb"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Recherche" href="search.html" />
+    <link rel="next" title="data_cleaner module" href="data_cleaner.html" />
+    <link rel="prev" title="Web API (FastAPI)" href="web_api.html" />
    
   <link rel="stylesheet" href="_static/custom.css" type="text/css" />
   
@@ -53,12 +55,40 @@ Les secrets sont stockés dans un fichier JSON chiffré avec AES-256.</p>
 <dd></dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="config.SecureConfig.encrypt_file">
+<em class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">encrypt_file</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_json_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_enc_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">aes_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bytes</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/config.html#SecureConfig.encrypt_file"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#config.SecureConfig.encrypt_file" title="Lien vers cette définition">¶</a></dt>
+<dd><p>Chiffre un fichier JSON en AES-256-CBC (IV aléatoire + base64) pour usage avec SecureConfig.</p>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="config.SecureConfig.get">
 <span class="sig-name descname"><span class="pre">get</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">default</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/config.html#SecureConfig.get"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#config.SecureConfig.get" title="Lien vers cette définition">¶</a></dt>
 <dd></dd></dl>
 
 </dd></dl>
 
+</section>
+<section id="gestion-securisee-de-la-configuration">
+<h1>Gestion sécurisée de la configuration<a class="headerlink" href="#gestion-securisee-de-la-configuration" title="Lien vers cette rubrique">¶</a></h1>
+<ul class="simple">
+<li><p>Le fichier de configuration <strong>doit</strong> être chiffré (AES-256) et stocké sous <code class="docutils literal notranslate"><span class="pre">config.enc</span></code>.</p></li>
+<li><p>La variable d’environnement <code class="docutils literal notranslate"><span class="pre">CONFIG_AES_KEY</span></code> (clé hexadécimale 64 caractères) est <strong>obligatoire</strong> pour tout lancement du bot.</p></li>
+<li><p><strong>Aucun fallback</strong> sur <code class="docutils literal notranslate"><span class="pre">config_clear.json</span></code> n’est autorisé en production.</p></li>
+<li><p>En cas d’absence de la clé AES, le bot s’arrête immédiatement avec une erreur explicite.</p></li>
+<li><p>Il est recommandé d’injecter la clé via un gestionnaire de secrets (Vault, AWS, Azure).</p></li>
+</ul>
+<p>Exemple d’utilisation :</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">export</span><span class="w"> </span><span class="nv">CONFIG_AES_KEY</span><span class="o">=</span><span class="s2">&quot;0123456789abcdef...&quot;</span>
+python<span class="w"> </span>bitcoin_scalper/main.py
+</pre></div>
+</div>
+<section id="securite">
+<h2>Sécurité :<a class="headerlink" href="#securite" title="Lien vers cette rubrique">¶</a></h2>
+<ul class="simple">
+<li><p>Ne jamais stocker la clé AES en clair dans le code, ni dans les fichiers de configuration.</p></li>
+<li><p>Ne jamais versionner <code class="docutils literal notranslate"><span class="pre">config_clear.json</span></code> ou tout fichier contenant des secrets non chiffrés.</p></li>
+</ul>
+</section>
 </section>
 
 
@@ -87,11 +117,38 @@ Les secrets sont stockés dans un fichier JSON chiffré avec AES-256.</p>
     </div>
 </search>
 <script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="web_api.html">Web API (FastAPI)</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Modules</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">config module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#config.ConfigError"><code class="docutils literal notranslate"><span class="pre">ConfigError</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#config.SecureConfig"><code class="docutils literal notranslate"><span class="pre">SecureConfig</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="#gestion-securisee-de-la-configuration">Gestion sécurisée de la configuration</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#securite">Sécurité :</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="data_cleaner.html">data_cleaner module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data_ingestor.html">data_ingestor module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dvc_manager.html">dvc_manager module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="feature_engineering.html">feature_engineering module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ml_pipeline.html">ml_pipeline module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="order_algos.html">order_algos module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="risk_management.html">risk_management module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="timescaledb_client.html">timescaledb_client module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="backtesting.html">backtesting module</a></li>
+</ul>
 
 <div class="relations">
 <h3>Related Topics</h3>
 <ul>
   <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="web_api.html" title="Chapitre précédent">Web API (FastAPI)</a></li>
+      <li>Next: <a href="data_cleaner.html" title="Chapitre suivant">data_cleaner module</a></li>
   </ul></li>
 </ul>
 </div>

@@ -7,6 +7,7 @@ from bitcoin_scalper.core.timescaledb_client import TimescaleDBClient
 from bitcoin_scalper.core.data_cleaner import DataCleaner
 
 logger = logging.getLogger("data_ingestor")
+logger.setLevel(logging.WARNING)  # Réduction de la verbosité par défaut
 
 class DataIngestor:
     """
@@ -56,6 +57,20 @@ class DataIngestor:
     def _ingest_ticks(self):
         try:
             ticks = self.mt5_client.get_ticks(self.symbol, limit=self.batch_size)
+            ticks_with_ts = []
+            for t in ticks:
+                if 'timestamp' not in t:
+                    if 'time' in t:
+                        t['timestamp'] = t['time']
+                        logger.debug(f"Tick : champ 'timestamp' ajouté à partir de 'time' : {t['timestamp']}")
+                    elif 'time_msc' in t:
+                        t['timestamp'] = int(t['time_msc'] // 1000)
+                        logger.debug(f"Tick : champ 'timestamp' ajouté à partir de 'time_msc' : {t['timestamp']}")
+                if 'timestamp' in t and 'symbol' in t:
+                    ticks_with_ts.append(t)
+                else:
+                    logger.warning(f"Tick ignoré (clé manquante) : {t}")
+            ticks = ticks_with_ts
             if self._last_tick_time:
                 ticks = [t for t in ticks if t["timestamp"] > self._last_tick_time]
             if self.cleaner and ticks:
@@ -91,4 +106,22 @@ ingestor = DataIngestor(mt5_client, db_client, cleaner=cleaner)
 ingestor.start()
 # ...
 ingestor.stop()
-""" 
+"""
+
+def test_ingest_ticks_symbol(monkeypatch):
+    """
+    Vérifie que seuls les ticks avec 'symbol' sont insérés.
+    """
+    class DummyMT5:
+        def get_ticks(self, symbol, limit):
+            return [
+                {'bid': 1, 'ask': 2, 'volume': 0.1, 'timestamp': 123, 'symbol': 'BTCUSD'},
+                {'bid': 1, 'ask': 2, 'volume': 0.1, 'timestamp': 124},  # Manque symbol
+            ]
+    class DummyDB:
+        def insert_ticks(self, ticks):
+            assert all('symbol' in t for t in ticks)
+    ingestor = DataIngestor(DummyMT5(), DummyDB())
+    ingestor._last_tick_time = None
+    ingestor.cleaner = None
+    ingestor._ingest_ticks() 

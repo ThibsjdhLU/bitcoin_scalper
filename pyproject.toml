@@ -28,6 +28,9 @@ python-multipart = "*"
 # MetaTrader5 = "*" # Commenté car non compatible macOS et non nécessaire pour les tests actuels
 shap = "*"
 optuna = "^4.3.0"
+sphinx = "^8.2.3"
+dvc = "^3.59.2"
+lightgbm = "^4.6.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "*"

@@ -113,4 +113,55 @@ def test_add_features_exception(monkeypatch):
     monkeypatch.setattr("pandas.Series.pct_change", lambda self, *a, **k: (_ for _ in ()).throw(Exception("fail")))
     df = make_ohlcv(20)
     with pytest.raises(Exception, match="fail"):
-        fe.add_features(df) 
+        fe.add_features(df)
+
+def test_no_lookahead():
+    fe = FeatureEngineering()
+    df = make_ohlcv(20)
+    out = fe.add_indicators(df)
+    # Tous les indicateurs doivent être NaN à la première ligne
+    indicators = [
+        'rsi', 'macd', 'macd_signal', 'macd_diff',
+        'ema_21', 'ema_50', 'sma_20',
+        'bb_high', 'bb_low', 'bb_width',
+        'atr', 'supertrend', 'vwap',
+        'close_sma_3', 'atr_sma_20'
+    ]
+    for col in indicators:
+        assert pd.isna(out.iloc[0][col]), f"{col} n'est pas NaN en t0 (look-ahead possible)"
+    # La valeur t1 doit correspondre à la valeur calculée sur t0 (hors NaN initiaux)
+    df_base = make_ohlcv(20)
+    out_base = fe.add_indicators(df_base)
+    for col in indicators:
+        if not pd.isna(out_base.iloc[0][col]):
+            assert np.isclose(out.iloc[1][col], out_base.iloc[0][col], equal_nan=True), f"Décalage incorrect sur {col}"
+
+def test_add_features_no_lookahead():
+    fe = FeatureEngineering()
+    df = make_ohlcv(20)
+    out = fe.add_features(df)
+    # Les features doivent être NaN à la première ligne
+    features = ['return', 'log_return', 'volatility_20']
+    for col in features:
+        assert pd.isna(out.iloc[0][col]), f"{col} n'est pas NaN en t0 (look-ahead possible)"
+    # La valeur t1 doit correspondre à la valeur calculée sur t0 (hors NaN initiaux)
+    df_base = make_ohlcv(20)
+    out_base = fe.add_features(df_base)
+    for col in features:
+        if not pd.isna(out_base.iloc[0][col]):
+            assert np.isclose(out.iloc[1][col], out_base.iloc[0][col], equal_nan=True), f"Décalage incorrect sur {col}"
+
+def test_supertrend_direction_type():
+    # DataFrame minimal avec OHLCV
+    df = pd.DataFrame({
+        'open': [1, 2, 3, 4, 5, 6, 7],
+        'high': [2, 3, 4, 5, 6, 7, 8],
+        'low': [0, 1, 2, 3, 4, 5, 6],
+        'close': [1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5],
+        'volume': [10, 10, 10, 10, 10, 10, 10]
+    })
+    fe = FeatureEngineering()
+    df_feat = fe.add_indicators(df)
+    # Vérifie que la colonne supertrend_direction existe et est bien de type float
+    assert 'supertrend_direction' in df_feat.columns
+    assert np.issubdtype(df_feat['supertrend_direction'].dtype, np.floating) 

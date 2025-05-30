@@ -61,11 +61,16 @@ class MT5RestClient:
         if price is not None:
             data["price"] = price
         data.update(kwargs)
+        logger.info(f"[MT5RestClient] Payload POST /order : {data}")
         return self._request("POST", "/order", json=data)
 
     def get_status(self) -> Dict[str, Any]:
         """Récupère le statut du serveur MT5 distant."""
         return self._request("GET", "/status")
+
+    def get_positions(self) -> List[Dict[str, Any]]:
+        """Récupère la liste des positions ouvertes sur le compte MT5."""
+        return self._request("GET", "/positions")
 
 """
 Exemple d'utilisation :

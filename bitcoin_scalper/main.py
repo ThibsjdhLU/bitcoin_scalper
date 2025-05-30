@@ -15,7 +15,8 @@ from bitcoin_scalper.core.feature_engineering import FeatureEngineering
 from bitcoin_scalper.core.risk_management import RiskManager
 from bitcoin_scalper.core.timescaledb_client import TimescaleDBClient  # TODO: à instancier pour stockage
 from bitcoin_scalper.core.dvc_manager import DVCManager  # TODO: à utiliser pour versioning
-from bitcoin_scalper.core.ml_pipeline import MLPipeline  # TODO: à charger pour prédiction ML
+from bitcoin_scalper.core.export import load_objects  # Pour charger le modèle ML
+from bitcoin_scalper.core.modeling import predict    # Pour la prédiction ML
 from bitcoin_scalper.core.backtesting import Backtester  # TODO: à intégrer pour reporting/backtest offline
 from bitcoin_scalper.core.order_algos import execute_iceberg, execute_vwap  # TODO: à intégrer pour exécution avancée
 from bot.connectors.mt5_rest_client import MT5RestClient
@@ -24,6 +25,21 @@ import threading
 import argparse
 import numpy as np
 from sklearn.metrics import accuracy_score, f1_score, roc_auc_score, precision_score, recall_score
+import joblib
+from scripts.prepare_features import generate_signal  # Ajout pour fallback algo trading
+import getpass
+import hashlib
+import sys
+from PyQt6.QtWidgets import QApplication, QMainWindow, QDockWidget, QTableView, QTextEdit, QMenuBar, QMessageBox
+from PyQt6.QtGui import QAction
+from PyQt6.QtCore import pyqtSignal, Qt
+from ui.main_window import MainWindow
+from ui.password_dialog import PasswordDialog
+from threads.trading_worker import TradingWorker
+from utils.logger import QtLogger
+from utils.settings import SettingsManager
+from models.positions_model import PositionsModel
+import pyqtgraph as pg
 
 # --- Config logging ---
 logging.basicConfig(level=logging.INFO)
@@ -51,6 +67,19 @@ BOT_LAST_BALANCE = Gauge('bot_last_balance', 'Dernier solde du bot')
 
 # TODO: Ajouter d'autres métriques Prometheus (latence, exécution ordres, PnL, drawdown, etc.)
 
+# --- Sécurité simplifiée : dérivation de la clé AES à partir d'un mot de passe utilisateur ---
+SALT = b"bitcoin_scalper_salt"  # À stocker dans un fichier séparé pour plus de sécurité
+ITERATIONS = 200_000
+
+def derive_key_from_password(password: str, salt: bytes = SALT, iterations: int = ITERATIONS) -> bytes:
+    """Dérive une clé AES-256 à partir d'un mot de passe utilisateur."""
+    return hashlib.pbkdf2_hmac(
+        'sha256',
+        password.encode('utf-8'),
+        salt,
+        iterations,
+        dklen=32  # 256 bits
+    )
 
 def prometheus_exporter():
     start_http_server(8001)
@@ -82,24 +111,12 @@ def run_live_trading(max_cycles=None):
     - Les ordres sont validés par la gestion du risque avant exécution.
     - Mode par défaut du bot.
     """
-    # 1. Charger la config (sécurisée ou claire)
-    aes_key = os.environ.get("CONFIG_AES_KEY")
-    if aes_key:
-        config = SecureConfig("config.enc", bytes.fromhex(aes_key))
-        logger.info("Configuration chargée en mode sécurisé (AES-256).")
-    else:
-        import json
-        with open("config_clear.json", "r") as f:
-            config_dict = json.load(f)
-        class DummyConfig:
-            def __init__(self, d):
-                self._d = d
-            def get(self, key, default=None):
-                return self._d.get(key, default)
-            def as_dict(self):
-                return self._d
-        config = DummyConfig(config_dict)
-        logger.warning("Configuration chargée en mode NON sécurisé (config_clear.json).")
+    # 1. Charger la config (sécurisée uniquement, fallback interdit)
+    # --- Sécurité simplifiée : demande du mot de passe utilisateur et dérivation de la clé ---
+    password = getpass.getpass("Mot de passe pour déverrouiller la config sécurisée : ")
+    aes_key = derive_key_from_password(password)
+    config = SecureConfig("config.enc", aes_key)
+    logger.info("Configuration chargée en mode sécurisé (clé dérivée du mot de passe utilisateur, PBKDF2, AES-256). Fallback interdit.")
     mt5_url = config.get("MT5_REST_URL")
     mt5_api_key = config.get("MT5_REST_API_KEY")
 
@@ -135,17 +152,17 @@ def run_live_trading(max_cycles=None):
     # --- Chargement du pipeline ML (si modèle existant) ---
     ml_pipe = None
     ml_model_path = config.get("ML_MODEL_PATH", "model_rf.pkl")
+    ml_loaded = False
     try:
         if os.path.exists(ml_model_path):
-            ml_pipe = MLPipeline(model_type="random_forest")  # TODO: adapter le type si besoin
-            ml_pipe.load(ml_model_path)
+            # On charge le modèle ML via load_objects (cf. orchestrator.py)
+            ml_pipe, _, _, _, _ = load_objects(ml_model_path)
             logger.info(f"Modèle ML chargé depuis {ml_model_path}")
+            ml_loaded = True
         else:
-            logger.info(f"Aucun modèle ML trouvé à {ml_model_path}, fallback RSI")
+            logger.warning(f"Aucun modèle ML trouvé à {ml_model_path}. Fallback sur stratégie algo projet.")
     except Exception as e:
-        logger.error(f"Erreur chargement modèle ML : {e}")
-        ml_pipe = None
-
+        logger.warning(f"Erreur chargement modèle ML : {e}. Fallback sur stratégie algo projet.")
     risk = RiskManager(mt5_client)
     # TODO: Initialiser les algos d'exécution avancée (iceberg, TWAP, VWAP)
     # TODO: Initialiser le backtester pour reporting offline
@@ -174,12 +191,23 @@ def run_live_trading(max_cycles=None):
             # 5. Feature engineering
             df = fe.add_indicators(df)
             # TODO: Ajouter add_features, multi_timeframe, etc.
-            # 6. Prédiction ML (si modèle chargé)
+            # 6. Prédiction ML ou fallback algo
             signal = None
-            if ml_pipe:
+            if ml_loaded:
                 try:
-                    # On suppose que le modèle prédit 1=buy, -1=sell, 0=hold
-                    pred = ml_pipe.predict(df)[-1]
+                    features_list_path = "features_list.pkl"
+                    if os.path.exists(features_list_path):
+                        features_list = joblib.load(features_list_path)
+                        missing_cols = [col for col in features_list if col not in df.columns]
+                        if missing_cols:
+                            logger.warning(f"Colonnes de features manquantes pour la prédiction ML : {missing_cols}")
+                        X_pred = df[[col for col in features_list if col in df.columns]]
+                    else:
+                        logger.warning("features_list.pkl introuvable. Fallback sur stratégie algo projet.")
+                        ml_loaded = False
+                        raise RuntimeError("features_list.pkl manquant : fallback sur stratégie algo projet.")
+                    pred = predict(ml_pipe, X_pred)[-1]
+                    logger.info(f"ML utilisée pour la prédiction. Prédiction brute : {pred}")
                     if pred == 1:
                         signal = "buy"
                     elif pred == -1:
@@ -188,57 +216,101 @@ def run_live_trading(max_cycles=None):
                         signal = None
                     logger.info(f"Signal ML : {signal} (prédiction brute : {pred})")
                 except Exception as e:
-                    logger.error(f"Erreur prédiction ML, fallback RSI : {e}")
-                    ml_pipe = None  # On désactive le ML si erreur
-            if not ml_pipe:
-                # Fallback RSI
-                last_rsi = df["rsi"].iloc[-1]
-                logger.info(f"Dernier RSI: {last_rsi:.2f}")
-                if last_rsi < RSI_OVERSOLD:
+                    logger.warning(f"Erreur prédiction ML : {e}. Fallback sur stratégie algo projet.")
+                    ml_loaded = False
+            if not ml_loaded:
+                # Fallback : stratégie algo projet
+                df_signal = generate_signal(df)
+                pred = df_signal['signal'].iloc[-1]
+                logger.info(f"Signal généré par stratégie algo projet : {pred}")
+                if pred == 1:
                     signal = "buy"
-                elif last_rsi > RSI_OVERBOUGHT:
+                elif pred == -1:
                     signal = "sell"
                 else:
                     signal = None
-            # 8. Gestion du risque
+            # 7. Gestion du risque et exécution avancée
             if signal:
-                # Validation du risque avant envoi d'ordre
-                res = risk.can_open_position(SYMBOL, ORDER_VOLUME)
-                if not res["allowed"]:
-                    logger.info(f"Signal {signal} refusé par gestion du risque: {res['reason']}")
-                    signal = None
-            # 9. Exécution de l'ordre
-            if signal:
-                logger.info(f"Envoi ordre {signal} {ORDER_VOLUME} {SYMBOL}")
+                # Calcul SL/TP (par défaut % ou ATR si dispo)
+                close_price = df["close"].iloc[-1]
+                atr = df["atr"].iloc[-1] if "atr" in df.columns and not pd.isna(df["atr"].iloc[-1]) else None
+                sl, tp = None, None
+                if atr and not pd.isna(atr) and atr > 0:
+                    sl_mult = float(config.get("SL_ATR_MULT", 2.0))
+                    tp_mult = float(config.get("TP_ATR_MULT", 3.0))
+                    if signal == "buy":
+                        sl = close_price - sl_mult * atr
+                        tp = close_price + tp_mult * atr
+                    elif signal == "sell":
+                        sl = close_price + sl_mult * atr
+                        tp = close_price - tp_mult * atr
+                else:
+                    sl_pct = float(config.get("DEFAULT_SL_PCT", 0.01))
+                    tp_pct = float(config.get("DEFAULT_TP_PCT", 0.02))
+                    if signal == "buy":
+                        sl = close_price * (1 - sl_pct)
+                        tp = close_price * (1 + tp_pct)
+                    elif signal == "sell":
+                        sl = close_price * (1 + sl_pct)
+                        tp = close_price * (1 - tp_pct)
+                logger.info(f"SL/TP utilisés : SL={sl:.2f}, TP={tp:.2f} (méthode {'ATR' if atr else '%'})")
+                risk_check = risk.can_open_position(SYMBOL, ORDER_VOLUME)
+                if risk_check["allowed"]:
+                    try:
+                        exec_algo = config.get("EXEC_ALGO", "market").lower()
+                        if exec_algo == "iceberg":
+                            execute_iceberg(mt5_client, SYMBOL, signal, ORDER_VOLUME, sl=sl, tp=tp)
+                        elif exec_algo == "vwap":
+                            execute_vwap(mt5_client, SYMBOL, signal, ORDER_VOLUME, sl=sl, tp=tp)
+                        elif exec_algo == "twap":
+                            logger.warning("TWAP non implémenté, fallback market order.")
+                            mt5_client.send_order(SYMBOL, signal, ORDER_VOLUME, sl=sl, tp=tp)
+                        else:
+                            mt5_client.send_order(SYMBOL, signal, ORDER_VOLUME, sl=sl, tp=tp)
+                        logger.info(f"Ordre {signal} exécuté via {exec_algo} avec SL={sl:.2f}, TP={tp:.2f}.")
+                        dvc.add("data/features/BTCUSD_M1.csv")
+                        dvc.commit()
+                    except Exception as e:
+                        logger.error(f"Erreur exécution ordre : {e}")
+                        BOT_ERRORS.inc()
+                else:
+                    logger.warning(f"Ordre refusé par gestion du risque : {risk_check['reason']}")
+            else:
+                logger.info("Aucun signal de trading généré.")
+            # 8. Reporting backtesting (si activé)
+            if config.get("ENABLE_BACKTEST", False):
                 try:
-                    # TODO: Utiliser les algos avancés si besoin (ex: execute_iceberg, execute_vwap)
-                    # Exemple d'appel :
-                    # res = execute_iceberg(ORDER_VOLUME, max_child=0.005, price=None, send_order_fn=mt5_client.send_order, symbol=SYMBOL, action=signal)
-                    res = mt5_client.send_order(SYMBOL, action=signal, volume=ORDER_VOLUME)
-                    logger.info(f"Ordre envoyé: {res}")
+                    backtester = Backtester()
+                    backtester.run(df)
+                    logger.info("Backtesting exécuté.")
                 except Exception as e:
-                    logger.error(f"Erreur envoi ordre: {e}")
+                    logger.error(f"Erreur backtesting : {e}")
+            # 9. Monitoring cycle
+            BOT_CYCLES.inc()
             # 10. Stockage des features/données (TimescaleDB, DVC)
             try:
-                # Stockage OHLCV enrichi dans TimescaleDB
                 db_client.insert_ohlcv(df.to_dict(orient="records"))
-                # Versioning DVC du fichier features (exemple : export CSV puis add/commit/push)
+            except Exception as e:
+                logger.error(f"Erreur stockage TimescaleDB : {e}")
+            # 11. Versioning DVC du fichier features (exemple : export CSV puis add/commit)
+            try:
                 features_path = f"data/features/{SYMBOL}_{TIMEFRAME}.csv"
                 df.to_csv(features_path, index=False)
                 dvc.add(features_path)
                 dvc.commit(features_path)
-                dvc.push()
                 logger.info(f"Features stockées et versionnées : {features_path}")
             except Exception as e:
-                logger.error(f"Erreur stockage/versioning features : {e}")
-            # 11. Monitoring avancé (Prometheus, alertes, dashboard)
-            # TODO: exporter d'autres métriques, hooks alertes
-            BOT_CYCLES.inc()
-            time.sleep(LOOP_INTERVAL)
+                logger.error(f"Erreur versioning DVC : {e}")
+            # 12. Push DVC une seule fois par cycle
+            try:
+                dvc.push()
+            except Exception as e:
+                logger.error(f"Erreur DVC push : {e}")
         except Exception as e:
+            logger.error(f"Erreur dans la boucle principale : {e}")
             BOT_ERRORS.inc()
-            logger.error(f"Erreur dans la boucle principale: {e}")
-            time.sleep(LOOP_INTERVAL)
+        time.sleep(LOOP_INTERVAL)
+    logger.info("Arrêt du bot après {cycles} cycles.")
 
 def run_backtest():
     """
@@ -298,16 +370,48 @@ def run_data():
     # TODO: intégrer la gestion complète des datasets, synchronisation DVC
     pass
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Orchestrateur universel du bot BTCUSD")
-    parser.add_argument('--mode', type=str, default='live', choices=['live', 'backtest', 'audit', 'data'], help='Mode d\'exécution du bot')
-    args = parser.parse_args()
+def main():
+    app = QApplication(sys.argv)
+    logger = QtLogger()
+    settings = SettingsManager()
+    positions_model = PositionsModel()
+    worker = TradingWorker()
+    window = MainWindow(logger=logger, settings=settings, positions_model=positions_model)
 
-    if args.mode == 'live':
-        run_live_trading()
-    elif args.mode == 'backtest':
-        run_backtest()
-    elif args.mode == 'audit':
-        run_audit()
-    elif args.mode == 'data':
-        run_data() 
+    # Connexions signaux/slots UI <-> worker
+    worker.log_message.connect(logger.append_log)
+    logger.log_signal.connect(window.append_log)
+    worker.positions_updated.connect(positions_model.update_data)
+    positions_model.model_updated.connect(window.update_positions)
+    window.start_trading.connect(worker.start_trading)
+    window.stop_trading.connect(worker.stop_trading)
+    window.reload_settings.connect(settings.reload)
+    settings.settings_reloaded.connect(window.on_settings_reloaded)
+    worker.finished.connect(window.on_worker_finished)
+    # Signaux métier
+    worker.new_ohlcv.connect(window.update_graph)
+    worker.features_ready.connect(lambda df: logger.append_log("[UI] Features calculées."))
+    worker.prediction_ready.connect(lambda signal: logger.append_log(f"[UI] Signal de trading : {signal}"))
+    worker.order_executed.connect(lambda res: logger.append_log(f"[UI] Ordre exécuté : {res}"))
+    worker.risk_update.connect(lambda risk: logger.append_log(f"[UI] Risk check : {risk}"))
+
+    # Demande du mot de passe au démarrage
+    def on_password_entered(password):
+        try:
+            aes_key = derive_key_from_password(password)
+            worker.set_config(aes_key)
+            logger.append_log("[UI] Mot de passe accepté, worker initialisé.")
+            worker.start_trading()
+        except Exception as e:
+            QMessageBox.critical(window, "Erreur", f"Erreur lors du déverrouillage de la configuration : {e}")
+            sys.exit(1)
+
+    pwd_dialog = PasswordDialog(window)
+    pwd_dialog.password_entered.connect(on_password_entered)
+    pwd_dialog.exec()
+
+    window.show()
+    sys.exit(app.exec())
+
+if __name__ == "__main__":
+    main() 

@@ -1,6 +1,6 @@
 import MetaTrader5 as mt5
 from fastapi import FastAPI, HTTPException, Request
-from pydantic import BaseModel
+from pydantic import BaseModel, Extra
 import uvicorn
 import logging
 import os
@@ -24,6 +24,9 @@ class OrderRequest(BaseModel):
     volume: float
     price: Optional[float] = None
     order_type: str = "market"  # 'market' ou 'limit'
+
+    class Config:
+        extra = Extra.allow  # Autorise les champs additionnels (sl, tp, etc.)
 
 # --- Endpoints REST ---
 @app.on_event("startup")
@@ -82,6 +85,30 @@ async def get_ohlcv(symbol: str, timeframe: str = "M1", limit: int = 100, reques
         }
         result.append(d)
     return result
+
+@app.get("/positions")
+async def get_positions(request: Request):
+    check_api_key(request)
+    try:
+        positions = mt5.positions_get()
+        if positions is None:
+            logger.error(f"MT5 positions_get() failed: {mt5.last_error()}")
+            # Retourner une erreur si l'appel MT5 échoue côté serveur
+            raise HTTPException(status_code=500, detail=f"Failed to get positions from MT5: {mt5.last_error()}")
+        if len(positions) == 0:
+            return [] # Retourner liste vide s'il n'y a pas de positions
+
+        # Convertir les objets TradePosition en dictionnaires
+        positions_list = [pos._asdict() for pos in positions]
+        logger.info(f"Returning {len(positions_list)} positions.")
+        return positions_list
+    except HTTPException:
+        # Relever l'exception si elle vient déjà de check_api_key ou de l'appel MT5 échoué
+        raise
+    except Exception as e:
+        logger.exception(f"An unexpected error occurred while getting positions: {e}")
+        # Retourner une erreur générique pour les autres exceptions inattendues
+        raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {e}")
 
 @app.post("/order")
 async def send_order(order: OrderRequest, request: Request):

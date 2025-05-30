@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+
+<html lang="fr" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Web API (FastAPI) &#8212; Documentation bitcoin_scalper 1.0</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=27fed22d" />
+    <script src="_static/documentation_options.js?v=7a28dfa3"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/translations.js?v=e6b791cb"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Recherche" href="search.html" />
+    <link rel="next" title="config module" href="config.html" />
+    <link rel="prev" title="bitcoin_scalper documentation" href="index.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="web-api-fastapi">
+<h1>Web API (FastAPI)<a class="headerlink" href="#web-api-fastapi" title="Lien vers cette rubrique">¶</a></h1>
+<section id="endpoints-principaux">
+<h2>Endpoints principaux<a class="headerlink" href="#endpoints-principaux" title="Lien vers cette rubrique">¶</a></h2>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">POST</span> <span class="pre">/token</span></code> : Authentification, retourne un token d’accès</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">POST</span> <span class="pre">/verify</span></code> : Vérification MFA (TOTP)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">GET</span> <span class="pre">/pnl</span></code> : Récupère le PnL (protégé MFA + token)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">GET</span> <span class="pre">/positions</span></code> : Récupère les positions (protégé MFA + token)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">GET</span> <span class="pre">/alerts</span></code> : Récupère les alertes (protégé MFA + token)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">GET</span> <span class="pre">/kpis</span></code> : Récupère les KPIs (protégé MFA + token)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">GET</span> <span class="pre">/healthz</span></code> : Healthcheck</p></li>
+</ul>
+</section>
+<section id="securite">
+<h2>Sécurité<a class="headerlink" href="#securite" title="Lien vers cette rubrique">¶</a></h2>
+<ul class="simple">
+<li><p>Authentification OAuth2 (token)</p></li>
+<li><p>MFA obligatoire (TOTP)</p></li>
+<li><p>Aucun secret exposé dans les réponses</p></li>
+</ul>
+</section>
+<section id="securite-des-secrets">
+<h2>Sécurité des secrets<a class="headerlink" href="#securite-des-secrets" title="Lien vers cette rubrique">¶</a></h2>
+<ul class="simple">
+<li><p>Les variables d’environnement suivantes sont <strong>obligatoires</strong> pour démarrer l’API :
+- <code class="docutils literal notranslate"><span class="pre">API_ADMIN_PASSWORD</span></code> (&gt;=12 caractères)
+- <code class="docutils literal notranslate"><span class="pre">API_ADMIN_TOTP</span></code> (&gt;=16 caractères)
+- <code class="docutils literal notranslate"><span class="pre">API_ADMIN_TOKEN</span></code> (&gt;=32 caractères)</p></li>
+<li><p>Aucun secret ne doit être codé en dur ni avoir de valeur par défaut.</p></li>
+<li><p>L’API refusera de démarrer si un secret est absent ou trop faible.</p></li>
+</ul>
+</section>
+<section id="exemple-d-utilisation">
+<h2>Exemple d’utilisation<a class="headerlink" href="#exemple-d-utilisation" title="Lien vers cette rubrique">¶</a></h2>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span><span class="s2">&quot;http://localhost:8000/token&quot;</span><span class="w"> </span>-d<span class="w"> </span><span class="s2">&quot;username=admin&amp;password=admin&quot;</span>
+curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span><span class="s2">&quot;http://localhost:8000/verify&quot;</span><span class="w"> </span>-H<span class="w"> </span><span class="s2">&quot;Content-Type: application/json&quot;</span><span class="w"> </span>-d<span class="w"> </span><span class="s1">&#39;{&quot;username&quot;: &quot;admin&quot;, &quot;code&quot;: &quot;123456&quot;}&#39;</span>
+curl<span class="w"> </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer &lt;token&gt;&quot;</span><span class="w"> </span><span class="s2">&quot;http://localhost:8000/pnl?username=admin&amp;code=123456&quot;</span>
+</pre></div>
+</div>
+</section>
+<section id="connexion-au-coeur-metier">
+<h2>Connexion au cœur métier<a class="headerlink" href="#connexion-au-coeur-metier" title="Lien vers cette rubrique">¶</a></h2>
+<p>Depuis la version X.X.X, tous les endpoints critiques (/pnl, /positions, /alerts, /kpis) sont connectés en temps réel au cœur du bot Bitcoin Scalper :</p>
+<ul class="simple">
+<li><p>Les données retournées proviennent directement du RiskManager, du connecteur MT5 et des modules internes.</p></li>
+<li><p>Toute erreur d’accès au cœur métier (ex : indisponibilité du broker, problème de configuration) est remontée avec un code HTTP 500 et un message explicite.</p></li>
+<li><p>Aucun fallback factice n’est utilisé : si une donnée n’est pas disponible, une erreur explicite est retournée.</p></li>
+</ul>
+</section>
+<section id="gestion-des-erreurs-et-robustesse">
+<h2>Gestion des erreurs et robustesse<a class="headerlink" href="#gestion-des-erreurs-et-robustesse" title="Lien vers cette rubrique">¶</a></h2>
+<ul class="simple">
+<li><p>Tous les endpoints critiques sont protégés contre les erreurs inattendues (try/except, logs, HTTP 500 explicite).</p></li>
+<li><p>Les accès aux secrets et à la configuration sont strictement contrôlés (aucun secret en clair, vérification de la présence des variables d’environnement).</p></li>
+<li><p>En cas d’erreur de configuration ou d’indisponibilité d’un service externe, l’API retourne une erreur explicite et ne divulgue aucune information sensible.</p></li>
+</ul>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">bitcoin_scalper</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Web API (FastAPI)</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#endpoints-principaux">Endpoints principaux</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#securite">Sécurité</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#securite-des-secrets">Sécurité des secrets</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#exemple-d-utilisation">Exemple d’utilisation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#connexion-au-coeur-metier">Connexion au cœur métier</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#gestion-des-erreurs-et-robustesse">Gestion des erreurs et robustesse</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Modules</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="config.html">config module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="config.html#gestion-securisee-de-la-configuration">Gestion sécurisée de la configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data_cleaner.html">data_cleaner module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data_ingestor.html">data_ingestor module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dvc_manager.html">dvc_manager module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="feature_engineering.html">feature_engineering module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ml_pipeline.html">ml_pipeline module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="order_algos.html">order_algos module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="risk_management.html">risk_management module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="timescaledb_client.html">timescaledb_client module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="backtesting.html">backtesting module</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="index.html" title="Chapitre précédent">bitcoin_scalper documentation</a></li>
+      <li>Next: <a href="config.html" title="Chapitre suivant">config module</a></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2025, Thibault Leray.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="_sources/web_api.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

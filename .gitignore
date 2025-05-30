@@ -20,3 +20,7 @@ logs/
 *~
 # Fichiers d’indexation Cursor
 .cursor/ 
+# Fichiers volumineux à ignorer
+.venv/
+*.pkl
+data/features/*.csv

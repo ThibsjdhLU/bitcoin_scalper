@@ -80,4 +80,9 @@ class SecureConfig:
 Exemple d'utilisation:
 config = SecureConfig("/chemin/vers/config.enc", os.environ["CONFIG_AES_KEY"])
 mt5_login = config.get("mt5_login")
+
+Recommandation sécurité :
+- Ne jamais stocker la clé AES en clair dans le code ou les fichiers.
+- Utiliser un gestionnaire de secrets externe (HashiCorp Vault, AWS Secrets Manager, Azure Key Vault) pour injecter la clé via variable d'environnement.
+- Pour la production, interdire tout fallback sur un fichier de config non chiffré.
 """ 

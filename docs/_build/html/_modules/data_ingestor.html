@@ -98,6 +98,20 @@
     <span class="k">def</span><span class="w"> </span><span class="nf">_ingest_ticks</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="n">ticks</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mt5_client</span><span class="o">.</span><span class="n">get_ticks</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">symbol</span><span class="p">,</span> <span class="n">limit</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">batch_size</span><span class="p">)</span>
+            <span class="n">ticks_with_ts</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">ticks</span><span class="p">:</span>
+                <span class="k">if</span> <span class="s1">&#39;timestamp&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">t</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="s1">&#39;time&#39;</span> <span class="ow">in</span> <span class="n">t</span><span class="p">:</span>
+                        <span class="n">t</span><span class="p">[</span><span class="s1">&#39;timestamp&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">t</span><span class="p">[</span><span class="s1">&#39;time&#39;</span><span class="p">]</span>
+                        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Tick : champ &#39;timestamp&#39; ajouté à partir de &#39;time&#39; : </span><span class="si">{</span><span class="n">t</span><span class="p">[</span><span class="s1">&#39;timestamp&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                    <span class="k">elif</span> <span class="s1">&#39;time_msc&#39;</span> <span class="ow">in</span> <span class="n">t</span><span class="p">:</span>
+                        <span class="n">t</span><span class="p">[</span><span class="s1">&#39;timestamp&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">t</span><span class="p">[</span><span class="s1">&#39;time_msc&#39;</span><span class="p">]</span> <span class="o">//</span> <span class="mi">1000</span><span class="p">)</span>
+                        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Tick : champ &#39;timestamp&#39; ajouté à partir de &#39;time_msc&#39; : </span><span class="si">{</span><span class="n">t</span><span class="p">[</span><span class="s1">&#39;timestamp&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="k">if</span> <span class="s1">&#39;timestamp&#39;</span> <span class="ow">in</span> <span class="n">t</span><span class="p">:</span>
+                    <span class="n">ticks_with_ts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Tick ignoré (pas de timestamp) : </span><span class="si">{</span><span class="n">t</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="n">ticks</span> <span class="o">=</span> <span class="n">ticks_with_ts</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_last_tick_time</span><span class="p">:</span>
                 <span class="n">ticks</span> <span class="o">=</span> <span class="p">[</span><span class="n">t</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">ticks</span> <span class="k">if</span> <span class="n">t</span><span class="p">[</span><span class="s2">&quot;timestamp&quot;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">_last_tick_time</span><span class="p">]</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">cleaner</span> <span class="ow">and</span> <span class="n">ticks</span><span class="p">:</span>
@@ -162,6 +176,24 @@
     </div>
 </search>
 <script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../web_api.html">Web API (FastAPI)</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Modules</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../config.html">config module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../config.html#gestion-securisee-de-la-configuration">Gestion sécurisée de la configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../data_cleaner.html">data_cleaner module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../data_ingestor.html">data_ingestor module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dvc_manager.html">dvc_manager module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../feature_engineering.html">feature_engineering module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml_pipeline.html">ml_pipeline module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../order_algos.html">order_algos module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../risk_management.html">risk_management module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../timescaledb_client.html">timescaledb_client module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../backtesting.html">backtesting module</a></li>
+</ul>
 
 <div class="relations">
 <h3>Related Topics</h3>

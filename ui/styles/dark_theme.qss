@@ -1,0 +1,85 @@
+/* Thème sombre Bitcoin Scalper - inspiré trading pro */
+
+QWidget {
+    background-color: #181a20;
+    color: #e0e0e3;
+    font-family: 'Arial', 'Helvetica', sans-serif;
+    font-size: 14px;
+}
+
+QMainWindow::separator {
+    background: #23272f;
+}
+
+QMenuBar, QMenu {
+    background-color: #23272f;
+    color: #e0e0e3;
+}
+QMenuBar::item:selected, QMenu::item:selected {
+    background: #31363f;
+    color: #4caf50;
+}
+
+QDockWidget {
+    background: #23272f;
+    titlebar-close-icon: url(resources/close.svg);
+    titlebar-normal-icon: url(resources/undock.svg);
+    border: 1px solid #23272f;
+}
+QDockWidget::title {
+    background: #23272f;
+    color: #e0e0e3;
+    font-weight: bold;
+    padding: 4px;
+}
+
+QTableView, QTextEdit, QLineEdit {
+    background: #181a20;
+    color: #e0e0e3;
+    border: 1px solid #31363f;
+    selection-background-color: #31363f;
+    selection-color: #4caf50;
+}
+
+QLabel {
+    color: #e0e0e3;
+}
+
+QPushButton {
+    background-color: #23272f;
+    color: #e0e0e3;
+    border: 1px solid #31363f;
+    border-radius: 4px;
+    padding: 6px 12px;
+}
+QPushButton:hover {
+    background-color: #31363f;
+    color: #4caf50;
+}
+QPushButton:pressed {
+    background-color: #4caf50;
+    color: #181a20;
+}
+
+QStatusBar {
+    background: #23272f;
+    color: #e0e0e3;
+    border-top: 1px solid #31363f;
+}
+
+/* Accent pour profit/perte */
+QLabel#pnl_label[positive="true"] {
+    color: #4caf50;
+    font-weight: bold;
+}
+QLabel#pnl_label[positive="false"] {
+    color: #f44336;
+    font-weight: bold;
+}
+
+/* Titres */
+QLabel[role="title"] {
+    font-size: 18px;
+    font-weight: bold;
+    color: #e0e0e3;
+} 

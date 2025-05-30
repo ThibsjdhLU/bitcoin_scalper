@@ -36,8 +36,9 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">cryptography.hazmat.primitives.ciphers</span><span class="w"> </span><span class="kn">import</span> <span class="n">Cipher</span><span class="p">,</span> <span class="n">algorithms</span><span class="p">,</span> <span class="n">modes</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">cryptography.hazmat.backends</span><span class="w"> </span><span class="kn">import</span> <span class="n">default_backend</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">base64</span><span class="w"> </span><span class="kn">import</span> <span class="n">b64decode</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">base64</span><span class="w"> </span><span class="kn">import</span> <span class="n">b64decode</span><span class="p">,</span> <span class="n">b64encode</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Dict</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cryptography.hazmat.primitives</span><span class="w"> </span><span class="kn">import</span> <span class="n">padding</span>
 
 <div class="viewcode-block" id="ConfigError">
 <a class="viewcode-back" href="../config.html#config.ConfigError">[docs]</a>
@@ -98,6 +99,29 @@
 <a class="viewcode-back" href="../config.html#config.SecureConfig.as_dict">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">as_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">:</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_config</span></div>
+
+
+<div class="viewcode-block" id="SecureConfig.encrypt_file">
+<a class="viewcode-back" href="../config.html#config.SecureConfig.encrypt_file">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">encrypt_file</span><span class="p">(</span><span class="n">input_json_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">output_enc_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">aes_key</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Chiffre un fichier JSON en AES-256-CBC (IV aléatoire + base64) pour usage avec SecureConfig.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">aes_key</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">32</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;La clé AES doit faire 32 bytes (256 bits)&quot;</span><span class="p">)</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">input_json_path</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+        <span class="n">raw</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">data</span><span class="p">)</span><span class="o">.</span><span class="n">encode</span><span class="p">()</span>
+        <span class="c1"># Padding PKCS7</span>
+        <span class="n">padder</span> <span class="o">=</span> <span class="n">padding</span><span class="o">.</span><span class="n">PKCS7</span><span class="p">(</span><span class="mi">128</span><span class="p">)</span><span class="o">.</span><span class="n">padder</span><span class="p">()</span>
+        <span class="n">padded</span> <span class="o">=</span> <span class="n">padder</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">raw</span><span class="p">)</span> <span class="o">+</span> <span class="n">padder</span><span class="o">.</span><span class="n">finalize</span><span class="p">()</span>
+        <span class="n">iv</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">urandom</span><span class="p">(</span><span class="mi">16</span><span class="p">)</span>
+        <span class="n">cipher</span> <span class="o">=</span> <span class="n">Cipher</span><span class="p">(</span><span class="n">algorithms</span><span class="o">.</span><span class="n">AES</span><span class="p">(</span><span class="n">aes_key</span><span class="p">),</span> <span class="n">modes</span><span class="o">.</span><span class="n">CBC</span><span class="p">(</span><span class="n">iv</span><span class="p">),</span> <span class="n">backend</span><span class="o">=</span><span class="n">default_backend</span><span class="p">())</span>
+        <span class="n">encryptor</span> <span class="o">=</span> <span class="n">cipher</span><span class="o">.</span><span class="n">encryptor</span><span class="p">()</span>
+        <span class="n">encrypted</span> <span class="o">=</span> <span class="n">encryptor</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">padded</span><span class="p">)</span> <span class="o">+</span> <span class="n">encryptor</span><span class="o">.</span><span class="n">finalize</span><span class="p">()</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">output_enc_path</span><span class="p">,</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">iv</span> <span class="o">+</span> <span class="n">b64encode</span><span class="p">(</span><span class="n">encrypted</span><span class="p">))</span></div>
 </div>
 
 
@@ -105,6 +129,11 @@
 <span class="sd">Exemple d&#39;utilisation:</span>
 <span class="sd">config = SecureConfig(&quot;/chemin/vers/config.enc&quot;, os.environ[&quot;CONFIG_AES_KEY&quot;])</span>
 <span class="sd">mt5_login = config.get(&quot;mt5_login&quot;)</span>
+
+<span class="sd">Recommandation sécurité :</span>
+<span class="sd">- Ne jamais stocker la clé AES en clair dans le code ou les fichiers.</span>
+<span class="sd">- Utiliser un gestionnaire de secrets externe (HashiCorp Vault, AWS Secrets Manager, Azure Key Vault) pour injecter la clé via variable d&#39;environnement.</span>
+<span class="sd">- Pour la production, interdire tout fallback sur un fichier de config non chiffré.</span>
 <span class="sd">&quot;&quot;&quot;</span> 
 </pre></div>
 
@@ -133,6 +162,24 @@
     </div>
 </search>
 <script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../web_api.html">Web API (FastAPI)</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Modules</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../config.html">config module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../config.html#gestion-securisee-de-la-configuration">Gestion sécurisée de la configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../data_cleaner.html">data_cleaner module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../data_ingestor.html">data_ingestor module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dvc_manager.html">dvc_manager module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../feature_engineering.html">feature_engineering module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml_pipeline.html">ml_pipeline module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../order_algos.html">order_algos module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../risk_management.html">risk_management module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../timescaledb_client.html">timescaledb_client module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../backtesting.html">backtesting module</a></li>
+</ul>
 
 <div class="relations">
 <h3>Related Topics</h3>

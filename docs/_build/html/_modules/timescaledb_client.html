@@ -56,11 +56,18 @@
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">host</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">port</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">dbname</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">user</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">password</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">sslmode</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;require&quot;</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">conn_params</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">host</span><span class="o">=</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="n">port</span><span class="p">,</span> <span class="n">dbname</span><span class="o">=</span><span class="n">dbname</span><span class="p">,</span> <span class="n">user</span><span class="o">=</span><span class="n">user</span><span class="p">,</span> <span class="n">password</span><span class="o">=</span><span class="n">password</span><span class="p">,</span> <span class="n">sslmode</span><span class="o">=</span><span class="n">sslmode</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">conn</span> <span class="o">=</span> <span class="kc">None</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">disabled</span> <span class="o">=</span> <span class="kc">False</span>  <span class="c1"># Mode dégradé si TimescaleDB non dispo</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Erreur connexion TimescaleDB: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">. Mode dégradé activé.&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">disabled</span> <span class="o">=</span> <span class="kc">True</span>
 
 <div class="viewcode-block" id="TimescaleDBClient.connect">
 <a class="viewcode-back" href="../timescaledb_client.html#timescaledb_client.TimescaleDBClient.connect">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">connect</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">disabled</span><span class="p">:</span>
+            <span class="k">return</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">conn</span> <span class="o">=</span> <span class="n">psycopg2</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">conn_params</span><span class="p">)</span>
             <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Connexion TimescaleDB établie.&quot;</span><span class="p">)</span>
@@ -72,6 +79,8 @@
 <div class="viewcode-block" id="TimescaleDBClient.ensure_connection">
 <a class="viewcode-back" href="../timescaledb_client.html#timescaledb_client.TimescaleDBClient.ensure_connection">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">ensure_connection</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">disabled</span><span class="p">:</span>
+            <span class="k">return</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">conn</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">conn</span><span class="o">.</span><span class="n">closed</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span>
@@ -82,10 +91,29 @@
 <div class="viewcode-block" id="TimescaleDBClient.create_schema">
 <a class="viewcode-back" href="../timescaledb_client.html#timescaledb_client.TimescaleDBClient.create_schema">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">create_schema</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Crée les tables nécessaires si elles n&#39;existent pas.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Crée les tables nécessaires (ticks, ohlcv) et les hypertables TimescaleDB.</span>
+<span class="sd">        - Partitionne sur &#39;timestamp&#39; (TIMESTAMPTZ NOT NULL)</span>
+<span class="sd">        - Indexe sur (symbol, timestamp DESC)</span>
+<span class="sd">        - Gestion robuste des erreurs et rollback</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">disabled</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;TimescaleDB désactivé : création du schéma ignorée.&quot;</span><span class="p">)</span>
+            <span class="k">return</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">ensure_connection</span><span class="p">()</span>
         <span class="n">cur</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
         <span class="k">try</span><span class="p">:</span>
+            <span class="c1"># Création extension TimescaleDB</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;CREATE EXTENSION IF NOT EXISTS timescaledb;&quot;</span><span class="p">)</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Extension TimescaleDB vérifiée/créée.&quot;</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Impossible de créer l&#39;extension TimescaleDB : </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;Mode dégradé activé : stockage TimescaleDB désactivé.&quot;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">disabled</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="k">return</span>
+
+            <span class="c1"># Table ticks</span>
             <span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;</span>
 <span class="s1">                CREATE TABLE IF NOT EXISTS ticks (</span>
 <span class="s1">                    id SERIAL PRIMARY KEY,</span>
@@ -95,9 +123,18 @@
 <span class="s1">                    ask DOUBLE PRECISION,</span>
 <span class="s1">                    volume DOUBLE PRECISION</span>
 <span class="s1">                );</span>
-<span class="s1">                SELECT create_hypertable(&#39;ticks&#39;, &#39;timestamp&#39;, if_not_exists =&gt; TRUE);</span>
-<span class="s1">                CREATE INDEX IF NOT EXISTS idx_ticks_symbol_time ON ticks(symbol, timestamp DESC);</span>
+<span class="s1">            &#39;&#39;&#39;</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Table ticks vérifiée/créée.&quot;</span><span class="p">)</span>
+            <span class="c1"># Hypertable ticks</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;SELECT create_hypertable(&#39;ticks&#39;, &#39;timestamp&#39;, if_not_exists =&gt; TRUE);&quot;</span><span class="p">)</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Hypertable ticks vérifiée/créée.&quot;</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Hypertable ticks: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+            <span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;CREATE INDEX IF NOT EXISTS idx_ticks_symbol_time ON ticks(symbol, timestamp DESC);&#39;</span><span class="p">)</span>
 
+            <span class="c1"># Table ohlcv</span>
+            <span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;</span>
 <span class="s1">                CREATE TABLE IF NOT EXISTS ohlcv (</span>
 <span class="s1">                    id SERIAL PRIMARY KEY,</span>
 <span class="s1">                    symbol TEXT NOT NULL,</span>
@@ -109,15 +146,23 @@
 <span class="s1">                    volume DOUBLE PRECISION,</span>
 <span class="s1">                    timeframe TEXT</span>
 <span class="s1">                );</span>
-<span class="s1">                SELECT create_hypertable(&#39;ohlcv&#39;, &#39;timestamp&#39;, if_not_exists =&gt; TRUE);</span>
-<span class="s1">                CREATE INDEX IF NOT EXISTS idx_ohlcv_symbol_time ON ohlcv(symbol, timestamp DESC);</span>
 <span class="s1">            &#39;&#39;&#39;</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Table ohlcv vérifiée/créée.&quot;</span><span class="p">)</span>
+            <span class="c1"># Hypertable ohlcv</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;SELECT create_hypertable(&#39;ohlcv&#39;, &#39;timestamp&#39;, if_not_exists =&gt; TRUE);&quot;</span><span class="p">)</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Hypertable ohlcv vérifiée/créée.&quot;</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Hypertable ohlcv: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+            <span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;CREATE INDEX IF NOT EXISTS idx_ohlcv_symbol_time ON ohlcv(symbol, timestamp DESC);&#39;</span><span class="p">)</span>
+
             <span class="bp">self</span><span class="o">.</span><span class="n">conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
             <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Schéma TimescaleDB vérifié/créé.&quot;</span><span class="p">)</span>
         <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">conn</span><span class="o">.</span><span class="n">rollback</span><span class="p">()</span>
             <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Erreur création schéma: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-            <span class="k">raise</span> <span class="n">TimescaleDBError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Erreur création schéma: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;Mode dégradé activé : stockage TimescaleDB désactivé.&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">disabled</span> <span class="o">=</span> <span class="kc">True</span>
         <span class="k">finally</span><span class="p">:</span>
             <span class="n">cur</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
 
@@ -125,7 +170,9 @@
 <div class="viewcode-block" id="TimescaleDBClient.insert_ticks">
 <a class="viewcode-back" href="../timescaledb_client.html#timescaledb_client.TimescaleDBClient.insert_ticks">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">insert_ticks</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ticks</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Insère une liste de ticks (dictionnaires) en batch.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">disabled</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;insert_ticks ignoré : TimescaleDB désactivé.&quot;</span><span class="p">)</span>
+            <span class="k">return</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">ensure_connection</span><span class="p">()</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">ticks</span><span class="p">:</span>
             <span class="k">return</span>
@@ -148,7 +195,9 @@
 <div class="viewcode-block" id="TimescaleDBClient.insert_ohlcv">
 <a class="viewcode-back" href="../timescaledb_client.html#timescaledb_client.TimescaleDBClient.insert_ohlcv">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">insert_ohlcv</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ohlcv</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Insère une liste d&#39;OHLCV (dictionnaires) en batch.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">disabled</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;insert_ohlcv ignoré : TimescaleDB désactivé.&quot;</span><span class="p">)</span>
+            <span class="k">return</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">ensure_connection</span><span class="p">()</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">ohlcv</span><span class="p">:</span>
             <span class="k">return</span>
@@ -171,6 +220,9 @@
 <div class="viewcode-block" id="TimescaleDBClient.close">
 <a class="viewcode-back" href="../timescaledb_client.html#timescaledb_client.TimescaleDBClient.close">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">close</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">disabled</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;TimescaleDB désactivé : close ignoré.&quot;</span><span class="p">)</span>
+            <span class="k">return</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">conn</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">conn</span><span class="o">.</span><span class="n">closed</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
             <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Connexion TimescaleDB fermée.&quot;</span><span class="p">)</span></div>
@@ -211,6 +263,24 @@
     </div>
 </search>
 <script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../web_api.html">Web API (FastAPI)</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Modules</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../config.html">config module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../config.html#gestion-securisee-de-la-configuration">Gestion sécurisée de la configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../data_cleaner.html">data_cleaner module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../data_ingestor.html">data_ingestor module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dvc_manager.html">dvc_manager module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../feature_engineering.html">feature_engineering module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml_pipeline.html">ml_pipeline module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../order_algos.html">order_algos module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../risk_management.html">risk_management module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../timescaledb_client.html">timescaledb_client module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../backtesting.html">backtesting module</a></li>
+</ul>
 
 <div class="relations">
 <h3>Related Topics</h3>

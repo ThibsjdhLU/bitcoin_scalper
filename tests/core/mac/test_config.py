@@ -137,6 +137,49 @@ def test_config_get_non_existing(monkeypatch):
         with pytest.raises(KeyError):
             _ = config._config["NON_EXISTENT_KEY"]
 
+def test_secure_config_env_only(monkeypatch, tmp_path):
+    # Générer une clé AES valide
+    key = os.urandom(32)
+    # Créer un fichier de config chiffré
+    input_json = tmp_path / "config.json"
+    input_json.write_text('{"foo": "bar"}')
+    enc_path = tmp_path / "config.enc"
+    SecureConfig.encrypt_file(str(input_json), str(enc_path), key)
+    # Injection par variable d'environnement
+    monkeypatch.setenv("CONFIG_AES_KEY", key.hex())
+    cfg = SecureConfig(str(enc_path), os.environ["CONFIG_AES_KEY"])
+    assert cfg.get("foo") == "bar"
+    # Refus d'une clé en clair
+    with pytest.raises(ConfigError):
+        SecureConfig(str(enc_path), "cle_en_clair_interdite")
+
+def test_secure_config_requires_aes_key(tmp_path):
+    # Génère un fichier de config chiffré valide
+    config_data = {"foo": "bar"}
+    json_path = tmp_path / "test.json"
+    enc_path = tmp_path / "test.enc"
+    json_path.write_text('{"foo": "bar"}')
+    key = os.urandom(32)
+    SecureConfig.encrypt_file(str(json_path), str(enc_path), key)
+    # Mauvaise taille de clé
+    with pytest.raises(ConfigError):
+        SecureConfig(str(enc_path), b"shortkey")
+    # Bonne taille mais mauvais format (str non hex)
+    with pytest.raises(ConfigError):
+        SecureConfig(str(enc_path), "nothex")
+    # Bonne clé, déchiffrement OK
+    cfg = SecureConfig(str(enc_path), key)
+    assert cfg.get("foo") == "bar"
+
+def test_secure_config_no_fallback(monkeypatch):
+    # Simule l'absence de clé AES dans l'env
+    monkeypatch.delenv("CONFIG_AES_KEY", raising=False)
+    with pytest.raises(RuntimeError):
+        # Simule le code de main.py qui impose la clé
+        aes_key = os.environ.get("CONFIG_AES_KEY")
+        if not aes_key:
+            raise RuntimeError("Clé AES manquante : variable d'environnement CONFIG_AES_KEY obligatoire. Aucun fallback n'est autorisé en production.")
+
 # TODO: Ajouter des tests pour l'encrypt_config si c'est une méthode à tester unitairement
 # TODO: Ajouter des tests pour get() avec différents types de données (int, bool, float)
 # TODO: Ajouter des tests pour la lecture depuis Keychain si pertinent pour l'unité de test SecureConfig

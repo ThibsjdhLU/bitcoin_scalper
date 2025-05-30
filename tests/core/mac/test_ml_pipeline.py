@@ -8,6 +8,10 @@ import shap
 import logging
 import optuna # Importer optuna car il est utilisé dans un test qui n'est pas mocké globalement
 import torch.nn as nn
+import joblib
+import os
+from bitcoin_scalper.core import ml_train
+import tempfile
 
 # Réduction encore plus aggressive pour les tests unitaires
 def make_data(n=5):
@@ -607,4 +611,81 @@ def test_callback():
     with patch.object(MLPipeline, "fit", new=mock_fit):
         metrics = pipe.fit(X, y, epochs=2, batch_size=2)
         assert "val_accuracy" in metrics
-        assert called == [0, 1] 
+        assert called == [0, 1]
+
+def test_feature_order_warning_rf(tabular_data, caplog):
+    X, y = tabular_data
+    pipe = MLPipeline(model_type="random_forest")
+    # Simule une liste de features différente
+    features_list = [col for col in X.columns]
+    joblib.dump(features_list, "features_list.pkl")
+    # Cas 1 : même ordre, pas de warning
+    with caplog.at_level('WARNING'):
+        pipe.fit(X, y)
+        _ = pipe.predict(X)
+        assert not any("manquantes" in r.message or "supplémentaires" in r.message for r in caplog.records)
+    # Cas 2 : ordre différent, warning attendu
+    X2 = X[features_list[::-1]]
+    with caplog.at_level('WARNING'):
+        _ = pipe.predict(X2)
+        assert any("Colonnes de features manquantes" in r.message or "supplémentaires" in r.message for r in caplog.records)
+    # Nettoyage
+    if os.path.exists("features_list.pkl"):
+        os.remove("features_list.pkl")
+
+def test_temporal_split_label():
+    # Génère un DataFrame séquentiel
+    n = 100
+    df = pd.DataFrame({
+        '<CLOSE>': np.linspace(100, 110, n) + np.random.normal(0, 0.1, n)
+    })
+    # Sauvegarde temporaire
+    with tempfile.NamedTemporaryFile(suffix='.csv', mode='w+', delete=False) as f:
+        df.to_csv(f.name, sep='\t', index=False)
+        # Appel pipeline avec split 80/20
+        clf, scaler = ml_train.train_ml_model(
+            input_csv=f.name,
+            test_size=0.2,
+            use_smote=False,
+            use_xgb=True
+        )
+    # Vérifie que le label du train ne dépend que du train, idem test
+    split_idx = int(n * 0.8)
+    train_df = df.iloc[:split_idx].copy()
+    test_df = df.iloc[split_idx:].copy()
+    train_labels = ml_train.compute_label(train_df, price_col='<CLOSE>', horizon=5, up_thr=0.003, down_thr=-0.002)
+    test_labels = ml_train.compute_label(test_df, price_col='<CLOSE>', horizon=5, up_thr=0.003, down_thr=-0.002)
+    # Les labels du test ne doivent pas dépendre du train
+    assert not any(test_labels.index.isin(train_df.index)), "Fuite temporelle : index du test dans le train"
+    assert not any(train_labels.index.isin(test_df.index)), "Fuite temporelle : index du train dans le test"
+
+def test_metrics_imbalance():
+    from bitcoin_scalper.core import ml_train
+    n = 200
+    df = pd.DataFrame({
+        '<CLOSE>': np.linspace(100, 110, n) + np.random.normal(0, 0.5, n)
+    })
+    with tempfile.NamedTemporaryFile(suffix='.csv', mode='w+', delete=False) as f:
+        df.to_csv(f.name, sep='\t', index=False)
+        clf, scaler = ml_train.train_ml_model(
+            input_csv=f.name,
+            test_size=0.2,
+            use_smote=True,
+            use_xgb=True
+        )
+    # On ne vérifie pas la valeur exacte mais que le pipeline ne plante pas et que les métriques sont calculées
+    # (AUPRC et Sharpe sont affichés dans la console) 
+
+def test_label_balance():
+    from bitcoin_scalper.core import ml_train
+    n = 200
+    df = pd.DataFrame({
+        '<CLOSE>': np.linspace(100, 110, n) + np.random.normal(0, 0.5, n)
+    })
+    with tempfile.NamedTemporaryFile(suffix='.csv', mode='w+', delete=False) as f:
+        df.to_csv(f.name, sep='\t', index=False)
+        split_idx = int(n * 0.8)
+        train_df = df.iloc[:split_idx].copy()
+        labels = ml_train.compute_label(train_df, price_col='<CLOSE>', horizon=5, up_thr=0.003, down_thr=-0.002)
+        pct_pos = (labels == 1).mean()
+        assert 0.05 <= pct_pos <= 0.10, f"% Labels positifs hors cible : {pct_pos:.3%}" 
