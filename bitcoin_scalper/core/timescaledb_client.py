@@ -35,10 +35,19 @@ class TimescaleDBClient:
             raise TimescaleDBError(f"Impossible de rétablir la connexion: {e}")
 
     def create_schema(self):
-        """Crée les tables nécessaires si elles n'existent pas."""
+        """Crée les tables nécessaires si elles n'existent pas et l'extension TimescaleDB si besoin."""
         self.ensure_connection()
         cur = self.conn.cursor()
         try:
+            # Création extension TimescaleDB
+            try:
+                cur.execute("CREATE EXTENSION IF NOT EXISTS timescaledb;")
+                logger.info("Extension TimescaleDB vérifiée/créée.")
+            except Exception as e:
+                logger.error(f"Impossible de créer l'extension TimescaleDB : {e}")
+                raise TimescaleDBError("TimescaleDB n'est pas disponible sur cette base de données.\nDétail : " + str(e))
+
+            # Table ticks
             cur.execute('''
                 CREATE TABLE IF NOT EXISTS ticks (
                     id SERIAL PRIMARY KEY,
@@ -48,9 +57,18 @@ class TimescaleDBClient:
                     ask DOUBLE PRECISION,
                     volume DOUBLE PRECISION
                 );
-                SELECT create_hypertable('ticks', 'timestamp', if_not_exists => TRUE);
-                CREATE INDEX IF NOT EXISTS idx_ticks_symbol_time ON ticks(symbol, timestamp DESC);
+            ''')
+            logger.info("Table ticks vérifiée/créée.")
+            # Hypertable ticks
+            try:
+                cur.execute("SELECT create_hypertable('ticks', 'timestamp', if_not_exists => TRUE);")
+                logger.info("Hypertable ticks vérifiée/créée.")
+            except Exception as e:
+                logger.warning(f'Hypertable ticks: {e}')
+            cur.execute('CREATE INDEX IF NOT EXISTS idx_ticks_symbol_time ON ticks(symbol, timestamp DESC);')
 
+            # Table ohlcv
+            cur.execute('''
                 CREATE TABLE IF NOT EXISTS ohlcv (
                     id SERIAL PRIMARY KEY,
                     symbol TEXT NOT NULL,
@@ -62,9 +80,16 @@ class TimescaleDBClient:
                     volume DOUBLE PRECISION,
                     timeframe TEXT
                 );
-                SELECT create_hypertable('ohlcv', 'timestamp', if_not_exists => TRUE);
-                CREATE INDEX IF NOT EXISTS idx_ohlcv_symbol_time ON ohlcv(symbol, timestamp DESC);
             ''')
+            logger.info("Table ohlcv vérifiée/créée.")
+            # Hypertable ohlcv
+            try:
+                cur.execute("SELECT create_hypertable('ohlcv', 'timestamp', if_not_exists => TRUE);")
+                logger.info("Hypertable ohlcv vérifiée/créée.")
+            except Exception as e:
+                logger.warning(f'Hypertable ohlcv: {e}')
+            cur.execute('CREATE INDEX IF NOT EXISTS idx_ohlcv_symbol_time ON ohlcv(symbol, timestamp DESC);')
+
             self.conn.commit()
             logger.info("Schéma TimescaleDB vérifié/créé.")
         except Exception as e:

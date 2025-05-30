@@ -1,7 +1,7 @@
-# Ce fichier est généré automatiquement par Poetry. Ne pas éditer manuellement.
+oui# Ce fichier est généré automatiquement par Poetry. Ne pas éditer manuellement.
 pytest
 pytest-cov
-numpy
+numpy==1.26.4
 pandas
 scikit-learn
 xgboost
@@ -12,4 +12,8 @@ uvicorn
 joblib
 matplotlib
 seaborn
-psycopg2-binary 
+psycopg2-binary
+pandas-ta==0.3.14b0
+ta
+cryptography
+shap 

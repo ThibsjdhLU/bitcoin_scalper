@@ -82,11 +82,24 @@ def run_live_trading(max_cycles=None):
     - Les ordres sont validés par la gestion du risque avant exécution.
     - Mode par défaut du bot.
     """
-    # 1. Charger la config sécurisée
+    # 1. Charger la config (sécurisée ou claire)
     aes_key = os.environ.get("CONFIG_AES_KEY")
-    if not aes_key:
-        raise RuntimeError("La variable d'environnement CONFIG_AES_KEY doit être définie (clé AES-256 hex)")
-    config = SecureConfig("config.enc", bytes.fromhex(aes_key))
+    if aes_key:
+        config = SecureConfig("config.enc", bytes.fromhex(aes_key))
+        logger.info("Configuration chargée en mode sécurisé (AES-256).")
+    else:
+        import json
+        with open("config_clear.json", "r") as f:
+            config_dict = json.load(f)
+        class DummyConfig:
+            def __init__(self, d):
+                self._d = d
+            def get(self, key, default=None):
+                return self._d.get(key, default)
+            def as_dict(self):
+                return self._d
+        config = DummyConfig(config_dict)
+        logger.warning("Configuration chargée en mode NON sécurisé (config_clear.json).")
     mt5_url = config.get("MT5_REST_URL")
     mt5_api_key = config.get("MT5_REST_API_KEY")
 
@@ -101,12 +114,14 @@ def run_live_trading(max_cycles=None):
     db_name = config.get("TSDB_NAME")
     db_user = config.get("TSDB_USER")
     db_password = config.get("TSDB_PASSWORD")
+    db_sslmode = config.get("TSDB_SSLMODE", "require")
     db_client = TimescaleDBClient(
         host=db_host,
         port=db_port,
         dbname=db_name,
         user=db_user,
-        password=db_password
+        password=db_password,
+        sslmode=db_sslmode
     )
     db_client.create_schema()
 
@@ -248,142 +263,6 @@ def run_backtest():
     df_bt, trades, kpis = backtester.run()
     logger.info(f"Backtest run completed with KPIs: {kpis}")
 
-def run_ml():
-    """
-    Entraîne, tune et explique un modèle ML/Deep Learning pour le trading.
-
-    Ce pipeline effectue les étapes suivantes :
-    
-    1. Chargement des features et du label cible à partir d'un fichier CSV.
-    2. Séparation temporelle des données en ensembles d'entraînement et de validation (pas de shuffle).
-    3. Entraînement d'un modèle ML (RandomForest, XGBoost, DNN, LSTM, Transformer, etc.) via MLPipeline.
-    4. Évaluation du modèle sur l'ensemble de validation (Accuracy, F1, Precision, Recall, AUC).
-    5. Sauvegarde du modèle entraîné sur disque.
-    6. Versioning du modèle avec DVC (Data Version Control).
-    7. Tuning des hyperparamètres (GridSearchCV ou Optuna).
-    8. Explicabilité du modèle (SHAP).
-
-    :raises FileNotFoundError: Si le fichier de features n'est pas trouvé.
-    :raises ValueError: Si la colonne de label n'est pas présente dans les données.
-    :raises Exception: Pour toute erreur lors de l'entraînement, de la sauvegarde ou du versioning.
-    
-    :return: None. Les métriques et résultats sont logués.
-    """
-    logger.info("Mode ML training/tuning : pipeline complet.")
-    # 1. Définir le chemin des features
-    features_file = "/Users/thibaultleray-beer/bitcoin_scalper/data/features/BTCUSD_M1_features_phoenix.csv"  # TODO: Rendre configurable (config.enc)
-
-    # 2. Charger les données
-    if not os.path.exists(features_file):
-        logger.error(f"Fichier de features non trouvé: {features_file}. Veuillez générer les features d'abord.")
-        return
-    try:
-        df = pd.read_csv(features_file)
-        logger.info(f"Features chargées depuis {features_file}. Aperçu:\n{df.head()}")
-        logger.info(f"Colonnes disponibles: {list(df.columns)}")
-    except Exception as e:
-        logger.error(f"Erreur lors du chargement des features: {e}")
-        return
-
-    # 3. Préparer les données (Features X et Labels y)
-    label_col = 'signal'  # Le label à prédire (doit exister dans le CSV)
-    if label_col not in df.columns:
-        logger.error(f"Colonne de label '{label_col}' non trouvée dans les features.")
-        return
-    # Colonnes à exclure des features (timestamp, label, etc.)
-    exclude_cols = [label_col, 'timestamp', 'date', 'time']
-    features = df.drop(columns=[col for col in exclude_cols if col in df.columns], errors='ignore')
-    labels = df[label_col]
-    logger.info(f"Séparation features/labels : X shape={features.shape}, y shape={labels.shape}")
-
-    # 4. Séparer en train/validation (split temporel, pas de shuffle)
-    split_ratio = 0.8  # 80% train, 20% val
-    split_index = int(len(df) * split_ratio)
-    X_train, X_val = features.iloc[:split_index], features.iloc[split_index:]
-    y_train, y_val = labels.iloc[:split_index], labels.iloc[split_index:]
-    logger.info(f"Split temporel : Train ({len(X_train)}), Val ({len(X_val)})")
-
-    # 5. Instancier le pipeline ML
-    model_type = "random_forest"  # Ou "xgboost", "lstm", etc.
-    try:
-        ml_pipe = MLPipeline(model_type=model_type, random_state=42)
-        logger.info(f"Pipeline ML instancié avec modèle: {model_type}")
-    except ValueError as e:
-        logger.error(f"Erreur d'instanciation du pipeline ML: {e}")
-        return
-
-    # 6. Entraîner le modèle
-    logger.info("Lancement de l'entraînement...")
-    try:
-        training_metrics = ml_pipe.fit(X_train, y_train, val_split=len(X_val)/len(df), epochs=100, batch_size=64)
-        logger.info(f"Entraînement ML terminé. Métriques: {training_metrics}")
-    except Exception as e:
-        logger.error(f"Erreur lors de l'entraînement du modèle: {e}")
-        return
-
-    # 7. Évaluer le modèle sur l'ensemble de validation
-    try:
-        val_predictions = ml_pipe.predict(X_val)
-        accuracy = accuracy_score(y_val, val_predictions)
-        # Utiliser average='weighted' pour les métriques multiclasses pour gérer les déséquilibres de classes
-        f1 = f1_score(y_val, val_predictions, average='weighted', zero_division=0)
-        precision = precision_score(y_val, val_predictions, average='weighted', zero_division=0)
-        recall = recall_score(y_val, val_predictions, average='weighted', zero_division=0)
-        try:
-            # Adapter roc_auc_score pour multiclasse (méthode 'ovr' one-vs-rest)
-            # predict_proba doit renvoyer les probabilités pour chaque classe
-            # Assurez-vous que predict_proba est bien implémenté dans MLPipeline pour les modèles non-sklearn si besoin.
-            val_probabilities = ml_pipe.predict_proba(X_val)
-            if val_probabilities is not None and val_probabilities.shape[1] > 2:
-                 auc = roc_auc_score(y_val, val_probabilities, multi_class='ovr', average='weighted')
-            elif val_probabilities is not None and val_probabilities.shape[1] == 2:
-                 # Cas binaire géré pour compatibilité, bien que les données soient multiclasses ici.
-                 auc = roc_auc_score(y_val, val_probabilities[:, 1])
-            else:
-                 auc = None # Impossible de calculer l'AUC sans probabilités ou pour un cas non géré.
-
-        except Exception as auc_e:
-            logger.error(f"Erreur lors du calcul de l'AUC: {auc_e}")
-            auc = None
-        logger.info(f"Performance sur validation: Accuracy={accuracy:.4f}, F1={f1:.4f}, Precision={precision:.4f}, Recall={recall:.4f}, AUC={auc}")
-    except Exception as e:
-        logger.error(f"Erreur lors de l'évaluation du modèle: {e}")
-
-    # 8. Sauvegarder le modèle entraîné
-    model_save_path = "model_rf.pkl"  # TODO: Rendre configurable (config.enc)
-    try:
-        ml_pipe.save(model_save_path)
-        logger.info(f"Modèle sauvegardé sous: {model_save_path}")
-    except Exception as e:
-        logger.error(f"Erreur lors de la sauvegarde du modèle: {e}")
-        return
-
-    # 9. Versionner le modèle sauvegardé avec DVC
-    try:
-        dvc_manager = DVCManager()
-        dvc_manager.add(model_save_path)
-        dvc_manager.commit(model_save_path, f"Trained {model_type} model")
-        dvc_manager.push()
-        logger.info(f"Modèle versionné avec DVC: {model_save_path}.dvc")
-    except Exception as e:
-        logger.error(f"Erreur lors du versioning DVC du modèle: {e}")
-
-    # 10. Tuning hyperparamètres (GridSearchCV/Optuna)
-    try:
-        param_grid = {"n_estimators": [50, 100], "max_depth": [3, 5, 10]}
-        logger.info("Lancement du tuning hyperparamètres (GridSearchCV)...")
-        tuning_metrics = ml_pipe.tune(X_train, y_train, param_grid, cv=3, use_optuna=False)
-        logger.info(f"Tuning terminé. Best params: {tuning_metrics.get('best_params')}, Best score: {tuning_metrics.get('best_score')}")
-    except Exception as e:
-        logger.error(f"Erreur lors du tuning hyperparamètres: {e}")
-
-    # 11. Explicabilité (SHAP)
-    try:
-        logger.info("Calcul des valeurs SHAP pour l'explicabilité...")
-        shap_values = ml_pipe.explain(X_val, method="shap", nsamples=100)
-        logger.info(f"Valeurs SHAP calculées (shape: {np.array(shap_values).shape})")
-    except Exception as e:
-        logger.error(f"Erreur lors du calcul des valeurs SHAP: {e}")
 
 def run_audit():
     """
@@ -421,15 +300,13 @@ def run_data():
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Orchestrateur universel du bot BTCUSD")
-    parser.add_argument('--mode', type=str, default='live', choices=['live', 'backtest', 'ml', 'audit', 'data'], help='Mode d\'exécution du bot')
+    parser.add_argument('--mode', type=str, default='live', choices=['live', 'backtest', 'audit', 'data'], help='Mode d\'exécution du bot')
     args = parser.parse_args()
 
     if args.mode == 'live':
         run_live_trading()
     elif args.mode == 'backtest':
         run_backtest()
-    elif args.mode == 'ml':
-        run_ml()
     elif args.mode == 'audit':
         run_audit()
     elif args.mode == 'data':

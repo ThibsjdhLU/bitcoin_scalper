@@ -8,7 +8,7 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = ">=3.11,<3.12"
-numpy = "*"
+numpy = "1.26.4"
 pandas = "*"
 scikit-learn = "*"
 xgboost = "*"

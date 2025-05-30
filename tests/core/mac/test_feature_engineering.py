@@ -18,7 +18,7 @@ def test_add_indicators():
     fe = FeatureEngineering()
     df = make_ohlcv()
     out = fe.add_indicators(df)
-    for col in ["rsi", "macd", "macd_signal", "macd_diff", "ema_20", "sma_20", "bb_high", "bb_low", "bb_width", "atr", "vwap"]:
+    for col in ["rsi", "macd", "macd_signal", "macd_diff", "ema_21", "ema_50", "sma_20", "bb_high", "bb_low", "bb_width", "atr", "vwap"]:
         assert col in out.columns
         assert not out[col].isnull().all()
 
@@ -37,7 +37,7 @@ def test_multi_timeframe():
     dfs = {"1min": df1, "5min": df5}
     out = fe.multi_timeframe(dfs)
     for tf in ["1min", "5min"]:
-        for col in ["rsi", "macd", "ema_20", "atr", "vwap", "return", "volatility_20"]:
+        for col in ["rsi", "macd", "ema_21", "ema_50", "atr", "vwap", "return", "volatility_20"]:
             assert f"{tf}_{col}" in out.columns
 
 def test_edge_cases_empty():

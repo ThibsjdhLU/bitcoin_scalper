@@ -1,0 +1,11 @@
+{
+    "MT5_REST_URL": "http://localhost:8000",
+    "MT5_REST_API_KEY": "changeme",
+    "TSDB_HOST": "localhost",
+    "TSDB_PORT": 5432,
+    "TSDB_NAME": "btcdb",
+    "TSDB_USER": "btcuser",
+    "TSDB_PASSWORD": "btcpass",
+    "TSDB_SSLMODE": "disable",
+    "ML_MODEL_PATH": "model_rf.pkl"
+  }
