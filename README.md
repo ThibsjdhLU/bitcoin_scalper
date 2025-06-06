@@ -1,113 +1,135 @@
-[![CI](https://github.com/<OWNER>/<REPO>/actions/workflows/ci.yml/badge.svg)](https://github.com/<OWNER>/<REPO>/actions/workflows/ci.yml)
-[![Coverage Status](https://img.shields.io/badge/coverage-auto-important)](https://github.com/<OWNER>/<REPO>/actions)
+# Bitcoin Scalper
 
-## Sécurité avancée
+Bot de trading algorithmique BTC/USD intégrant pipeline Machine Learning, gestion avancée du risque, supervision sécurisée (API FastAPI, dashboard PyQt), monitoring Prometheus, et versioning des données avec DVC.
 
-- **MFA (TOTP)** : Authentification forte sur l'API (FastAPI) et dashboard (Streamlit à venir). Endpoints `/token`, `/verify`, `/secure-data`.
-- **Chiffrement disque** : FileVault obligatoire sur macOS. Vérification via `scripts/check_filevault.sh`.
-- **Pare-feu applicatif** : Activation obligatoire, vérification via `scripts/check_firewall.sh`.
-- **Tests d'intégration sécurité** : Automatisés dans `tests/security/test_api_security.py` (pytest, couverture MFA, secrets, accès protégé).
-- **Bonnes pratiques** : Aucun secret exposé dans les logs ou réponses, authentification forte obligatoire sur endpoints critiques.
+## Fonctionnalités principales
 
-**Scripts d'audit sécurité** :
-- `bash scripts/check_filevault.sh`
-- `bash scripts/check_firewall.sh`
-
-## Monitoring & alertes
-
-- **Export Prometheus** :
-  - Bot : `/metrics` sur port 8001 (uptime, cycles, erreurs)
-  - API web : `/metrics` (requêtes, erreurs, latence, uptime)
-- **Dashboard Grafana** :
-  - Connecter à Prometheus (voir `prometheus.yml`)
-  - Panels recommandés : uptime, erreurs, latence, cycles, requêtes
-- **Dashboard Streamlit** :
-  - Visualisation temps réel des métriques bot/API (voir `app/web/dashboard.py`)
-- **Alertes Prometheus Alertmanager** :
-  - À configurer pour email, Telegram, webhook (voir doc Prometheus)
-  - Exemple : `ALERT BotErrorsHigh IF increase(bot_errors_total[5m]) > 0`
-- **Bonnes pratiques** :
-  - Exporter toutes les métriques critiques (uptime, erreurs, latence, cycles, requêtes)
-  - Surveiller en continu, alertes multi-canal
-
-**Références** :
-- `prometheus.yml`, `docker-compose.yml`, `app/web/dashboard.py`
-
-## Interface web supervision
-
-- **API FastAPI** :
-  - Endpoints : `/pnl`, `/positions`, `/alerts`, `/kpis` (tous protégés MFA)
-  - Authentification forte obligatoire (token + TOTP)
-- **Dashboard Streamlit** :
-  - Widgets PnL, drawdown, historique, positions, alertes, KPIs
-  - Login MFA, rafraîchissement auto, gestion erreurs, responsive
-- **Exemple d'utilisation (API)** :
-  - `curl -X GET "http://localhost:8000/pnl?username=admin&code=123456" -H "Authorization: Bearer <token>"`
-- **Exemple d'utilisation (Streamlit)** :
-  - `streamlit run app/web/dashboard.py`
-- **Bonnes pratiques** :
-  - MFA obligatoire pour toute supervision
-  - Ne jamais exposer de secrets dans les réponses
-
-**Références** :
-- `app/web/api.py`, `app/web/dashboard.py`
-
-## DVC pipeline (versioning data & ML)
-
-Ce projet utilise DVC pour le versioning des datasets, features, modèles et artefacts ML.
-- Gestion centralisée via `app/core/dvc_manager.py` (API Python)
-- Automatisation CLI via `scripts/dvc_utils.py`
-- Intégration CI/CD : chaque PR vérifie le statut DVC et la reproductibilité pipeline
-
-Voir [app/core/README.md](app/core/README.md) pour la documentation détaillée et des exemples d'usage.
-
-## Nettoyage et structure
-
-Ce projet applique une politique stricte de nettoyage et d'exclusion des fichiers/dossiers inutiles :
-- Les caches Python (`__pycache__`), environnements virtuels (`.venv/`), logs, fichiers temporaires et dossiers d'indexation sont exclus du dépôt (voir `.gitignore` et `.dvcignore`).
-- Les dossiers vides ou non utilisés sont supprimés régulièrement.
-- Les scripts d'administration sont séparés des modules métiers.
-- Les fichiers de configuration par défaut sont adaptés ou supprimés s'ils ne sont pas utilisés.
-
-Pour toute contribution, merci de respecter ces règles afin de garantir la maintenabilité et la sécurité du projet.
-
-# bitcoin_scalper
+- **Sécurité avancée** :
+  - Authentification forte (MFA TOTP) sur l'API et l'interface de supervision
+  - Chiffrement des secrets (AES-256, dérivation PBKDF2)
+  - Vérification automatique du chiffrement disque (FileVault) et du pare-feu (scripts shell)
+  - Bonnes pratiques : aucun secret en clair, endpoints critiques protégés
+- **Monitoring & alertes** :
+  - Export Prometheus (bot & API) : uptime, erreurs, cycles, PnL, drawdown, latence
+  - Intégration Grafana (panels recommandés : uptime, erreurs, PnL, drawdown)
+  - Alertes Prometheus Alertmanager (email, Telegram, webhook)
+- **Supervision** :
+  - API FastAPI sécurisée (endpoints : `/pnl`, `/positions`, `/alerts`, `/kpis`, `/token`, `/verify`)
+  - Dashboard PyQt (statut, PnL, capital, positions, alertes, graphique capital)
+- **Pipeline ML & DVC** :
+  - Ingestion, nettoyage, feature engineering, modélisation, backtesting, exécution
+  - Versioning datasets, features, modèles et artefacts ML avec DVC
 
 ## Structure du projet
 
 ```
 bitcoin_scalper/
-│
 ├── README.md
-├── LICENSE
-├── setup.py / pyproject.toml
-├── requirements.txt
-├── .gitignore
-├── .coveragerc
+├── pyproject.toml / requirements.txt
 ├── Makefile
+├── .gitignore / .coveragerc
 │
-├── docs/                # Documentation Sphinx/MkDocs
+├── docs/                # Documentation Sphinx
 ├── docker/              # Dockerfile, docker-compose.yml
 ├── k8s/                 # Manifestes Kubernetes
 │
-├── bitcoin_scalper/     # Code source principal (anciennement app/)
-│   ├── core/
-│   ├── web/
-│   └── ...
-├── bot/
-├── data/
-├── scripts/
+├── bitcoin_scalper/     # Code source principal
+│   ├── core/            # Ingestion, ML, risk, DVC, etc.
+│   ├── web/             # API FastAPI
+│   └── main.py          # Orchestration du bot
+├── bot/                 # Connecteurs externes (MT5, etc.)
+├── data/                # Données (non versionnées)
+├── scripts/             # Scripts d'admin, migration, audit
 ├── tests/               # Tests unitaires et d'intégration
-└── .github/
+├── ui/                  # Dashboard PyQt
+└── .github/             # CI/CD
 ```
 
-## Commandes utiles
+## Installation & Prérequis
 
-- `make init` : Installer les dépendances
-- `make test` : Lancer les tests avec couverture
-- `make lint` : Linter le code
-- `make docs` : Générer la documentation
+- Python 3.11.x recommandé
+- Cloner le repo puis :
+
+```sh
+python3 -m venv .venv
+source .venv/bin/activate
+make init
+```
+
+- Pour la doc :
+
+```sh
+make docs
+```
+
+## Utilisation
+
+- **Lancer le bot principal** :
+  ```sh
+  python -m bitcoin_scalper.main
+  ```
+- **Lancer l'API FastAPI** :
+  ```sh
+  uvicorn bitcoin_scalper.web.api:app --reload
+  ```
+- **Dashboard PyQt** :
+  Lancement automatique avec le bot, ou via les modules `ui/`.
+
+- **Exemple de requête API protégée** :
+  ```sh
+  curl -X GET "http://localhost:8000/pnl?username=admin&code=123456" -H "Authorization: Bearer <token>"
+  ```
+
+## Tests & Qualité
+
+- **Lancer les tests** :
+  ```sh
+  make test
+  ```
+- **Vérifier la couverture** :
+  Couverture >95% exigée (voir rapport pytest-cov)
+- **Lint** :
+  ```sh
+  make lint
+  ```
+- **Générer la documentation** :
+  ```sh
+  make docs
+  ```
 
 ## Contribution
 
-Merci de respecter PEP8, d'ajouter des tests unitaires (>95% coverage) et de ne jamais exposer de secrets en clair. 
+- Respecter les standards Cursor :
+  - PEP8, docstrings, typage, sécurité (jamais de secrets en clair)
+  - Ajouter des tests unitaires pour toute nouvelle fonctionnalité (>95% coverage)
+  - Documenter chaque action significative dans `user_rules_history.md`
+  - Nettoyer les fichiers/dossiers inutiles avant chaque PR
+
+## Nettoyage & bonnes pratiques
+
+- Les fichiers/dossiers suivants sont exclus du dépôt :
+  - `__pycache__/`, `.pytest_cache/`, `.DS_Store`, `.coverage`, logs, fichiers temporaires, artefacts de build, données brutes
+- Les dossiers vides ou non utilisés sont supprimés régulièrement
+- Scripts d'audit sécurité :
+  - `bash scripts/check_filevault.sh`
+  - `bash scripts/check_firewall.sh`
+
+## Références & contacts
+
+- Documentation : dossier `docs/`
+- CI/CD : `.github/workflows/`
+- Pour toute question, ouvrir une issue ou contacter l'auteur.
+
+## Sécurité opérationnelle : gestion et rotation des secrets
+
+- **Ne jamais versionner config.enc ou tout fichier *.enc** (voir .gitignore)
+- Pour changer la clé de chiffrement ou le mot de passe :
+  1. Utiliser le script `scripts/migrate_config_to_password.py` pour rechiffrer la config avec un nouveau mot de passe.
+  2. Mettre à jour la variable d'environnement `CONFIG_AES_KEY` (ou le mot de passe utilisé pour la dérivation) sur tous les environnements.
+  3. Supprimer toute ancienne clé ou mot de passe stocké en local ou dans des scripts.
+- **Rotation des tokens API** :
+  - Modifier régulièrement les variables d'environnement `API_ADMIN_PASSWORD`, `API_ADMIN_TOTP`, `API_ADMIN_TOKEN`.
+  - Redémarrer les services après chaque rotation.
+- **Audit sécurité** :
+  - Exécuter régulièrement `bash scripts/check_filevault.sh` et `bash scripts/check_firewall.sh`.
+  - Documenter toute action de sécurité dans `user_rules_history.md`. 

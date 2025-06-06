@@ -59,4 +59,68 @@ def test_start_stop_thread():
     ingestor.start()
     time.sleep(0.2)
     ingestor.stop()
-    assert not ingestor._thread.is_alive() 
+    assert not ingestor._thread.is_alive()
+
+@pytest.fixture
+def ingestor():
+    mt5 = MagicMock()
+    db = MagicMock()
+    cleaner = MagicMock()
+    return DataIngestor(mt5, db, symbol="BTCUSD", timeframe="1min", cleaner=cleaner)
+
+def test_instanciation(ingestor):
+    assert hasattr(ingestor, "start")
+    assert hasattr(ingestor, "stop")
+    assert hasattr(ingestor, "_run")
+
+def test_start_stop(ingestor):
+    with patch.object(ingestor, "_run", return_value=None):
+        ingestor.start()
+        ingestor.stop()
+        assert not ingestor._thread.is_alive()
+
+def test_ingest_ohlcv_success(ingestor):
+    ingestor.mt5_client.get_ohlcv.return_value = [{"close": 100, "open": 99, "high": 101, "low": 98, "volume": 1, "timestamp": 1}]
+    ingestor.cleaner.clean_ohlcv.return_value = [{"close": 100, "timestamp": 1}]
+    ingestor.db_client.insert_ohlcv.return_value = True
+    ingestor._last_ohlcv_time = None
+    ingestor._ingest_ohlcv()
+    ingestor.mt5_client.get_ohlcv.assert_called()
+    ingestor.cleaner.clean_ohlcv.assert_called()
+    ingestor.db_client.insert_ohlcv.assert_called()
+
+def test_ingest_ohlcv_mt5_error(ingestor):
+    ingestor.mt5_client.get_ohlcv.side_effect = Exception("MT5 error")
+    ingestor._ingest_ohlcv()
+    ingestor.mt5_client.get_ohlcv.assert_called()
+
+def test_ingest_ohlcv_db_error(ingestor):
+    ingestor.mt5_client.get_ohlcv.return_value = [{"close": 100, "open": 99, "high": 101, "low": 98, "volume": 1, "timestamp": 1}]
+    ingestor.cleaner.clean_ohlcv.return_value = [{"close": 100, "timestamp": 1}]
+    ingestor.db_client.insert_ohlcv.side_effect = Exception("DB error")
+    ingestor._last_ohlcv_time = None
+    ingestor._ingest_ohlcv()
+    ingestor.db_client.insert_ohlcv.assert_called()
+
+def test_ingest_ticks_success(ingestor):
+    ingestor.mt5_client.get_ticks.return_value = [{"timestamp": 1, "symbol": "BTCUSD"}]
+    ingestor.cleaner.clean_ticks.return_value = [{"timestamp": 1, "symbol": "BTCUSD"}]
+    ingestor.db_client.insert_ticks.return_value = True
+    ingestor._last_tick_time = None
+    ingestor._ingest_ticks()
+    ingestor.mt5_client.get_ticks.assert_called()
+    ingestor.cleaner.clean_ticks.assert_called()
+    ingestor.db_client.insert_ticks.assert_called()
+
+def test_ingest_ticks_mt5_error(ingestor):
+    ingestor.mt5_client.get_ticks.side_effect = Exception("MT5 error")
+    ingestor._ingest_ticks()
+    ingestor.mt5_client.get_ticks.assert_called()
+
+def test_ingest_ticks_db_error(ingestor):
+    ingestor.mt5_client.get_ticks.return_value = [{"timestamp": 1, "symbol": "BTCUSD"}]
+    ingestor.cleaner.clean_ticks.return_value = [{"timestamp": 1, "symbol": "BTCUSD"}]
+    ingestor.db_client.insert_ticks.side_effect = Exception("DB error")
+    ingestor._last_tick_time = None
+    ingestor._ingest_ticks()
+    ingestor.db_client.insert_ticks.assert_called() 

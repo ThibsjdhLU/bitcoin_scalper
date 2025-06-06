@@ -9,16 +9,16 @@ import logging
 import os
 import pandas as pd
 from bitcoin_scalper.core.config import SecureConfig
-from bitcoin_scalper.core.data_ingestor import DataIngestor  # TODO: à instancier et lancer
+from bitcoin_scalper.core.data_ingestor import DataIngestor
 from bitcoin_scalper.core.data_cleaner import DataCleaner
 from bitcoin_scalper.core.feature_engineering import FeatureEngineering
 from bitcoin_scalper.core.risk_management import RiskManager
-from bitcoin_scalper.core.timescaledb_client import TimescaleDBClient  # TODO: à instancier pour stockage
-from bitcoin_scalper.core.dvc_manager import DVCManager  # TODO: à utiliser pour versioning
-from bitcoin_scalper.core.export import load_objects  # Pour charger le modèle ML
-from bitcoin_scalper.core.modeling import predict    # Pour la prédiction ML
-from bitcoin_scalper.core.backtesting import Backtester  # TODO: à intégrer pour reporting/backtest offline
-from bitcoin_scalper.core.order_algos import execute_iceberg, execute_vwap  # TODO: à intégrer pour exécution avancée
+from bitcoin_scalper.core.timescaledb_client import TimescaleDBClient
+from bitcoin_scalper.core.dvc_manager import DVCManager
+from bitcoin_scalper.core.export import load_objects
+from bitcoin_scalper.core.modeling import predict
+from bitcoin_scalper.core.backtesting import Backtester
+from bitcoin_scalper.core.order_algos import execute_iceberg, execute_vwap, execute_twap
 from bot.connectors.mt5_rest_client import MT5RestClient
 from prometheus_client import start_http_server, Counter, Gauge
 import threading
@@ -26,7 +26,7 @@ import argparse
 import numpy as np
 from sklearn.metrics import accuracy_score, f1_score, roc_auc_score, precision_score, recall_score
 import joblib
-from scripts.prepare_features import generate_signal  # Ajout pour fallback algo trading
+from scripts.prepare_features import generate_signal
 import getpass
 import hashlib
 import sys
@@ -64,8 +64,8 @@ BOT_DRAWDOWN = Gauge('bot_drawdown', 'Drawdown courant du bot')
 BOT_DAILY_PNL = Gauge('bot_daily_pnl', 'PnL journalier du bot')
 BOT_PEAK_BALANCE = Gauge('bot_peak_balance', 'Peak balance du bot')
 BOT_LAST_BALANCE = Gauge('bot_last_balance', 'Dernier solde du bot')
-
-# TODO: Ajouter d'autres métriques Prometheus (latence, exécution ordres, PnL, drawdown, etc.)
+BOT_ORDER_LATENCY = Gauge('bot_order_latency', 'Latence moyenne d\'exécution des ordres (ms)')
+BOT_ORDER_EXECUTED = Counter('bot_order_executed_total', 'Nombre total d\'ordres exécutés')
 
 # --- Sécurité simplifiée : dérivation de la clé AES à partir d'un mot de passe utilisateur ---
 SALT = b"bitcoin_scalper_salt"  # À stocker dans un fichier séparé pour plus de sécurité
@@ -145,9 +145,11 @@ def run_live_trading(max_cycles=None):
     # --- Ingestion temps réel (thread) ---
     ingestor = DataIngestor(mt5_client, db_client, symbol=SYMBOL, timeframe=TIMEFRAME, cleaner=cleaner)
     ingestor.start()
+    logger.info("DataIngestor lancé pour l'ingestion temps réel.")
 
     # --- Versioning DVC ---
     dvc = DVCManager()
+    logger.info("DVCManager initialisé.")
 
     # --- Chargement du pipeline ML (si modèle existant) ---
     ml_pipe = None
@@ -164,8 +166,26 @@ def run_live_trading(max_cycles=None):
     except Exception as e:
         logger.warning(f"Erreur chargement modèle ML : {e}. Fallback sur stratégie algo projet.")
     risk = RiskManager(mt5_client)
-    # TODO: Initialiser les algos d'exécution avancée (iceberg, TWAP, VWAP)
-    # TODO: Initialiser le backtester pour reporting offline
+    # Initialisation des algos d'exécution avancée (iceberg, TWAP, VWAP)
+    def advanced_order_execution(algo, mt5_client, symbol, side, volume, sl=None, tp=None):
+        """Exécute un ordre avancé selon l'algo choisi."""
+        if algo == "iceberg":
+            # Fragmentation en ordres enfants (exemple)
+            return execute_iceberg(total_qty=volume, max_child=volume/5, price=mt5_client.get_price(symbol), send_order_fn=mt5_client.send_order, symbol=symbol, side=side, sl=sl, tp=tp)
+        elif algo == "vwap":
+            # Utilise la série de prix récente pour VWAP
+            price_series = [mt5_client.get_price(symbol) for _ in range(5)]
+            return execute_vwap(total_qty=volume, price_series=price_series, send_order_fn=mt5_client.send_order, symbol=symbol, side=side, sl=sl, tp=tp)
+        elif algo == "twap":
+            return execute_twap(total_qty=volume, n_slices=5, price=mt5_client.get_price(symbol), send_order_fn=mt5_client.send_order, symbol=symbol, side=side, sl=sl, tp=tp)
+        else:
+            return [mt5_client.send_order(symbol, side, volume, sl=sl, tp=tp)]
+
+    # Initialisation du backtester pour reporting offline
+    backtester = None
+    if config.get("ENABLE_BACKTEST", False):
+        backtester = Backtester(df, signal_col="signal", price_col="close")
+        logger.info("Backtester initialisé pour reporting offline.")
 
     logger.info("Bot de trading BTCUSD démarré.")
     cycles = 0
@@ -190,6 +210,10 @@ def run_live_trading(max_cycles=None):
                 raise ValueError(f"Colonnes OHLCV manquantes: {set(required_cols) - set(df.columns)}")
             # 5. Feature engineering
             df = fe.add_indicators(df)
+            df = fe.add_features(df)
+            # Exemple multi-timeframe (si d'autres timeframes disponibles)
+            # dfs = {"1min": df, "5min": df_5min}
+            # df = fe.multi_timeframe(dfs)
             # TODO: Ajouter add_features, multi_timeframe, etc.
             # 6. Prédiction ML ou fallback algo
             signal = None
@@ -258,13 +282,8 @@ def run_live_trading(max_cycles=None):
                 if risk_check["allowed"]:
                     try:
                         exec_algo = config.get("EXEC_ALGO", "market").lower()
-                        if exec_algo == "iceberg":
-                            execute_iceberg(mt5_client, SYMBOL, signal, ORDER_VOLUME, sl=sl, tp=tp)
-                        elif exec_algo == "vwap":
-                            execute_vwap(mt5_client, SYMBOL, signal, ORDER_VOLUME, sl=sl, tp=tp)
-                        elif exec_algo == "twap":
-                            logger.warning("TWAP non implémenté, fallback market order.")
-                            mt5_client.send_order(SYMBOL, signal, ORDER_VOLUME, sl=sl, tp=tp)
+                        if exec_algo in ["iceberg", "vwap", "twap"]:
+                            advanced_order_execution(exec_algo, mt5_client, SYMBOL, signal, ORDER_VOLUME, sl=sl, tp=tp)
                         else:
                             mt5_client.send_order(SYMBOL, signal, ORDER_VOLUME, sl=sl, tp=tp)
                         logger.info(f"Ordre {signal} exécuté via {exec_algo} avec SL={sl:.2f}, TP={tp:.2f}.")
@@ -278,11 +297,10 @@ def run_live_trading(max_cycles=None):
             else:
                 logger.info("Aucun signal de trading généré.")
             # 8. Reporting backtesting (si activé)
-            if config.get("ENABLE_BACKTEST", False):
+            if config.get("ENABLE_BACKTEST", False) and backtester is not None:
                 try:
-                    backtester = Backtester()
-                    backtester.run(df)
-                    logger.info("Backtesting exécuté.")
+                    df_bt, trades, kpis = backtester.run()
+                    logger.info(f"Backtesting exécuté. KPIs: {kpis}")
                 except Exception as e:
                     logger.error(f"Erreur backtesting : {e}")
             # 9. Monitoring cycle
@@ -321,19 +339,22 @@ def run_backtest():
     - Génère un reporting pour l'analyse de performance.
     """
     logger.info("Mode backtest : simulation historique vectorisée.")
-    # Exemple d'utilisation :
-    # df = pd.read_csv('data/features/BTCUSD_M1.csv')
-    # backtester = Backtester(df, signal_col='signal', price_col='close')
-    # df_bt, trades, kpis = backtester.run()
-    # logger.info(f"KPIs backtest : {kpis}")
-    # TODO: intégrer la logique de chargement des features, signaux, reporting
-
-    # Implementation basique pour le test
-    # Utiliser des données de mock pour l'instant
-    mock_df = pd.DataFrame({'close': [100, 101, 102], 'signal': [1, -1, 0]})
-    backtester = Backtester(mock_df, signal_col='signal', price_col='close')
+    # Chargement des features et signaux
+    features_path = 'data/features/BTCUSD_M1.csv'
+    if not os.path.exists(features_path):
+        logger.error(f"Fichier de features introuvable : {features_path}")
+        return
+    df = pd.read_csv(features_path)
+    if 'signal' not in df.columns:
+        logger.error("Colonne 'signal' manquante dans les features. Impossible de backtester.")
+        return
+    backtester = Backtester(df, signal_col='signal', price_col='close')
     df_bt, trades, kpis = backtester.run()
-    logger.info(f"Backtest run completed with KPIs: {kpis}")
+    logger.info(f"KPIs backtest : {kpis}")
+    # Export reporting (exemple CSV)
+    report_path = 'data/reports/backtest_report.csv'
+    df_bt.to_csv(report_path, index=False)
+    logger.info(f"Reporting backtest exporté : {report_path}")
 
 
 def run_audit():
@@ -344,11 +365,20 @@ def run_audit():
     - Peut être utilisé en CI/CD ou en maintenance.
     """
     logger.info("Mode audit : scripts de sécurité, monitoring avancé.")
-    # Exemple d'utilisation :
-    # from scripts.check_firewall import check_firewall
-    # check_firewall()
-    # TODO: intégrer les scripts d'audit, export métriques, etc.
-    pass
+    # Exécution des scripts d'audit sécurité
+    os.system('bash scripts/check_firewall.sh')
+    os.system('bash scripts/check_filevault.sh')
+    # Export métriques de sécurité (exemple)
+    metrics = {
+        "firewall": os.system('bash scripts/check_firewall.sh'),
+        "filevault": os.system('bash scripts/check_filevault.sh')
+    }
+    metrics_path = 'data/reports/security_metrics.json'
+    os.makedirs(os.path.dirname(metrics_path), exist_ok=True)
+    import json
+    with open(metrics_path, 'w') as f:
+        json.dump(metrics, f)
+    logger.info(f"Métriques de sécurité exportées : {metrics_path}")
 
 def run_data():
     """
@@ -358,17 +388,35 @@ def run_data():
     - Utilitaire pour la gestion des expériences ML et backtests.
     """
     logger.info("Mode data : gestion datasets, DVC, synchronisation.")
-    # TODO: intégrer la logique DVC (add, commit, push, pull)
-
-    # Implementation basique pour le test
-    # Instancier DVCManager
     dvc = DVCManager()
-    # On suppose qu'une méthode add existe et retourne quelque chose
-    # add_result = dvc.add("fake_data.csv") # Cette méthode sera mockée dans le test
-    # logger.info(f"DVC add result: {add_result}")
+    # Synchronisation complète des datasets
+    datasets = [
+        'data/raw/BTCUSD_M1.csv',
+        'data/clean/BTCUSD_M1.csv',
+        'data/features/BTCUSD_M1.csv'
+    ]
+    for ds in datasets:
+        if os.path.exists(ds):
+            dvc.add(ds)
+            dvc.commit(ds)
+            logger.info(f"Dataset versionné : {ds}")
+    dvc.push()
+    logger.info("Push DVC effectué pour tous les datasets.")
+    # Pull pour synchronisation descendante
+    dvc.pull()
+    logger.info("Pull DVC effectué pour tous les datasets.")
 
-    # TODO: intégrer la gestion complète des datasets, synchronisation DVC
-    pass
+def run_backtest_offline(df: pd.DataFrame, signal_col: str = "signal", price_col: str = "close"):
+    """Exécute un backtest offline et log les KPIs principaux."""
+    backtester = Backtester(df, signal_col=signal_col, price_col=price_col)
+    df_bt, trades, kpis = backtester.run()
+    logger.info(f"Backtest terminé. KPIs: {kpis}")
+    return df_bt, trades, kpis
+
+def send_order_fn(qty, price, **kwargs):
+    """Exemple de fonction d'envoi d'ordre (à adapter à l'API broker réelle)."""
+    logger.info(f"Ordre envoyé: qty={qty}, price={price}, kwargs={kwargs}")
+    return {"qty": qty, "price": price, "status": "sent"}
 
 def main():
     app = QApplication(sys.argv)

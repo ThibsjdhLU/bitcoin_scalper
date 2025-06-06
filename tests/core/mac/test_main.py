@@ -8,6 +8,7 @@ import os # Import os for path checking in ML test
 import signal
 import numpy as np
 import json
+import logging
 
 class DummyConfig:
     def get(self, key, default=None):
@@ -297,4 +298,27 @@ def test_run_data_mode():
 #         try:
 #             func()
 #         except Exception as e:
-#             pytest.fail(f"Le mode {func.__name__} a levé une exception : {e}") 
+#             pytest.fail(f"Le mode {func.__name__} a levé une exception : {e}")
+
+# Patch les modules critiques pour un dry-run
+@patch("bitcoin_scalper.main.DataIngestor")
+@patch("bitcoin_scalper.main.TimescaleDBClient")
+@patch("bitcoin_scalper.main.DVCManager")
+@patch("bitcoin_scalper.main.Backtester")
+@patch("bitcoin_scalper.main.execute_iceberg")
+@patch("bitcoin_scalper.main.execute_twap")
+@patch("bitcoin_scalper.main.execute_vwap")
+def test_main_pipeline_dry_run(mock_vwap, mock_twap, mock_iceberg, mock_backtester, mock_dvc, mock_tsdb, mock_ingestor, caplog):
+    import bitcoin_scalper.main as main
+    caplog.set_level(logging.INFO)
+    # Simule un DataFrame minimal pour le backtest
+    import pandas as pd
+    df = pd.DataFrame({"close": [100, 101, 102], "signal": [0, 1, -1]})
+    # Mock les méthodes critiques
+    mock_backtester.return_value.run.return_value = (df, [], {"sharpe": 1.0, "win_rate": 1.0, "nb_trades": 1})
+    # Appelle les fonctions principales
+    main.run_backtest_offline(df)
+    main.dvc_sync()
+    # Vérifie la présence de logs clés
+    assert any("Backtest terminé" in r for r in caplog.text.splitlines())
+    assert any("DVC sync" in r or "Synchronisation DVC" in r for r in caplog.text.splitlines()) 

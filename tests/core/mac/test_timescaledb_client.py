@@ -94,4 +94,80 @@ def test_close(mock_connect):
     mock_connect.return_value = conn
     db = TimescaleDBClient(**get_db_params())
     db.close()
-    assert conn.close.called 
+    assert conn.close.called
+
+@pytest.fixture
+def db():
+    with patch("psycopg2.connect") as mock_connect:
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_connect.return_value = mock_conn
+        mock_conn.cursor.return_value = mock_cursor
+        yield TimescaleDBClient(host="localhost", port=5432, dbname="test", user="user", password="pass")
+
+def test_instanciation(db):
+    assert hasattr(db, "insert_ticks")
+    assert hasattr(db, "insert_ohlcv")
+    assert hasattr(db, "create_schema")
+
+def test_insert_ticks_success(db):
+    db.conn = MagicMock()
+    db.conn.cursor.return_value = MagicMock()
+    ticks = [{"symbol": "BTCUSD", "bid": 1, "ask": 2, "timestamp": 1, "volume": 0.1}]
+    with patch("bitcoin_scalper.core.timescaledb_client.execute_batch") as mock_batch:
+        db.insert_ticks(ticks)
+        mock_batch.assert_called()
+
+def test_insert_ohlcv_success(db):
+    db.conn = MagicMock()
+    db.conn.cursor.return_value = MagicMock()
+    ohlcv = [{"symbol": "BTCUSD", "open": 1, "high": 2, "low": 0.5, "close": 1.5, "volume": 0.1, "timestamp": 1, "timeframe": "M1"}]
+    with patch("bitcoin_scalper.core.timescaledb_client.execute_batch") as mock_batch:
+        db.insert_ohlcv(ohlcv)
+        mock_batch.assert_called()
+
+def test_create_schema_success(db):
+    db.conn = MagicMock()
+    db.conn.cursor.return_value = MagicMock()
+    db.create_schema()
+    db.conn.cursor.return_value.execute.assert_called()
+
+def test_insert_ticks_empty(db):
+    db.conn = MagicMock()
+    db.conn.cursor.return_value = MagicMock()
+    db.insert_ticks([])  # Ne doit pas lever d'exception
+    db.conn.cursor.return_value.execute.assert_not_called()
+
+def test_insert_ohlcv_empty(db):
+    db.conn = MagicMock()
+    db.conn.cursor.return_value = MagicMock()
+    db.insert_ohlcv([])  # Ne doit pas lever d'exception
+    db.conn.cursor.return_value.execute.assert_not_called()
+
+def test_insert_ticks_db_error(db):
+    db.conn = MagicMock()
+    db.conn.cursor.return_value.execute.side_effect = Exception("DB error")
+    with pytest.raises(Exception):
+        db.insert_ticks([{"symbol": "BTCUSD", "bid": 1, "ask": 2, "timestamp": 1, "volume": 0.1}])
+
+def test_insert_ohlcv_db_error(db):
+    db.conn = MagicMock()
+    db.conn.cursor.return_value.execute.side_effect = Exception("DB error")
+    with pytest.raises(Exception):
+        db.insert_ohlcv([{"symbol": "BTCUSD", "open": 1, "high": 2, "low": 0.5, "close": 1.5, "volume": 0.1, "timestamp": 1, "timeframe": "M1"}])
+
+def test_connect_fail():
+    with patch("bitcoin_scalper.core.timescaledb_client.psycopg2.connect", side_effect=Exception("fail")):
+        db = TimescaleDBClient(host="localhost", port=5432, dbname="test", user="user", password="pass")
+        assert db.disabled is True
+
+def test_create_schema_fail():
+    with patch("bitcoin_scalper.core.timescaledb_client.psycopg2.connect") as mock_connect:
+        conn = MagicMock(closed=0)
+        cur = MagicMock()
+        cur.execute.side_effect = Exception("fail")
+        conn.cursor.return_value = cur
+        mock_connect.return_value = conn
+        db = TimescaleDBClient(host="localhost", port=5432, dbname="test", user="user", password="pass")
+        db.create_schema()
+        assert db.disabled is True 

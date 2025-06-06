@@ -24,3 +24,5 @@ logs/
 .venv/
 *.pkl
 data/features/*.csv
+config.enc
+*.enc
