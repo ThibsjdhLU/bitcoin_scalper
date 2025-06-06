@@ -23,3 +23,5 @@ Ce fichier consigne chaque action majeure réalisée sur le projet (création, m
 - Ajout de docstrings et d'annotations de type dans utils/logger.py pour conformité PEP8 et respect des standards de documentation du projet.
 
 - Ajout de tests unitaires avancés sur utils/logger.py et utils/settings.py pour valider les comportements métier, la robustesse, la sécurité (gestion d'erreur, thread-safety, signaux Qt, persistance) et garantir une couverture >95% pertinente.
+
+- Purge complète de l'historique Git des fichiers volumineux (.pkl, .csv) avec BFG Repo-Cleaner, mise à jour du .gitignore, et synchronisation forcée avec le dépôt GitHub pour respecter les limites de taille et garantir la conformité du projet.

@@ -21,8 +21,11 @@ logs/
 # Fichiers d’indexation Cursor
 .cursor/ 
 # Fichiers volumineux à ignorer
-.venv/
 *.pkl
-data/features/*.csv
+*.csv
+.venv/
+# Dossiers de données et modèles
+models/
+data/features/
 config.enc
 *.enc
