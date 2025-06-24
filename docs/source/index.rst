@@ -15,6 +15,7 @@ documentation for details.
    :maxdepth: 2
    :caption: Contents:
 
+   installation_mac
    web_api
 
 .. toctree::
