@@ -15,7 +15,6 @@ documentation for details.
    :maxdepth: 2
    :caption: Contents:
 
-   installation_mac
    web_api
 
 .. toctree::
@@ -40,3 +39,9 @@ Sécurité et gestion des secrets
 - Tous les secrets (API_ADMIN_PASSWORD, API_ADMIN_TOTP, API_ADMIN_TOKEN, CONFIG_AES_KEY, etc.) doivent être injectés via variables d'environnement ou gestionnaire de secrets.
 - Le bot et l'API refusent de démarrer si un secret est absent ou trop faible.
 - Voir la section ``config`` pour la gestion sécurisée de la configuration.
+
+.. toctree::
+   :maxdepth=2
+   :caption: Sommaire
+
+   installation_windows
