@@ -5,7 +5,7 @@ import tempfile
 import os
 from bitcoin_scalper.core.inference import inference
 from bitcoin_scalper.core.export import save_objects
-from lightgbm import LGBMClassifier
+from catboost import CatBoostClassifier
 
 def make_df_minute():
     idx = pd.date_range('2024-06-01', periods=20, freq='T', tz='UTC')
@@ -22,7 +22,7 @@ def make_and_save_model(tmp_path):
     df = make_df_minute()
     X = df[['<OPEN>', '<HIGH>', '<LOW>', '<CLOSE>', '<TICKVOL>']].copy()
     y = np.random.choice([-1, 0, 1], len(X))
-    model = LGBMClassifier(objective='multiclass', n_estimators=5)
+    model = CatBoostClassifier(loss_function='MultiClass', iterations=5, verbose=0)
     model.fit(X, y)
     prefix = str(tmp_path / "test_infer")
     save_objects(model, None, None, None, prefix)

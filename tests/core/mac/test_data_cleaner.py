@@ -142,6 +142,71 @@ def test_clean_ohlcv_exception():
         with pytest.raises(Exception, match="Simulated DataFrame Error"):
             cleaner.clean_ohlcv(ohlcv)
 
+def test_correct_outliers_and_gaps(tmp_path):
+    cleaner = DataCleaner()
+    # Génère un DataFrame OHLCV avec outliers, trous, négatifs, incohérences
+    idx = pd.date_range("2024-01-01 00:00", periods=10, freq="min").delete([3, 7])  # trous aux index 3 et 7
+    df = pd.DataFrame({
+        "open": [1, 1.1, 1.2, 10, 1.3, 1.4, -2, 1.5, 1.6, 1.7],
+        "high": [2, 2.1, 2.2, 20, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8],
+        "low": [0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 1.0, 1.05, 1.1, 1.15],
+        "close": [1.5, 1.6, 1.7, 30, 1.8, 1.9, 1.95, 2.0, 2.1, 2.2],
+        "volume": [0.1, 0.2, 0.3, 100, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9],
+    }, index=idx)
+    report_path = tmp_path / "correction_report.json"
+    df_corr = cleaner.correct_outliers_and_gaps(df, freq="1min", outlier_zscore=3.0, winsorize=True, report_path=str(report_path))
+    # Vérifie que le DataFrame est réindexé (plus de trous)
+    assert len(df_corr) == 10
+    # Vérifie que les valeurs négatives ont été corrigées
+    assert (df_corr[["open", "high", "low", "close", "volume"]] >= 0).all().all()
+    # Vérifie que le rapport JSON est généré
+    assert report_path.exists()
+    # Vérifie que les outliers ont été corrigés (plus de valeurs extrêmes)
+    assert (df_corr[["open", "close", "volume"]] < 50).all().all()
+
+def test_check_temporal_consistency(tmp_path):
+    cleaner = DataCleaner()
+    # Génère un DataFrame avec des incohérences
+    idx = pd.date_range("2024-01-01 00:00", periods=10, freq="min").delete([3, 7])
+    df = pd.DataFrame({
+        "open": np.arange(10),
+        "target_2m": [1]*8 + [np.nan, np.nan],
+    }, index=idx)
+    # Ajoute un doublon
+    df_dup = pd.concat([df, df.iloc[[-1]]])
+    df_dup = df_dup.sort_index()
+    # Ajoute un timestamp dans le futur
+    future_idx = pd.DatetimeIndex([pd.Timestamp.utcnow() + pd.Timedelta("1D")])
+    df_dup.loc[future_idx, "open"] = 42
+    report_path = tmp_path / "temporal_report.json"
+    report = cleaner.check_temporal_consistency(df_dup, target_cols=["target_2m"], freq="1min", report_path=str(report_path))
+    # Vérifie la détection des gaps, doublons, timestamps futurs, look-ahead
+    assert "gaps" in report and len(report["gaps"]) > 0
+    assert "duplicates" in report and len(report["duplicates"]) > 0
+    assert "future_timestamps" in report and len(report["future_timestamps"]) > 0
+    assert "lookahead" in report and "target_2m" in report["lookahead"]
+    # Vérifie que le rapport JSON est généré
+    assert report_path.exists()
+
+def test_audit_data_quality(tmp_path):
+    cleaner = DataCleaner()
+    idx = pd.date_range("2024-01-01 00:00", periods=10, freq="min")
+    df = pd.DataFrame({
+        "open": np.arange(10),
+        "high": np.arange(10)+1,
+        "low": np.arange(10)-1,
+        "close": np.arange(10),
+        "volume": np.ones(10),
+        "target_2m": [1]*8 + [np.nan, np.nan],
+    }, index=idx)
+    report = cleaner.audit_data_quality(df, label_cols=["target_2m"], report_dir=str(tmp_path), prefix="test_")
+    # Vérifie que tous les rapports sont générés
+    for key in ["clean_market", "correction", "temporal", "label_distribution"]:
+        assert key in report
+        assert (tmp_path / report[key].split("/")[-1]).exists()
+    # Vérifie que le rapport global est généré
+    assert (tmp_path / "test_global_audit.json").exists()
+
 # TODO: Ajouter des tests pour les cas limites (listes vides, un seul élément)
 # TODO: Ajouter des tests pour différents zscore_thresh
 # TODO: Ajouter des tests pour la gestion des timestamps (conversion, format invalide)

@@ -4,13 +4,13 @@ import shutil
 import tempfile
 import numpy as np
 import pandas as pd
-from lightgbm import LGBMClassifier
+from catboost import CatBoostClassifier
 from bitcoin_scalper.core.export import save_objects, load_objects
 
 def make_model():
     X = pd.DataFrame({'a': np.random.randn(30), 'b': np.random.randn(30)})
     y = np.random.choice([-1, 0, 1], 30)
-    model = LGBMClassifier(objective='multiclass', n_estimators=10)
+    model = CatBoostClassifier(loss_function='MultiClass', iterations=10, verbose=0)
     model.fit(X, y)
     return model, X
 

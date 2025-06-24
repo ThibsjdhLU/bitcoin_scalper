@@ -3,7 +3,7 @@ import pickle
 import joblib
 import logging
 from typing import Any, Dict, Optional
-from lightgbm import Booster, LGBMClassifier
+from catboost import CatBoostClassifier
 
 logger = logging.getLogger("bitcoin_scalper.export")
 logger.setLevel(logging.DEBUG)
@@ -14,26 +14,26 @@ if not logger.hasHandlers():
     logger.addHandler(handler)
 
 def save_objects(
-    model: LGBMClassifier,
+    model: CatBoostClassifier,
     pipeline: Optional[Any],
     encoders: Optional[Dict[str, Any]],
     scaler: Optional[Any],
     path_prefix: str
 ) -> None:
     """
-    Sauvegarde tous les objets nécessaires à l'inférence (modèle, pipeline, encodages, scaler) avec validation post-sauvegarde.
+    Sauvegarde tous les objets nécessaires à l'inférence (modèle CatBoost, pipeline, encodages, scaler) avec validation post-sauvegarde.
 
-    :param model: Modèle LightGBM entraîné
+    :param model: Modèle CatBoost entraîné
     :param pipeline: Pipeline de transformation (feature engineering, scaling, etc.)
     :param encoders: Dictionnaire d'encodages (labels, features)
     :param scaler: Scaler ou normalisateur (optionnel)
     :param path_prefix: Préfixe de chemin pour les fichiers sauvegardés
     """
     try:
-        # Modèle LightGBM natif
-        model_path = f"{path_prefix}_model.txt"
-        model.booster_.save_model(model_path)
-        logger.info(f"Modèle LightGBM sauvegardé : {model_path}")
+        # Modèle CatBoost natif
+        model_path = f"{path_prefix}_model.cbm"
+        model.save_model(model_path)
+        logger.info(f"Modèle CatBoost sauvegardé : {model_path}")
         # Pipeline, encoders, scaler (pickle/joblib)
         for obj, name in zip([pipeline, encoders, scaler], ["pipeline", "encoders", "scaler"]):
             if obj is not None:
@@ -58,14 +58,14 @@ def load_objects(path_prefix: str) -> Dict[str, Any]:
     """
     objects = {}
     try:
-        # Modèle LightGBM natif
-        model_path = f"{path_prefix}_model.txt"
+        # Modèle CatBoost natif
+        model_path = f"{path_prefix}_model.cbm"
         if not os.path.exists(model_path):
             raise FileNotFoundError(f"Fichier modèle absent : {model_path}")
-        model = LGBMClassifier()
-        model._Booster = Booster(model_file=model_path)
+        model = CatBoostClassifier()
+        model.load_model(model_path)
         objects['model'] = model
-        logger.info(f"Modèle LightGBM chargé : {model_path}")
+        logger.info(f"Modèle CatBoost chargé : {model_path}")
         # Pipeline, encoders, scaler
         for name in ["pipeline", "encoders", "scaler"]:
             obj_path = f"{path_prefix}_{name}.pkl"
@@ -88,16 +88,15 @@ def test_load_objects_model_absent():
     with pytest.raises(FileNotFoundError):
         load_objects("/tmp/model_inexistant")
 
-
 def test_save_and_load_objects(tmp_path):
     """
-    Teste la sauvegarde et le rechargement d'un modèle LightGBM minimal.
+    Teste la sauvegarde et le rechargement d'un modèle CatBoost minimal.
     """
     import numpy as np
-    from lightgbm import LGBMClassifier
+    from catboost import CatBoostClassifier
     X = np.random.rand(10, 2)
     y = np.random.randint(0, 2, 10)
-    model = LGBMClassifier().fit(X, y)
+    model = CatBoostClassifier(loss_function='Logloss', verbose=0).fit(X, y)
     save_objects(model, None, None, None, str(tmp_path / "test_model"))
     loaded = load_objects(str(tmp_path / "test_model"))
     assert loaded["model"] is not None 

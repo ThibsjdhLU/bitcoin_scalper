@@ -52,6 +52,10 @@ class TradingWorker(QThread):
         self.config = SecureConfig(config_path, aes_key)
 
     def run(self):
+        """
+        Boucle principale du worker de trading (live ou backtest).
+        Loggue toute erreur de features manquantes et applique un fallback automatique (stratégie alternative) si besoin.
+        """
         try:
             if not self.config:
                 self.log_message.emit("[Worker] Erreur : config non initialisée.")
@@ -119,7 +123,10 @@ class TradingWorker(QThread):
                                 features_list = joblib.load(features_list_path)
                                 missing_cols = [col for col in features_list if col not in df.columns]
                                 if missing_cols:
-                                    self.log_message.emit(f"[Worker] Colonnes de features manquantes pour la prédiction ML : {missing_cols}")
+                                    self.log_message.emit(f"[Worker][ERREUR] Colonnes de features manquantes pour la prédiction ML : {missing_cols}. Fallback automatique sur stratégie alternative.")
+                                    # Fallback immédiat
+                                    self.ml_loaded = False
+                                    raise RuntimeError("Features manquantes : fallback sur stratégie alternative.")
                                 X_pred = df[[col for col in features_list if col in df.columns]]
                             else:
                                 self.log_message.emit("[Worker] features_list.pkl introuvable. Fallback sur stratégie algo projet.")

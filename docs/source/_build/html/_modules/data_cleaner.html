@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+
+<html lang="fr" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>data_cleaner &#8212; Documentation bitcoin_scalper 1.0</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=27fed22d" />
+    <script src="../_static/documentation_options.js?v=7a28dfa3"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/translations.js?v=e6b791cb"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Recherche" href="../search.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Code source de data_cleaner</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.ensemble</span><span class="w"> </span><span class="kn">import</span> <span class="n">IsolationForest</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Optional</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+
+<div class="viewcode-block" id="DataCleaner">
+<a class="viewcode-back" href="../data_cleaner.html#data_cleaner.DataCleaner">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">DataCleaner</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Nettoyage avancé des données ticks et OHLCV :</span>
+<span class="sd">    - Suppression des outliers (z-score robuste/MAD, IQR)</span>
+<span class="sd">    - Gestion des valeurs manquantes</span>
+<span class="sd">    - Détection d&#39;anomalies (Isolation Forest)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">anomaly_method</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;isoforest&quot;</span><span class="p">,</span> <span class="n">contamination</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.01</span><span class="p">,</span> <span class="n">zscore_thresh</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">4.0</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">anomaly_method</span> <span class="o">=</span> <span class="n">anomaly_method</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">contamination</span> <span class="o">=</span> <span class="n">contamination</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">zscore_thresh</span> <span class="o">=</span> <span class="n">zscore_thresh</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_mad_zscore</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">series</span><span class="p">):</span>
+        <span class="n">median</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">series</span><span class="p">)</span>
+        <span class="n">mad</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">series</span> <span class="o">-</span> <span class="n">median</span><span class="p">))</span> <span class="o">+</span> <span class="mf">1e-9</span>
+        <span class="k">return</span> <span class="mf">0.6745</span> <span class="o">*</span> <span class="p">(</span><span class="n">series</span> <span class="o">-</span> <span class="n">median</span><span class="p">)</span> <span class="o">/</span> <span class="n">mad</span>
+
+<div class="viewcode-block" id="DataCleaner.clean_ticks">
+<a class="viewcode-back" href="../data_cleaner.html#data_cleaner.DataCleaner.clean_ticks">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">clean_ticks</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ticks</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Nettoie une liste de ticks (suppression outliers, valeurs manquantes, anomalies).</span>
+<span class="sd">        - Si &#39;timestamp&#39; est absent mais &#39;time&#39; ou &#39;time_msc&#39; est présent, il est ajouté automatiquement.</span>
+<span class="sd">        - Supprime les ticks incomplets ou aberrants.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">ticks</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[]</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">ticks</span><span class="p">)</span>
+        <span class="c1"># Gestion valeurs manquantes : suppression lignes incomplètes</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">dropna</span><span class="p">(</span><span class="n">subset</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;bid&quot;</span><span class="p">,</span> <span class="s2">&quot;ask&quot;</span><span class="p">,</span> <span class="s2">&quot;volume&quot;</span><span class="p">,</span> <span class="s2">&quot;timestamp&quot;</span><span class="p">])</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="c1"># Suppression stricte des outliers z-score robuste (MAD) sur bid/ask/volume</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">df</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+            <span class="n">mad_zscores</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="n">col</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_mad_zscore</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="n">col</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">))</span> <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;bid&quot;</span><span class="p">,</span> <span class="s2">&quot;ask&quot;</span><span class="p">,</span> <span class="s2">&quot;volume&quot;</span><span class="p">]})</span>
+            <span class="n">mask</span> <span class="o">=</span> <span class="p">(</span><span class="n">mad_zscores</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">zscore_thresh</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="c1"># Détection anomalies (Isolation Forest)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">anomaly_method</span> <span class="o">==</span> <span class="s2">&quot;isoforest&quot;</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">10</span><span class="p">:</span>
+            <span class="n">clf</span> <span class="o">=</span> <span class="n">IsolationForest</span><span class="p">(</span><span class="n">contamination</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">contamination</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">42</span><span class="p">)</span>
+            <span class="n">features</span> <span class="o">=</span> <span class="n">df</span><span class="p">[[</span><span class="s2">&quot;bid&quot;</span><span class="p">,</span> <span class="s2">&quot;ask&quot;</span><span class="p">,</span> <span class="s2">&quot;volume&quot;</span><span class="p">]]</span>
+            <span class="n">preds</span> <span class="o">=</span> <span class="n">clf</span><span class="o">.</span><span class="n">fit_predict</span><span class="p">(</span><span class="n">features</span><span class="p">)</span>
+            <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">preds</span> <span class="o">==</span> <span class="mi">1</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">df</span><span class="o">.</span><span class="n">to_dict</span><span class="p">(</span><span class="n">orient</span><span class="o">=</span><span class="s2">&quot;records&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="DataCleaner.clean_ohlcv">
+<a class="viewcode-back" href="../data_cleaner.html#data_cleaner.DataCleaner.clean_ohlcv">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">clean_ohlcv</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ohlcv</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Nettoie une liste d&#39;OHLCV (suppression outliers, valeurs manquantes, anomalies).&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">ohlcv</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[]</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">ohlcv</span><span class="p">)</span>
+        <span class="c1"># Gestion valeurs manquantes : suppression lignes incomplètes</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">dropna</span><span class="p">(</span><span class="n">subset</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;open&quot;</span><span class="p">,</span> <span class="s2">&quot;high&quot;</span><span class="p">,</span> <span class="s2">&quot;low&quot;</span><span class="p">,</span> <span class="s2">&quot;close&quot;</span><span class="p">,</span> <span class="s2">&quot;volume&quot;</span><span class="p">,</span> <span class="s2">&quot;timestamp&quot;</span><span class="p">])</span>
+        <span class="c1"># Suppression stricte des outliers IQR sur open/high/low/close/volume</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">df</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+            <span class="n">iqr_mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;open&quot;</span><span class="p">,</span> <span class="s2">&quot;high&quot;</span><span class="p">,</span> <span class="s2">&quot;low&quot;</span><span class="p">,</span> <span class="s2">&quot;close&quot;</span><span class="p">,</span> <span class="s2">&quot;volume&quot;</span><span class="p">]:</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">5</span><span class="p">:</span>
+                    <span class="c1"># Filtrage MAD strict pour petits jeux de données</span>
+                    <span class="n">median</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">col</span><span class="p">]</span><span class="o">.</span><span class="n">median</span><span class="p">()</span>
+                    <span class="n">mad</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="n">col</span><span class="p">]</span> <span class="o">-</span> <span class="n">median</span><span class="p">))</span> <span class="o">+</span> <span class="mf">1e-9</span>
+                    <span class="n">col_mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="n">col</span><span class="p">]</span> <span class="o">-</span> <span class="n">median</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">3</span> <span class="o">*</span> <span class="n">mad</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">q1</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">col</span><span class="p">]</span><span class="o">.</span><span class="n">quantile</span><span class="p">(</span><span class="mf">0.25</span><span class="p">)</span>
+                    <span class="n">q3</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">col</span><span class="p">]</span><span class="o">.</span><span class="n">quantile</span><span class="p">(</span><span class="mf">0.75</span><span class="p">)</span>
+                    <span class="n">iqr</span> <span class="o">=</span> <span class="n">q3</span> <span class="o">-</span> <span class="n">q1</span>
+                    <span class="n">median</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">col</span><span class="p">]</span><span class="o">.</span><span class="n">median</span><span class="p">()</span>
+                    <span class="k">if</span> <span class="n">iqr</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                        <span class="n">col_mask</span> <span class="o">=</span> <span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="n">col</span><span class="p">]</span> <span class="o">==</span> <span class="n">median</span><span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">col_mask</span> <span class="o">=</span> <span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="n">col</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">q1</span> <span class="o">-</span> <span class="mf">1.5</span> <span class="o">*</span> <span class="n">iqr</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="n">col</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">q3</span> <span class="o">+</span> <span class="mf">1.5</span> <span class="o">*</span> <span class="n">iqr</span><span class="p">)</span>
+                <span class="n">iqr_mask</span> <span class="o">&amp;=</span> <span class="n">col_mask</span>
+            <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">iqr_mask</span><span class="p">]</span>
+        <span class="c1"># Détection anomalies (Isolation Forest)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">anomaly_method</span> <span class="o">==</span> <span class="s2">&quot;isoforest&quot;</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">10</span><span class="p">:</span>
+            <span class="n">clf</span> <span class="o">=</span> <span class="n">IsolationForest</span><span class="p">(</span><span class="n">contamination</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">contamination</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">42</span><span class="p">)</span>
+            <span class="n">features</span> <span class="o">=</span> <span class="n">df</span><span class="p">[[</span><span class="s2">&quot;open&quot;</span><span class="p">,</span> <span class="s2">&quot;high&quot;</span><span class="p">,</span> <span class="s2">&quot;low&quot;</span><span class="p">,</span> <span class="s2">&quot;close&quot;</span><span class="p">,</span> <span class="s2">&quot;volume&quot;</span><span class="p">]]</span>
+            <span class="n">preds</span> <span class="o">=</span> <span class="n">clf</span><span class="o">.</span><span class="n">fit_predict</span><span class="p">(</span><span class="n">features</span><span class="p">)</span>
+            <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">preds</span> <span class="o">==</span> <span class="mi">1</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">df</span><span class="o">.</span><span class="n">to_dict</span><span class="p">(</span><span class="n">orient</span><span class="o">=</span><span class="s2">&quot;records&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="DataCleaner.clean_market_data">
+<a class="viewcode-back" href="../data_cleaner.html#data_cleaner.DataCleaner.clean_market_data">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">clean_market_data</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
+        <span class="n">min_volume</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
+        <span class="n">max_spread</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.01</span><span class="p">,</span>
+        <span class="n">zscore_thresh</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">5.0</span><span class="p">,</span>
+        <span class="n">exclude_hours</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">list</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">report_path</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Nettoyage avancé d&#39;un DataFrame OHLCV :</span>
+<span class="sd">        - Supprime/masque les périodes d&#39;illiquidité (volume &lt; min_volume, spread &gt; max_spread)</span>
+<span class="sd">        - Supprime/masque les périodes d&#39;anomalies (prix aberrants, gaps, spikes, via z-score)</span>
+<span class="sd">        - Exclut des plages horaires (ex : week-end, nuit, maintenance)</span>
+<span class="sd">        - Génère un rapport JSON sur les périodes supprimées/masquées</span>
+<span class="sd">        :param df: DataFrame OHLCV indexé par datetime</span>
+<span class="sd">        :param min_volume: Volume minimum pour considérer une période liquide</span>
+<span class="sd">        :param max_spread: Spread maximum toléré (en proportion, ex : 0.01 = 1%)</span>
+<span class="sd">        :param zscore_thresh: Seuil z-score pour détecter les prix aberrants</span>
+<span class="sd">        :param exclude_hours: Liste d&#39;heures (ou fonction) à exclure (ex : [0,1,2,3,4,5,23])</span>
+<span class="sd">        :param report_path: Chemin du rapport JSON à générer (optionnel)</span>
+<span class="sd">        :return: DataFrame nettoyé</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;bitcoin_scalper.data_cleaner&quot;</span><span class="p">)</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">report</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;illiquid&quot;</span><span class="p">:</span> <span class="p">[],</span> <span class="s2">&quot;spread&quot;</span><span class="p">:</span> <span class="p">[],</span> <span class="s2">&quot;anomaly&quot;</span><span class="p">:</span> <span class="p">[],</span> <span class="s2">&quot;excluded_hours&quot;</span><span class="p">:</span> <span class="p">[]}</span>
+        <span class="c1"># Illiquidité (volume)</span>
+        <span class="n">illiquid_mask</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;volume&quot;</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">min_volume</span>
+        <span class="n">report</span><span class="p">[</span><span class="s2">&quot;illiquid&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="p">[</span><span class="n">illiquid_mask</span><span class="p">]</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2"> %H:%M:%S&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+        <span class="c1"># Spread (high-low/close)</span>
+        <span class="n">spread</span> <span class="o">=</span> <span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;high&quot;</span><span class="p">]</span> <span class="o">-</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;low&quot;</span><span class="p">])</span> <span class="o">/</span> <span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;close&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="mf">1e-9</span><span class="p">)</span>
+        <span class="n">spread_mask</span> <span class="o">=</span> <span class="n">spread</span> <span class="o">&gt;</span> <span class="n">max_spread</span>
+        <span class="n">report</span><span class="p">[</span><span class="s2">&quot;spread&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="p">[</span><span class="n">spread_mask</span><span class="p">]</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2"> %H:%M:%S&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+        <span class="c1"># Anomalies (z-score sur close)</span>
+        <span class="n">zscores</span> <span class="o">=</span> <span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;close&quot;</span><span class="p">]</span> <span class="o">-</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;close&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">rolling</span><span class="p">(</span><span class="mi">30</span><span class="p">,</span> <span class="n">min_periods</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">())</span> <span class="o">/</span> <span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;close&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">rolling</span><span class="p">(</span><span class="mi">30</span><span class="p">,</span> <span class="n">min_periods</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span><span class="o">.</span><span class="n">std</span><span class="p">()</span> <span class="o">+</span> <span class="mf">1e-9</span><span class="p">)</span>
+        <span class="n">anomaly_mask</span> <span class="o">=</span> <span class="n">zscores</span><span class="o">.</span><span class="n">abs</span><span class="p">()</span> <span class="o">&gt;</span> <span class="n">zscore_thresh</span>
+        <span class="n">report</span><span class="p">[</span><span class="s2">&quot;anomaly&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="p">[</span><span class="n">anomaly_mask</span><span class="p">]</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2"> %H:%M:%S&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+        <span class="c1"># Exclusion horaires</span>
+        <span class="k">if</span> <span class="n">exclude_hours</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">callable</span><span class="p">(</span><span class="n">exclude_hours</span><span class="p">):</span>
+                <span class="n">hours_mask</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">exclude_hours</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">hours_mask</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">hour</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">exclude_hours</span><span class="p">)</span>
+            <span class="n">report</span><span class="p">[</span><span class="s2">&quot;excluded_hours&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="p">[</span><span class="n">hours_mask</span><span class="p">]</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2"> %H:%M:%S&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">hours_mask</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="kc">False</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
+        <span class="c1"># Masquage global</span>
+        <span class="n">mask</span> <span class="o">=</span> <span class="o">~</span><span class="p">(</span><span class="n">illiquid_mask</span> <span class="o">|</span> <span class="n">spread_mask</span> <span class="o">|</span> <span class="n">anomaly_mask</span> <span class="o">|</span> <span class="n">hours_mask</span><span class="p">)</span>
+        <span class="n">df_clean</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span>
+        <span class="c1"># Rapport JSON</span>
+        <span class="k">if</span> <span class="n">report_path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">report_path</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">report</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Rapport de nettoyage exporté : </span><span class="si">{</span><span class="n">report_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">df_clean</span></div>
+
+
+<div class="viewcode-block" id="DataCleaner.correct_outliers_and_gaps">
+<a class="viewcode-back" href="../data_cleaner.html#data_cleaner.DataCleaner.correct_outliers_and_gaps">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">correct_outliers_and_gaps</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
+        <span class="n">freq</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;1min&quot;</span><span class="p">,</span>
+        <span class="n">outlier_zscore</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">5.0</span><span class="p">,</span>
+        <span class="n">winsorize</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">report_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Corrige les outliers, trous temporels et erreurs de marché dans un DataFrame OHLCV.</span>
+<span class="sd">        - Outliers (prix, volume) : winsorization ou interpolation</span>
+<span class="sd">        - Trous temporels : réindexation, ffill/bfill/interpolation</span>
+<span class="sd">        - Erreurs de marché : prix/volume négatifs, incohérences OHLC</span>
+<span class="sd">        - Génère un rapport JSON sur les corrections appliquées</span>
+<span class="sd">        :param df: DataFrame OHLCV indexé par datetime</span>
+<span class="sd">        :param freq: Fréquence cible (ex : &quot;1min&quot;)</span>
+<span class="sd">        :param outlier_zscore: Seuil z-score pour détecter les outliers</span>
+<span class="sd">        :param winsorize: Si True, applique la winsorization, sinon interpolation</span>
+<span class="sd">        :param report_path: Chemin du rapport JSON à générer (optionnel)</span>
+<span class="sd">        :return: DataFrame corrigé</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;bitcoin_scalper.data_cleaner&quot;</span><span class="p">)</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">report</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;outliers&quot;</span><span class="p">:</span> <span class="p">{},</span> <span class="s2">&quot;gaps&quot;</span><span class="p">:</span> <span class="p">[],</span> <span class="s2">&quot;negatives&quot;</span><span class="p">:</span> <span class="p">[],</span> <span class="s2">&quot;ohlc_incoherence&quot;</span><span class="p">:</span> <span class="p">[]}</span>
+        <span class="c1"># Correction des trous temporels</span>
+        <span class="n">full_idx</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">date_range</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">min</span><span class="p">(),</span> <span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">max</span><span class="p">(),</span> <span class="n">freq</span><span class="o">=</span><span class="n">freq</span><span class="p">)</span>
+        <span class="n">gaps</span> <span class="o">=</span> <span class="n">full_idx</span><span class="o">.</span><span class="n">difference</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
+        <span class="n">report</span><span class="p">[</span><span class="s2">&quot;gaps&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">gaps</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2"> %H:%M:%S&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">reindex</span><span class="p">(</span><span class="n">full_idx</span><span class="p">)</span>
+        <span class="c1"># Correction des valeurs négatives</span>
+        <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;open&quot;</span><span class="p">,</span> <span class="s2">&quot;high&quot;</span><span class="p">,</span> <span class="s2">&quot;low&quot;</span><span class="p">,</span> <span class="s2">&quot;close&quot;</span><span class="p">,</span> <span class="s2">&quot;volume&quot;</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+                <span class="n">neg_mask</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">col</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">0</span>
+                <span class="n">report</span><span class="p">[</span><span class="s2">&quot;negatives&quot;</span><span class="p">]</span> <span class="o">+=</span> <span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="p">[</span><span class="n">neg_mask</span><span class="p">]</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2"> %H:%M:%S&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+                <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">neg_mask</span><span class="p">,</span> <span class="n">col</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+        <span class="c1"># Correction des incohérences OHLC (high &lt; low, close hors [low, high])</span>
+        <span class="k">if</span> <span class="nb">all</span><span class="p">(</span><span class="n">c</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;high&quot;</span><span class="p">,</span> <span class="s2">&quot;low&quot;</span><span class="p">]):</span>
+            <span class="n">incoh_mask</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;high&quot;</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;low&quot;</span><span class="p">]</span>
+            <span class="n">report</span><span class="p">[</span><span class="s2">&quot;ohlc_incoherence&quot;</span><span class="p">]</span> <span class="o">+=</span> <span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="p">[</span><span class="n">incoh_mask</span><span class="p">]</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2"> %H:%M:%S&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+            <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">incoh_mask</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;high&quot;</span><span class="p">,</span> <span class="s2">&quot;low&quot;</span><span class="p">]]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+        <span class="k">if</span> <span class="nb">all</span><span class="p">(</span><span class="n">c</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;close&quot;</span><span class="p">,</span> <span class="s2">&quot;low&quot;</span><span class="p">,</span> <span class="s2">&quot;high&quot;</span><span class="p">]):</span>
+            <span class="n">out_low</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;close&quot;</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;low&quot;</span><span class="p">]</span>
+            <span class="n">out_high</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;close&quot;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;high&quot;</span><span class="p">]</span>
+            <span class="n">report</span><span class="p">[</span><span class="s2">&quot;ohlc_incoherence&quot;</span><span class="p">]</span> <span class="o">+=</span> <span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="p">[</span><span class="n">out_low</span> <span class="o">|</span> <span class="n">out_high</span><span class="p">]</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2"> %H:%M:%S&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+            <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">out_low</span><span class="p">,</span> <span class="s2">&quot;close&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">out_low</span><span class="p">,</span> <span class="s2">&quot;low&quot;</span><span class="p">]</span>
+            <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">out_high</span><span class="p">,</span> <span class="s2">&quot;close&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">out_high</span><span class="p">,</span> <span class="s2">&quot;high&quot;</span><span class="p">]</span>
+        <span class="c1"># Correction des outliers (z-score)</span>
+        <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;open&quot;</span><span class="p">,</span> <span class="s2">&quot;high&quot;</span><span class="p">,</span> <span class="s2">&quot;low&quot;</span><span class="p">,</span> <span class="s2">&quot;close&quot;</span><span class="p">,</span> <span class="s2">&quot;volume&quot;</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+                <span class="n">roll_mean</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">col</span><span class="p">]</span><span class="o">.</span><span class="n">rolling</span><span class="p">(</span><span class="mi">30</span><span class="p">,</span> <span class="n">min_periods</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+                <span class="n">roll_std</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">col</span><span class="p">]</span><span class="o">.</span><span class="n">rolling</span><span class="p">(</span><span class="mi">30</span><span class="p">,</span> <span class="n">min_periods</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span><span class="o">.</span><span class="n">std</span><span class="p">()</span> <span class="o">+</span> <span class="mf">1e-9</span>
+                <span class="n">zscores</span> <span class="o">=</span> <span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="n">col</span><span class="p">]</span> <span class="o">-</span> <span class="n">roll_mean</span><span class="p">)</span> <span class="o">/</span> <span class="n">roll_std</span>
+                <span class="n">outlier_mask</span> <span class="o">=</span> <span class="n">zscores</span><span class="o">.</span><span class="n">abs</span><span class="p">()</span> <span class="o">&gt;</span> <span class="n">outlier_zscore</span>
+                <span class="n">report</span><span class="p">[</span><span class="s2">&quot;outliers&quot;</span><span class="p">][</span><span class="n">col</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="p">[</span><span class="n">outlier_mask</span><span class="p">]</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2"> %H:%M:%S&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+                <span class="k">if</span> <span class="n">winsorize</span><span class="p">:</span>
+                    <span class="c1"># Winsorization : ramène à la borne la plus proche</span>
+                    <span class="n">upper</span> <span class="o">=</span> <span class="n">roll_mean</span> <span class="o">+</span> <span class="n">outlier_zscore</span> <span class="o">*</span> <span class="n">roll_std</span>
+                    <span class="n">lower</span> <span class="o">=</span> <span class="n">roll_mean</span> <span class="o">-</span> <span class="n">outlier_zscore</span> <span class="o">*</span> <span class="n">roll_std</span>
+                    <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">outlier_mask</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="n">col</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">upper</span><span class="p">),</span> <span class="n">col</span><span class="p">]</span> <span class="o">=</span> <span class="n">upper</span><span class="p">[</span><span class="n">outlier_mask</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="n">col</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">upper</span><span class="p">)]</span>
+                    <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">outlier_mask</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="n">col</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">lower</span><span class="p">),</span> <span class="n">col</span><span class="p">]</span> <span class="o">=</span> <span class="n">lower</span><span class="p">[</span><span class="n">outlier_mask</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="n">col</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">lower</span><span class="p">)]</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="c1"># Interpolation</span>
+                    <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">outlier_mask</span><span class="p">,</span> <span class="n">col</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+        <span class="c1"># Interpolation/ffill/bfill pour les NaN</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">interpolate</span><span class="p">(</span><span class="n">method</span><span class="o">=</span><span class="s2">&quot;time&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">ffill</span><span class="p">()</span><span class="o">.</span><span class="n">bfill</span><span class="p">()</span>
+        <span class="c1"># Rapport JSON</span>
+        <span class="k">if</span> <span class="n">report_path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">report_path</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">report</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Rapport de correction exporté : </span><span class="si">{</span><span class="n">report_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">df</span></div>
+
+
+<div class="viewcode-block" id="DataCleaner.check_temporal_consistency">
+<a class="viewcode-back" href="../data_cleaner.html#data_cleaner.DataCleaner.check_temporal_consistency">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">check_temporal_consistency</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
+        <span class="n">target_cols</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">freq</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;1min&quot;</span><span class="p">,</span>
+        <span class="n">report_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Vérifie la cohérence temporelle d&#39;un DataFrame OHLCV/ML :</span>
+<span class="sd">        - Pas de fuite d&#39;information (colonnes target/future bien décalées)</span>
+<span class="sd">        - Pas de doublons ou de désordre dans l&#39;index temporel</span>
+<span class="sd">        - Continuité temporelle (pas de saut anormal, pas de timestamp dans le futur)</span>
+<span class="sd">        - Génère un rapport JSON ou log sur les incohérences détectées</span>
+<span class="sd">        :param df: DataFrame indexé par datetime</span>
+<span class="sd">        :param target_cols: Liste des colonnes à vérifier pour le look-ahead (ex : [&quot;target_5m&quot;, &quot;future_return&quot;])</span>
+<span class="sd">        :param freq: Fréquence attendue (ex : &quot;1min&quot;)</span>
+<span class="sd">        :param report_path: Chemin du rapport JSON à générer (optionnel)</span>
+<span class="sd">        :return: Dictionnaire des incohérences détectées</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;bitcoin_scalper.data_cleaner&quot;</span><span class="p">)</span>
+        <span class="n">report</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;lookahead&quot;</span><span class="p">:</span> <span class="p">{},</span> <span class="s2">&quot;duplicates&quot;</span><span class="p">:</span> <span class="p">[],</span> <span class="s2">&quot;disorder&quot;</span><span class="p">:</span> <span class="p">[],</span> <span class="s2">&quot;gaps&quot;</span><span class="p">:</span> <span class="p">[],</span> <span class="s2">&quot;future_timestamps&quot;</span><span class="p">:</span> <span class="p">[]}</span>
+        <span class="c1"># Vérification doublons</span>
+        <span class="k">if</span> <span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">duplicated</span><span class="p">()</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
+            <span class="n">report</span><span class="p">[</span><span class="s2">&quot;duplicates&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="p">[</span><span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">duplicated</span><span class="p">()]</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2"> %H:%M:%S&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+        <span class="c1"># Vérification désordre</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">is_monotonic_increasing</span><span class="p">:</span>
+            <span class="n">disorder_idx</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="p">[</span><span class="o">~</span><span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">is_monotonic_increasing</span><span class="p">]</span>
+            <span class="n">report</span><span class="p">[</span><span class="s2">&quot;disorder&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">disorder_idx</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2"> %H:%M:%S&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+        <span class="c1"># Vérification gaps temporels</span>
+        <span class="n">expected_idx</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">date_range</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">min</span><span class="p">(),</span> <span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">max</span><span class="p">(),</span> <span class="n">freq</span><span class="o">=</span><span class="n">freq</span><span class="p">)</span>
+        <span class="n">gaps</span> <span class="o">=</span> <span class="n">expected_idx</span><span class="o">.</span><span class="n">difference</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
+        <span class="n">report</span><span class="p">[</span><span class="s2">&quot;gaps&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">gaps</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2"> %H:%M:%S&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+        <span class="c1"># Vérification timestamps dans le futur</span>
+        <span class="n">now</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="o">.</span><span class="n">utcnow</span><span class="p">()</span>
+        <span class="n">future_mask</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">index</span> <span class="o">&gt;</span> <span class="n">now</span>
+        <span class="n">report</span><span class="p">[</span><span class="s2">&quot;future_timestamps&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="p">[</span><span class="n">future_mask</span><span class="p">]</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2"> %H:%M:%S&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+        <span class="c1"># Vérification look-ahead (fuite d&#39;info)</span>
+        <span class="k">if</span> <span class="n">target_cols</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">target_cols</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+                    <span class="c1"># Vérifie que la valeur en t ne dépend pas de t+1 ou plus (ex : target_5m doit être NaN sur les 5 dernières lignes)</span>
+                    <span class="n">horizon</span> <span class="o">=</span> <span class="mi">0</span>
+                    <span class="k">if</span> <span class="s2">&quot;_&quot;</span> <span class="ow">in</span> <span class="n">col</span> <span class="ow">and</span> <span class="s2">&quot;m&quot;</span> <span class="ow">in</span> <span class="n">col</span><span class="p">:</span>
+                        <span class="k">try</span><span class="p">:</span>
+                            <span class="n">horizon</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">col</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;_&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;m&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">))</span>
+                        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+                            <span class="k">pass</span>
+                    <span class="k">if</span> <span class="n">horizon</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                        <span class="n">tail</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">col</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="o">-</span><span class="n">horizon</span><span class="p">:]</span>
+                        <span class="k">if</span> <span class="n">tail</span><span class="o">.</span><span class="n">notna</span><span class="p">()</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
+                            <span class="n">report</span><span class="p">[</span><span class="s2">&quot;lookahead&quot;</span><span class="p">][</span><span class="n">col</span><span class="p">]</span> <span class="o">=</span> <span class="n">tail</span><span class="o">.</span><span class="n">index</span><span class="p">[</span><span class="n">tail</span><span class="o">.</span><span class="n">notna</span><span class="p">()]</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2"> %H:%M:%S&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+        <span class="c1"># Rapport JSON</span>
+        <span class="k">if</span> <span class="n">report_path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">report_path</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">report</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Rapport de cohérence temporelle exporté : </span><span class="si">{</span><span class="n">report_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">report</span></div>
+
+
+<div class="viewcode-block" id="DataCleaner.audit_data_quality">
+<a class="viewcode-back" href="../data_cleaner.html#data_cleaner.DataCleaner.audit_data_quality">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">audit_data_quality</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
+        <span class="n">label_cols</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">freq</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;1min&quot;</span><span class="p">,</span>
+        <span class="n">min_volume</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
+        <span class="n">max_spread</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.01</span><span class="p">,</span>
+        <span class="n">zscore_thresh</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">5.0</span><span class="p">,</span>
+        <span class="n">outlier_zscore</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">5.0</span><span class="p">,</span>
+        <span class="n">winsorize</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">exclude_hours</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">report_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;data/features&quot;</span><span class="p">,</span>
+        <span class="n">prefix</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;audit_&quot;</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Audit global de la qualité des données :</span>
+<span class="sd">        - Nettoyage avancé (illiquidité, spread, anomalies, horaires exclus)</span>
+<span class="sd">        - Correction des outliers, trous, erreurs de marché</span>
+<span class="sd">        - Vérification de la cohérence temporelle</span>
+<span class="sd">        - Analyse de la distribution des labels (si label_cols)</span>
+<span class="sd">        - Génère un rapport global JSON dans report_dir</span>
+<span class="sd">        :param df: DataFrame OHLCV indexé par datetime</span>
+<span class="sd">        :param label_cols: Colonnes de labels à analyser (optionnel)</span>
+<span class="sd">        :param freq: Fréquence cible</span>
+<span class="sd">        :param min_volume: Volume minimum pour la liquidité</span>
+<span class="sd">        :param max_spread: Spread max toléré</span>
+<span class="sd">        :param zscore_thresh: Seuil z-score pour anomalies marché</span>
+<span class="sd">        :param outlier_zscore: Seuil z-score pour outliers</span>
+<span class="sd">        :param winsorize: Winsorization ou interpolation</span>
+<span class="sd">        :param exclude_hours: Heures à exclure</span>
+<span class="sd">        :param report_dir: Dossier de sortie des rapports</span>
+<span class="sd">        :param prefix: Préfixe pour les fichiers exportés</span>
+<span class="sd">        :return: Dictionnaire du rapport global</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">report_dir</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;bitcoin_scalper.data_cleaner&quot;</span><span class="p">)</span>
+        <span class="n">report</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="c1"># Nettoyage marché</span>
+        <span class="n">clean_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">report_dir</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">prefix</span><span class="si">}</span><span class="s2">clean_market.json&quot;</span><span class="p">)</span>
+        <span class="n">df_clean</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">clean_market_data</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">min_volume</span><span class="o">=</span><span class="n">min_volume</span><span class="p">,</span> <span class="n">max_spread</span><span class="o">=</span><span class="n">max_spread</span><span class="p">,</span> <span class="n">zscore_thresh</span><span class="o">=</span><span class="n">zscore_thresh</span><span class="p">,</span> <span class="n">exclude_hours</span><span class="o">=</span><span class="n">exclude_hours</span><span class="p">,</span> <span class="n">report_path</span><span class="o">=</span><span class="n">clean_path</span><span class="p">)</span>
+        <span class="n">report</span><span class="p">[</span><span class="s2">&quot;clean_market&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">clean_path</span>
+        <span class="c1"># Correction outliers/gaps</span>
+        <span class="n">corr_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">report_dir</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">prefix</span><span class="si">}</span><span class="s2">correction.json&quot;</span><span class="p">)</span>
+        <span class="n">df_corr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">correct_outliers_and_gaps</span><span class="p">(</span><span class="n">df_clean</span><span class="p">,</span> <span class="n">freq</span><span class="o">=</span><span class="n">freq</span><span class="p">,</span> <span class="n">outlier_zscore</span><span class="o">=</span><span class="n">outlier_zscore</span><span class="p">,</span> <span class="n">winsorize</span><span class="o">=</span><span class="n">winsorize</span><span class="p">,</span> <span class="n">report_path</span><span class="o">=</span><span class="n">corr_path</span><span class="p">)</span>
+        <span class="n">report</span><span class="p">[</span><span class="s2">&quot;correction&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">corr_path</span>
+        <span class="c1"># Cohérence temporelle</span>
+        <span class="n">temporal_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">report_dir</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">prefix</span><span class="si">}</span><span class="s2">temporal.json&quot;</span><span class="p">)</span>
+        <span class="n">temporal_report</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">check_temporal_consistency</span><span class="p">(</span><span class="n">df_corr</span><span class="p">,</span> <span class="n">target_cols</span><span class="o">=</span><span class="n">label_cols</span><span class="p">,</span> <span class="n">freq</span><span class="o">=</span><span class="n">freq</span><span class="p">,</span> <span class="n">report_path</span><span class="o">=</span><span class="n">temporal_path</span><span class="p">)</span>
+        <span class="n">report</span><span class="p">[</span><span class="s2">&quot;temporal&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">temporal_path</span>
+        <span class="c1"># Distribution des labels</span>
+        <span class="k">if</span> <span class="n">label_cols</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="kn">from</span><span class="w"> </span><span class="nn">bitcoin_scalper.core.labeling</span><span class="w"> </span><span class="kn">import</span> <span class="n">analyze_label_distribution</span>
+            <span class="n">dist</span> <span class="o">=</span> <span class="n">analyze_label_distribution</span><span class="p">(</span><span class="n">df_corr</span><span class="p">,</span> <span class="n">label_cols</span><span class="p">,</span> <span class="n">out_dir</span><span class="o">=</span><span class="n">report_dir</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="n">prefix</span><span class="p">)</span>
+            <span class="n">report</span><span class="p">[</span><span class="s2">&quot;label_distribution&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">report_dir</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">prefix</span><span class="si">}</span><span class="s2">labels_distribution.json&quot;</span><span class="p">)</span>
+        <span class="c1"># Rapport global</span>
+        <span class="n">global_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">report_dir</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">prefix</span><span class="si">}</span><span class="s2">global_audit.json&quot;</span><span class="p">)</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">global_path</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">report</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Rapport global d&#39;audit exporté : </span><span class="si">{</span><span class="n">global_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">report</span></div>
+</div>
+
+
+<div class="viewcode-block" id="test_clean_ticks_timestamp_fallback">
+<a class="viewcode-back" href="../data_cleaner.html#data_cleaner.test_clean_ticks_timestamp_fallback">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">test_clean_ticks_timestamp_fallback</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Vérifie que clean_ticks ajoute &#39;timestamp&#39; à partir de &#39;time&#39; ou &#39;time_msc&#39; et supprime les ticks incomplets.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">cleaner</span> <span class="o">=</span> <span class="n">DataCleaner</span><span class="p">()</span>
+    <span class="n">ticks</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="p">{</span><span class="s2">&quot;bid&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;ask&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="s2">&quot;volume&quot;</span><span class="p">:</span> <span class="mf">0.1</span><span class="p">,</span> <span class="s2">&quot;time&quot;</span><span class="p">:</span> <span class="mi">1234567890</span><span class="p">},</span>
+        <span class="p">{</span><span class="s2">&quot;bid&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;ask&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="s2">&quot;volume&quot;</span><span class="p">:</span> <span class="mf">0.1</span><span class="p">,</span> <span class="s2">&quot;time_msc&quot;</span><span class="p">:</span> <span class="mi">1234567890123</span><span class="p">},</span>
+        <span class="p">{</span><span class="s2">&quot;bid&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;ask&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="s2">&quot;volume&quot;</span><span class="p">:</span> <span class="mf">0.1</span><span class="p">},</span>  <span class="c1"># Incomplet</span>
+        <span class="p">{</span><span class="s2">&quot;bid&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;ask&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="s2">&quot;volume&quot;</span><span class="p">:</span> <span class="mf">0.1</span><span class="p">,</span> <span class="s2">&quot;timestamp&quot;</span><span class="p">:</span> <span class="mi">1234567890</span><span class="p">},</span>
+    <span class="p">]</span>
+    <span class="c1"># On simule l&#39;ajout du champ timestamp dans l&#39;ingestor, mais on vérifie la robustesse ici aussi</span>
+    <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">ticks</span><span class="p">:</span>
+        <span class="k">if</span> <span class="s1">&#39;timestamp&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">t</span><span class="p">:</span>
+            <span class="k">if</span> <span class="s1">&#39;time&#39;</span> <span class="ow">in</span> <span class="n">t</span><span class="p">:</span>
+                <span class="n">t</span><span class="p">[</span><span class="s1">&#39;timestamp&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">t</span><span class="p">[</span><span class="s1">&#39;time&#39;</span><span class="p">]</span>
+            <span class="k">elif</span> <span class="s1">&#39;time_msc&#39;</span> <span class="ow">in</span> <span class="n">t</span><span class="p">:</span>
+                <span class="n">t</span><span class="p">[</span><span class="s1">&#39;timestamp&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">t</span><span class="p">[</span><span class="s1">&#39;time_msc&#39;</span><span class="p">]</span> <span class="o">//</span> <span class="mi">1000</span><span class="p">)</span>
+    <span class="n">cleaned</span> <span class="o">=</span> <span class="n">cleaner</span><span class="o">.</span><span class="n">clean_ticks</span><span class="p">(</span><span class="n">ticks</span><span class="p">)</span>
+    <span class="c1"># Seuls les ticks avec tous les champs requis doivent rester</span>
+    <span class="k">assert</span> <span class="nb">all</span><span class="p">(</span><span class="s1">&#39;timestamp&#39;</span> <span class="ow">in</span> <span class="n">t</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">cleaned</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="nb">all</span><span class="p">(</span><span class="s1">&#39;bid&#39;</span> <span class="ow">in</span> <span class="n">t</span> <span class="ow">and</span> <span class="s1">&#39;ask&#39;</span> <span class="ow">in</span> <span class="n">t</span> <span class="ow">and</span> <span class="s1">&#39;volume&#39;</span> <span class="ow">in</span> <span class="n">t</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">cleaned</span><span class="p">)</span>
+    <span class="c1"># Le tick incomplet doit être supprimé</span>
+    <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">cleaned</span><span class="p">)</span> <span class="o">==</span> <span class="mi">3</span></div>
+
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Exemple d&#39;utilisation :</span>
+<span class="sd">cleaner = DataCleaner()</span>
+<span class="sd">ticks_clean = cleaner.clean_ticks(ticks)</span>
+<span class="sd">ohlcv_clean = cleaner.clean_ohlcv(ohlcv)</span>
+<span class="sd">&quot;&quot;&quot;</span> 
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">bitcoin_scalper</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../web_api.html">Web API (FastAPI)</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Modules</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../config.html">config module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../config.html#gestion-securisee-de-la-configuration">Gestion sécurisée de la configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../data_cleaner.html">data_cleaner module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../data_ingestor.html">data_ingestor module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dvc_manager.html">dvc_manager module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../feature_engineering.html">feature_engineering module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml_pipeline.html">ml_pipeline module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../order_algos.html">order_algos module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../risk_management.html">risk_management module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../timescaledb_client.html">timescaledb_client module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../backtesting.html">backtesting module</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">Code du module</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2025, Thibault Leray.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

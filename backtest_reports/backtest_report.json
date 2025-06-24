@@ -1,0 +1,8 @@
+{
+  "metrics": "backtest_reports/metrics.json",
+  "trades": "backtest_reports/trades.csv",
+  "equity_curve": "backtest_reports/equity_curve.csv",
+  "equity_curve_png": "backtest_reports/equity_curve.png",
+  "drawdown_png": "backtest_reports/drawdown.png",
+  "confusion_png": null
+}

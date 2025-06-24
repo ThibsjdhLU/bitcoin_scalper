@@ -1,6 +1,12 @@
 import pandas as pd
 import numpy as np
 import logging
+from typing import Optional
+try:
+    from imblearn.over_sampling import SMOTE
+    _HAS_SMOTE = True
+except ImportError:
+    _HAS_SMOTE = False
 
 logger = logging.getLogger("bitcoin_scalper.balancing")
 logger.setLevel(logging.DEBUG)
@@ -66,3 +72,44 @@ def balance_by_block(
     balanced_df = pd.concat(blocks).sort_index()
     logger.info(f"DataFrame équilibré : {balanced_df.shape[0]} lignes, répartition : {balanced_df[label_col].value_counts().to_dict()}")
     return balanced_df 
+
+def balance_with_smote(
+    X: pd.DataFrame,
+    y: pd.Series,
+    random_state: int = 42,
+    k_neighbors: int = 5
+) -> Optional[tuple]:
+    """
+    Équilibre un dataset via SMOTE (surdéchantillonnage synthétique) pour corriger l'imbalance des classes.
+    Nécessite imblearn. Retourne (X_res, y_res) ou None si imblearn absent.
+    :param X: Features (DataFrame)
+    :param y: Labels (Series)
+    :param random_state: Seed de reproductibilité
+    :param k_neighbors: Nombre de voisins pour SMOTE
+    :return: (X_res, y_res) ou None
+    """
+    if not _HAS_SMOTE:
+        logger.error("imblearn n'est pas installé. SMOTE indisponible.")
+        return None
+    smote = SMOTE(random_state=random_state, k_neighbors=k_neighbors)
+    X_res, y_res = smote.fit_resample(X, y)
+    logger.info(f"SMOTE appliqué : {X.shape[0]} → {X_res.shape[0]} échantillons. Répartition : {dict(pd.Series(y_res).value_counts())}")
+    return X_res, y_res
+
+def test_balance_with_smote():
+    """
+    Test unitaire : vérifie que balance_with_smote équilibre bien un dataset binaire très déséquilibré.
+    """
+    import pandas as pd
+    import numpy as np
+    if not _HAS_SMOTE:
+        print("imblearn non installé : test SMOTE ignoré.")
+        return
+    X = pd.DataFrame({
+        'f1': np.random.randn(100),
+        'f2': np.random.randn(100)
+    })
+    y = pd.Series([0]*90 + [1]*10)
+    X_res, y_res = balance_with_smote(X, y)
+    assert abs(sum(y_res==0) - sum(y_res==1)) <= 1, f"SMOTE n'a pas équilibré les classes : {dict(pd.Series(y_res).value_counts())}"
+    print("Test SMOTE OK.") 

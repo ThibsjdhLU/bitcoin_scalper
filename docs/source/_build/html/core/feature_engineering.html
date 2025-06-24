@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+
+<html lang="fr" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Feature Engineering &#8212; Documentation bitcoin_scalper 1.0</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=27fed22d" />
+    <script src="../_static/documentation_options.js?v=7a28dfa3"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/translations.js?v=e6b791cb"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Recherche" href="../search.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="module-bitcoin_scalper.core.feature_engineering">
+<span id="feature-engineering"></span><h1>Feature Engineering<a class="headerlink" href="#module-bitcoin_scalper.core.feature_engineering" title="Lien vers cette rubrique">¶</a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="bitcoin_scalper.core.feature_engineering.FeatureEngineering">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">bitcoin_scalper.core.feature_engineering.</span></span><span class="sig-name descname"><span class="pre">FeatureEngineering</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">timeframes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/bitcoin_scalper/core/feature_engineering.html#FeatureEngineering"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#bitcoin_scalper.core.feature_engineering.FeatureEngineering" title="Lien vers cette définition">¶</a></dt>
+<dd><p>Bases : <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Calcul vectorisé d’indicateurs techniques et extraction de features dérivées pour pipeline ML.
+Génère systématiquement :</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>rsi, macd, macd_signal, macd_diff</p></li>
+<li><p>ema_21, ema_50, sma_20</p></li>
+<li><p>bb_high, bb_low, bb_width</p></li>
+<li><p>atr, supertrend, vwap</p></li>
+<li><p>tickvol (copie de volume si absent)</p></li>
+<li><p>close_sma_3 (SMA 3 sur close)</p></li>
+<li><p>atr_sma_20 (SMA 20 sur ATR)</p></li>
+</ul>
+</div></blockquote>
+<p>Support multi-timeframe, API flexible, pas d’IO (purement transformation DataFrame).</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="bitcoin_scalper.core.feature_engineering.FeatureEngineering.add_features">
+<span class="sig-name descname"><span class="pre">add_features</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">price_col</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'close'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">volume_col</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'volume'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prefix</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="../_modules/bitcoin_scalper/core/feature_engineering.html#FeatureEngineering.add_features"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#bitcoin_scalper.core.feature_engineering.FeatureEngineering.add_features" title="Lien vers cette définition">¶</a></dt>
+<dd><p>Ajoute des features dérivées (retours, volatilité, ratios, z-score, distances, encodages temporels, etc).
+Sécurité :</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Toutes les features sont décalées d’une bougie (shift(1)) pour éviter tout look-ahead bias.</p></li>
+</ul>
+</div></blockquote>
+<dl class="field-list simple">
+<dt class="field-odd">Paramètres<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>df</strong> – DataFrame d’entrée</p></li>
+<li><p><strong>price_col</strong> – Colonne de prix (par défaut “close”)</p></li>
+<li><p><strong>volume_col</strong> – Colonne de volume (par défaut “volume”)</p></li>
+<li><p><strong>prefix</strong> – Préfixe optionnel pour les colonnes</p></li>
+</ul>
+</dd>
+<dt class="field-even">Renvoie<span class="colon">:</span></dt>
+<dd class="field-even"><p>DataFrame enrichi</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="bitcoin_scalper.core.feature_engineering.FeatureEngineering.add_indicators">
+<span class="sig-name descname"><span class="pre">add_indicators</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">price_col</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'close'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">high_col</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'high'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">low_col</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'low'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">volume_col</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'volume'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prefix</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="../_modules/bitcoin_scalper/core/feature_engineering.html#FeatureEngineering.add_indicators"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#bitcoin_scalper.core.feature_engineering.FeatureEngineering.add_indicators" title="Lien vers cette définition">¶</a></dt>
+<dd><p>Ajoute les indicateurs techniques principaux et avancés au DataFrame OHLCV.
+Sécurité :</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Tous les indicateurs sont décalés d’une bougie (shift(1)) pour éviter tout look-ahead bias.</p></li>
+<li><p>VWAP est calculé de façon cumulative et décalée.</p></li>
+</ul>
+</div></blockquote>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="bitcoin_scalper.core.feature_engineering.FeatureEngineering.multi_timeframe">
+<span class="sig-name descname"><span class="pre">multi_timeframe</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dfs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">DataFrame</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">price_col</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'&lt;CLOSE&gt;'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">high_col</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'&lt;HIGH&gt;'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">low_col</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'&lt;LOW&gt;'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">volume_col</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'&lt;TICKVOL&gt;'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="../_modules/bitcoin_scalper/core/feature_engineering.html#FeatureEngineering.multi_timeframe"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#bitcoin_scalper.core.feature_engineering.FeatureEngineering.multi_timeframe" title="Lien vers cette définition">¶</a></dt>
+<dd><p>Fusionne et concatène les features multi-timeframe (clé = timeframe, valeur = DataFrame OHLCV).</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="bitcoin_scalper.core.feature_engineering.add_features">
+<span class="sig-prename descclassname"><span class="pre">bitcoin_scalper.core.feature_engineering.</span></span><span class="sig-name descname"><span class="pre">add_features</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="../_modules/bitcoin_scalper/core/feature_engineering.html#add_features"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#bitcoin_scalper.core.feature_engineering.add_features" title="Lien vers cette définition">¶</a></dt>
+<dd><p>Enrichit un DataFrame minute BTC avec toutes les features financières et temporelles requises pour le ML, dont log_return_1m systématique.
+Toutes les features sont calculées de façon causale (aucune fuite d’information vers le futur).
+Les NaN générés par les rollings sont explicitement traqués et loggés.
+:param df: DataFrame prétraité, indexé par datetime UTC, colonnes : OPEN, HIGH, LOW, CLOSE, TICKVOL
+:return: DataFrame enrichi avec les features demandées</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="bitcoin_scalper.core.feature_engineering.test_add_indicators_all_features">
+<span class="sig-prename descclassname"><span class="pre">bitcoin_scalper.core.feature_engineering.</span></span><span class="sig-name descname"><span class="pre">test_add_indicators_all_features</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/bitcoin_scalper/core/feature_engineering.html#test_add_indicators_all_features"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#bitcoin_scalper.core.feature_engineering.test_add_indicators_all_features" title="Lien vers cette définition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="bitcoin_scalper.core.feature_engineering.test_add_indicators_incomplete_df">
+<span class="sig-prename descclassname"><span class="pre">bitcoin_scalper.core.feature_engineering.</span></span><span class="sig-name descname"><span class="pre">test_add_indicators_incomplete_df</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/bitcoin_scalper/core/feature_engineering.html#test_add_indicators_incomplete_df"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#bitcoin_scalper.core.feature_engineering.test_add_indicators_incomplete_df" title="Lien vers cette définition">¶</a></dt>
+<dd><p>Vérifie que add_indicators ne plante pas et retourne un DataFrame même si des colonnes sont manquantes.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="bitcoin_scalper.core.feature_engineering.test_add_indicators_with_tickvol">
+<span class="sig-prename descclassname"><span class="pre">bitcoin_scalper.core.feature_engineering.</span></span><span class="sig-name descname"><span class="pre">test_add_indicators_with_tickvol</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/bitcoin_scalper/core/feature_engineering.html#test_add_indicators_with_tickvol"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#bitcoin_scalper.core.feature_engineering.test_add_indicators_with_tickvol" title="Lien vers cette définition">¶</a></dt>
+<dd><p>Vérifie que add_indicators fonctionne si le DataFrame utilise “tickvol” comme colonne de volume.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="bitcoin_scalper.core.feature_engineering.test_feature_order_matches_reference">
+<span class="sig-prename descclassname"><span class="pre">bitcoin_scalper.core.feature_engineering.</span></span><span class="sig-name descname"><span class="pre">test_feature_order_matches_reference</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/bitcoin_scalper/core/feature_engineering.html#test_feature_order_matches_reference"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#bitcoin_scalper.core.feature_engineering.test_feature_order_matches_reference" title="Lien vers cette définition">¶</a></dt>
+<dd><p>Vérifie que l’ordre des features générées correspond à la liste de référence (features_list.pkl).</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="bitcoin_scalper.core.feature_engineering.test_features_compatibility_with_reference">
+<span class="sig-prename descclassname"><span class="pre">bitcoin_scalper.core.feature_engineering.</span></span><span class="sig-name descname"><span class="pre">test_features_compatibility_with_reference</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/bitcoin_scalper/core/feature_engineering.html#test_features_compatibility_with_reference"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#bitcoin_scalper.core.feature_engineering.test_features_compatibility_with_reference" title="Lien vers cette définition">¶</a></dt>
+<dd><p>Vérifie que toutes les features attendues (ex: features_list.pkl) sont bien générées par add_indicators.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="bitcoin_scalper.core.feature_engineering.test_supertrend_typing">
+<span class="sig-prename descclassname"><span class="pre">bitcoin_scalper.core.feature_engineering.</span></span><span class="sig-name descname"><span class="pre">test_supertrend_typing</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/bitcoin_scalper/core/feature_engineering.html#test_supertrend_typing"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#bitcoin_scalper.core.feature_engineering.test_supertrend_typing" title="Lien vers cette définition">¶</a></dt>
+<dd></dd></dl>
+
+<section id="features-generees">
+<h2>Features générées<a class="headerlink" href="#features-generees" title="Lien vers cette rubrique">¶</a></h2>
+<ul class="simple">
+<li><p>rsi</p></li>
+<li><p>macd, macd_signal, macd_diff</p></li>
+<li><p>ema_21, ema_50, sma_20</p></li>
+<li><p>bb_high, bb_low, bb_width</p></li>
+<li><p>atr, supertrend, vwap</p></li>
+<li><p>tickvol (copie de volume si absent)</p></li>
+<li><p>close_sma_3 (SMA 3 sur close)</p></li>
+<li><p>atr_sma_20 (SMA 20 sur ATR)</p></li>
+</ul>
+</section>
+<section id="exemple-d-utilisation">
+<h2>Exemple d’utilisation<a class="headerlink" href="#exemple-d-utilisation" title="Lien vers cette rubrique">¶</a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">bitcoin_scalper.core.feature_engineering</span><span class="w"> </span><span class="kn">import</span> <span class="n">FeatureEngineering</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span>
+    <span class="s1">&#39;close&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">100</span><span class="p">,</span> <span class="mi">101</span><span class="p">,</span> <span class="mi">102</span><span class="p">],</span>
+    <span class="s1">&#39;high&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">101</span><span class="p">,</span> <span class="mi">102</span><span class="p">,</span> <span class="mi">103</span><span class="p">],</span>
+    <span class="s1">&#39;low&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">99</span><span class="p">,</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">101</span><span class="p">],</span>
+    <span class="s1">&#39;volume&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">10</span><span class="p">,</span> <span class="mi">12</span><span class="p">,</span> <span class="mi">11</span><span class="p">]</span>
+<span class="p">})</span>
+<span class="n">fe</span> <span class="o">=</span> <span class="n">FeatureEngineering</span><span class="p">()</span>
+<span class="n">df_feat</span> <span class="o">=</span> <span class="n">fe</span><span class="o">.</span><span class="n">add_indicators</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">df_feat</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="securite-temporelle">
+<h2>Sécurité temporelle<a class="headerlink" href="#securite-temporelle" title="Lien vers cette rubrique">¶</a></h2>
+<ul class="simple">
+<li><p>Tous les indicateurs sont décalés d’une bougie (shift(1)) pour éviter tout look-ahead bias.</p></li>
+<li><p>VWAP est calculé de façon cumulative et décalée.</p></li>
+<li><p>Aucun indicateur ne regarde le futur : sécurité stricte pour le ML et le backtest.</p></li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Depuis le 2024-06-11, la méthode <code class="docutils literal notranslate"><span class="pre">add_indicators</span></code> ajoute automatiquement les indicateurs avancés suivants (multi-timeframe, tous décalés d’une bougie pour éviter le look-ahead bias) :</p>
+<ul class="simple">
+<li><p>Volatilité : Keltner Channels, Donchian Channels, Chandelier Exit, Ulcer Index</p></li>
+<li><p>Volume : MFI, OBV, Accumulation/Distribution, Chaikin Money Flow</p></li>
+<li><p>Momentum : TSI, CCI, Williams %R, Stochastic RSI, Ultimate Oscillator, ROC</p></li>
+<li><p>Trend : ADX, DMI, Ichimoku, Parabolic SAR, PPO</p></li>
+</ul>
+<p>Ces indicateurs enrichissent fortement le pipeline ML pour la détection de signaux robustes.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Depuis le 2024-06-11, la méthode <code class="docutils literal notranslate"><span class="pre">add_features</span></code> ajoute automatiquement des features de contexte avancées :</p>
+<ul class="simple">
+<li><p>Z-score généralisé sur plusieurs fenêtres (5, 20, 50, 100) pour close, high, low, volume</p></li>
+<li><p>Distance à la bande de Bollinger (écart à bb_high, bb_low, bb_width)</p></li>
+<li><p>Distance au plus haut/bas N périodes (5, 20, 50, 100)</p></li>
+<li><p>Encodage temporel enrichi (minute, heure, jour, semaine, mois, quarter, year, encodage cyclique)</p></li>
+<li><p>Position relative dans la journée/semaine/mois</p></li>
+</ul>
+<p>Ces features permettent d’apporter un contexte de marché et temporel robuste au pipeline ML.</p>
+</div>
+</section>
+<section id="analyse-d-importance-des-features">
+<h2>Analyse d’importance des features<a class="headerlink" href="#analyse-d-importance-des-features" title="Lien vers cette rubrique">¶</a></h2>
+<p>Une fonction dédiée permet d’analyser l’importance des features (gain, split, SHAP) après chaque entraînement de modèle (LightGBM/XGBoost) :</p>
+<ul class="simple">
+<li><p>Génération automatique de rapports PNG/HTML (bar plot, summary plot SHAP)</p></li>
+<li><p>Export dans le dossier data/features/</p></li>
+<li><p>Utilisation recommandée après chaque entraînement pour guider l’itération sur le feature engineering.</p></li>
+</ul>
+</section>
+<section id="tests-unitaires">
+<h2>Tests unitaires<a class="headerlink" href="#tests-unitaires" title="Lien vers cette rubrique">¶</a></h2>
+<p>Des tests automatisés (pytest) valident la présence et la cohérence de chaque indicateur avancé ajouté. Voir <code class="docutils literal notranslate"><span class="pre">tests/core/mac/test_feature_engineering.py</span></code> pour la liste exhaustive et les assertions de robustesse.</p>
+</section>
+<section id="selection-automatique-des-features">
+<h2>Sélection automatique des features<a class="headerlink" href="#selection-automatique-des-features" title="Lien vers cette rubrique">¶</a></h2>
+<p>La fonction <code class="docutils literal notranslate"><span class="pre">select_features_by_importance</span></code> permet de sélectionner automatiquement les features les plus importantes (par gain/split ou SHAP) après chaque entraînement de modèle :</p>
+<ul class="simple">
+<li><p>Prend en entrée un modèle ML et un DataFrame de features</p></li>
+<li><p>Retourne la liste des features à conserver (top N)</p></li>
+<li><p>Permet d’itérer rapidement sur le feature set et d’automatiser la suppression des features inutiles</p></li>
+</ul>
+</section>
+<section id="generation-de-labels-multi-horizon">
+<h2>Génération de labels multi-horizon<a class="headerlink" href="#generation-de-labels-multi-horizon" title="Lien vers cette rubrique">¶</a></h2>
+<p>La fonction <code class="docutils literal notranslate"><span class="pre">generate_multi_horizon_labels</span></code> permet de générer automatiquement les labels pour plusieurs horizons de prédiction (5, 10, 15, 30 min) :</p>
+<ul class="simple">
+<li><p>Ajoute les colonnes target_5m, target_10m, target_15m, target_30m au DataFrame</p></li>
+<li><p>Permet d’évaluer la robustesse du modèle sur différents horizons de marché</p></li>
+</ul>
+</section>
+<section id="labeling-support-des-differents-types-de-seuils">
+<h2>Labeling : support des différents types de seuils<a class="headerlink" href="#labeling-support-des-differents-types-de-seuils" title="Lien vers cette rubrique">¶</a></h2>
+<p>La fonction <code class="docutils literal notranslate"><span class="pre">generate_labels</span></code> permet de choisir le type de seuil pour la génération des labels :</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">threshold_type=&quot;std&quot;</span></code> : seuil dynamique basé sur la volatilité locale (rolling std)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">threshold_type=&quot;quantile&quot;</span></code> : seuils basés sur les quantiles des retours futurs (ex : 80e/20e percentile)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">threshold_type=&quot;spread_fee&quot;</span></code> : seuil absolu (spread+frais)</p></li>
+</ul>
+<p>Cela permet de tester la robustesse du modèle selon différentes définitions de « signal ».</p>
+</section>
+<section id="labeling-mode-actionnable-gain-net-apres-frais-slippage">
+<h2>Labeling : mode actionnable (gain net après frais/slippage)<a class="headerlink" href="#labeling-mode-actionnable-gain-net-apres-frais-slippage" title="Lien vers cette rubrique">¶</a></h2>
+<p>La fonction <code class="docutils literal notranslate"><span class="pre">generate_labels</span></code> permet de générer des labels « actionnables » :</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">threshold_type=&quot;actionnable&quot;</span></code> : le label dépend du gain net après application d’un spread, de frais et d’un slippage paramétrables</p></li>
+<li><p>Les classes sont : 1 (gain net &gt; 0), -1 (gain net &lt; 0), 0 (sinon)</p></li>
+<li><p>Permet d’aligner le signal ML sur la réalité du trading après coûts</p></li>
+</ul>
+</section>
+<section id="analyse-de-la-distribution-des-labels">
+<h2>Analyse de la distribution des labels<a class="headerlink" href="#analyse-de-la-distribution-des-labels" title="Lien vers cette rubrique">¶</a></h2>
+<p>La fonction <code class="docutils literal notranslate"><span class="pre">analyze_label_distribution</span></code> permet d’analyser la distribution des labels (comptage, pourcentage) :</p>
+<ul class="simple">
+<li><p>Génère un rapport PNG (bar plot) et un rapport JSON (statistiques)</p></li>
+<li><p>Alerte si la distribution est très déséquilibrée (&gt;90% d’une classe)</p></li>
+<li><p>Permet de valider la pertinence métier des labels avant entraînement</p></li>
+</ul>
+</section>
+<section id="verification-de-la-coherence-temporelle">
+<h2>Vérification de la cohérence temporelle<a class="headerlink" href="#verification-de-la-coherence-temporelle" title="Lien vers cette rubrique">¶</a></h2>
+<p>La fonction <code class="docutils literal notranslate"><span class="pre">check_temporal_consistency</span></code> permet de valider la qualité temporelle des datasets :</p>
+<ul class="simple">
+<li><p>Détecte les fuites d’information (look-ahead) sur les colonnes target/future</p></li>
+<li><p>Détecte les doublons, le désordre, les gaps, les timestamps dans le futur</p></li>
+<li><p>Génère un rapport JSON sur les incohérences détectées</p></li>
+<li><p>Permet de garantir l’absence de fuite d’information avant tout entraînement ML</p></li>
+</ul>
+</section>
+<section id="audit-global-de-la-qualite-des-donnees">
+<h2>Audit global de la qualité des données<a class="headerlink" href="#audit-global-de-la-qualite-des-donnees" title="Lien vers cette rubrique">¶</a></h2>
+<p>La méthode <code class="docutils literal notranslate"><span class="pre">audit_data_quality</span></code> de DataCleaner permet d’orchestrer tout le pipeline qualité :</p>
+<ul class="simple">
+<li><p>Nettoyage avancé, correction des outliers/trous, vérification de la cohérence temporelle, analyse de la distribution des labels</p></li>
+<li><p>Génère un rapport global JSON et des sous-rapports détaillés (logs, PNG, etc.)</p></li>
+<li><p>Permet d’automatiser l’audit qualité avant tout entraînement ou backtest</p></li>
+</ul>
+</section>
+<section id="split-temporel-robuste-train-val-test">
+<h2>Split temporel robuste (train/val/test)<a class="headerlink" href="#split-temporel-robuste-train-val-test" title="Lien vers cette rubrique">¶</a></h2>
+<p>La fonction <code class="docutils literal notranslate"><span class="pre">temporal_train_val_test_split</span></code> permet de découper un DataFrame indexé par datetime :</p>
+<ul class="simple">
+<li><p>Split par bornes explicites (dates) ou proportions (train/val/test)</p></li>
+<li><p>Exclusion automatique des derniers points de train/val pour éviter toute fuite sur les labels futurs (multi-horizon)</p></li>
+<li><p>Génère un rapport JSON détaillé (dates, tailles, indices, sécurité, absence d’overlap)</p></li>
+<li><p>Sécurité : aucune intersection entre les splits, vérification de l’absence de fuite</p></li>
+<li><p>Utilisation recommandée avant tout entraînement ML ou backtest</p></li>
+</ul>
+</section>
+<section id="generation-automatique-des-folds-validation-croisee-temporelle">
+<h2>Génération automatique des folds (validation croisée temporelle)<a class="headerlink" href="#generation-automatique-des-folds-validation-croisee-temporelle" title="Lien vers cette rubrique">¶</a></h2>
+<p>Les fonctions <code class="docutils literal notranslate"><span class="pre">generate_time_series_folds</span></code> et <code class="docutils literal notranslate"><span class="pre">generate_purged_kfold_folds</span></code> permettent de générer automatiquement les folds pour la validation croisée :</p>
+<ul class="simple">
+<li><p>TimeSeriesSplit : découpage standard scikit-learn, pas d’overlap, pas de fuite temporelle</p></li>
+<li><p>PurgedKFold : découpage chronologique avec fenêtre de purge anti-fuite entre train et validation</p></li>
+<li><p>Génération d’un rapport JSON détaillé (bornes, tailles, indices, sécurité)</p></li>
+<li><p>Sécurité : aucune intersection entre train/val, vérification de la purge</p></li>
+<li><p>Utilisation recommandée pour le tuning, la validation robuste et l’audit ML</p></li>
+</ul>
+</section>
+<section id="orchestration-du-pipeline-ml-split-train-test-report">
+<h2>Orchestration du pipeline ML (split/train/test/report)<a class="headerlink" href="#orchestration-du-pipeline-ml-split-train-test-report" title="Lien vers cette rubrique">¶</a></h2>
+<p>La fonction <code class="docutils literal notranslate"><span class="pre">run_ml_pipeline</span></code> permet d’orchestrer tout le pipeline ML :</p>
+<ul class="simple">
+<li><p>Split temporel robuste, génération des folds, entraînement LightGBM/XGBoost, évaluation sur validation/test</p></li>
+<li><p>Génération automatique de rapports (JSON, PNG, CSV) : métriques, courbes de confusion, importance des features</p></li>
+<li><p>Sécurité anti-fuite, reproductibilité, logging structuré</p></li>
+<li><p>Utilisation recommandée pour l’entraînement, le tuning et l’audit des modèles ML</p></li>
+</ul>
+</section>
+<section id="tuning-avance-des-hyperparametres">
+<h2>Tuning avancé des hyperparamètres<a class="headerlink" href="#tuning-avance-des-hyperparametres" title="Lien vers cette rubrique">¶</a></h2>
+<p>La fonction <code class="docutils literal notranslate"><span class="pre">tune_model_hyperparams</span></code> permet d’optimiser automatiquement les hyperparamètres des modèles ML :</p>
+<ul class="simple">
+<li><p>Support grid search, random search, Optuna (si installé)</p></li>
+<li><p>Validation croisée temporelle (TimeSeriesSplit), early stopping, logging structuré</p></li>
+<li><p>Génération automatique de rapports (JSON, CSV, PNG) : meilleurs paramètres, tous les essais, courbe des scores, importance des features</p></li>
+<li><p>Sécurité, reproductibilité, auditabilité</p></li>
+<li><p>Utilisation recommandée pour le tuning, la recherche de robustesse et l’audit des modèles ML</p></li>
+</ul>
+</section>
+<section id="execution-temps-reel-simulation">
+<h2>Exécution temps réel / simulation<a class="headerlink" href="#execution-temps-reel-simulation" title="Lien vers cette rubrique">¶</a></h2>
+<p>La classe <code class="docutils literal notranslate"><span class="pre">RealTimeExecutor</span></code> permet d’exécuter un modèle ML en temps réel ou en mode simulation :</p>
+<ul class="simple">
+<li><p>Support du mode live (API exchange/mock) et du mode simulation (replay historique)</p></li>
+<li><p>Gestion du portefeuille, des signaux, de la latence, du reporting (CSV, PNG)</p></li>
+<li><p>Sécurité, auditabilité, reproductibilité</p></li>
+<li><p>Utilisation recommandée pour le paper trading, le monitoring, la validation en conditions réelles</p></li>
+</ul>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">bitcoin_scalper</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../web_api.html">Web API (FastAPI)</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Modules</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../config.html">config module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../config.html#gestion-securisee-de-la-configuration">Gestion sécurisée de la configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../data_cleaner.html">data_cleaner module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../data_ingestor.html">data_ingestor module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dvc_manager.html">dvc_manager module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../feature_engineering.html">feature_engineering module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml_pipeline.html">ml_pipeline module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../order_algos.html">order_algos module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../risk_management.html">risk_management module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../timescaledb_client.html">timescaledb_client module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../backtesting.html">backtesting module</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2025, Thibault Leray.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/core/feature_engineering.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
