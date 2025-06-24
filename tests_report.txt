@@ -4,146 +4,21 @@ PyQt6 6.9.0 -- Qt runtime 6.9.0 -- Qt compiled 6.9.0
 rootdir: /Users/thibaultleray-beer/bitcoin_scalper
 configfile: pyproject.toml
 plugins: qt-4.4.0, anyio-4.9.0, hydra-core-1.3.2, cov-6.1.1
-collected 283 items / 1 error
-
-ERROR: Coverage failure: total of 24 is less than fail-under=95
+collected 195 items / 1 error
 
 ==================================== ERRORS ====================================
-___________ ERROR collecting tests/core/test_feature_engineering.py ____________
-import file mismatch:
-imported module 'test_feature_engineering' has this __file__ attribute:
-  /Users/thibaultleray-beer/bitcoin_scalper/tests/core/mac/test_feature_engineering.py
-which is not the same as the test file we want to collect:
-  /Users/thibaultleray-beer/bitcoin_scalper/tests/core/test_feature_engineering.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-=============================== warnings summary ===============================
-.venv/lib/python3.11/site-packages/pandas_ta/__init__.py:7
-  /Users/thibaultleray-beer/bitcoin_scalper/.venv/lib/python3.11/site-packages/pandas_ta/__init__.py:7: DeprecationWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html
-    from pkg_resources import get_distribution, DistributionNotFound
-
-.venv/lib/python3.11/site-packages/pkg_resources/__init__.py:3143
-  /Users/thibaultleray-beer/bitcoin_scalper/.venv/lib/python3.11/site-packages/pkg_resources/__init__.py:3143: DeprecationWarning: Deprecated call to `pkg_resources.declare_namespace('sphinxcontrib')`.
-  Implementing implicit namespace packages (as specified in PEP 420) is preferred to `pkg_resources.declare_namespace`. See https://setuptools.pypa.io/en/latest/references/keywords.html#keyword-namespace-packages
-    declare_namespace(pkg)
-
-.venv/lib/python3.11/site-packages/pkg_resources/__init__.py:3143
-  /Users/thibaultleray-beer/bitcoin_scalper/.venv/lib/python3.11/site-packages/pkg_resources/__init__.py:3143: DeprecationWarning: Deprecated call to `pkg_resources.declare_namespace('zc')`.
-  Implementing implicit namespace packages (as specified in PEP 420) is preferred to `pkg_resources.declare_namespace`. See https://setuptools.pypa.io/en/latest/references/keywords.html#keyword-namespace-packages
-    declare_namespace(pkg)
-
-tests/core/mac/test_main.py:36
-  /Users/thibaultleray-beer/bitcoin_scalper/tests/core/mac/test_main.py:36: PytestUnknownMarkWarning: Unknown pytest.mark.timeout - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
-    @pytest.mark.timeout(10)
-
-tests/core/mac/test_ml_pipeline.py:107
-  /Users/thibaultleray-beer/bitcoin_scalper/tests/core/mac/test_ml_pipeline.py:107: PytestUnknownMarkWarning: Unknown pytest.mark.timeout - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
-    @pytest.mark.timeout(5)
-
-tests/core/mac/test_ml_pipeline.py:135
-  /Users/thibaultleray-beer/bitcoin_scalper/tests/core/mac/test_ml_pipeline.py:135: PytestUnknownMarkWarning: Unknown pytest.mark.timeout - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
-    @pytest.mark.timeout(5)
-
-tests/core/mac/test_ml_pipeline.py:163
-  /Users/thibaultleray-beer/bitcoin_scalper/tests/core/mac/test_ml_pipeline.py:163: PytestUnknownMarkWarning: Unknown pytest.mark.timeout - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
-    @pytest.mark.timeout(5)
-
-tests/core/mac/test_ml_pipeline.py:191
-  /Users/thibaultleray-beer/bitcoin_scalper/tests/core/mac/test_ml_pipeline.py:191: PytestUnknownMarkWarning: Unknown pytest.mark.timeout - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
-    @pytest.mark.timeout(5)
-
-tests/core/mac/test_ml_pipeline.py:315
-  /Users/thibaultleray-beer/bitcoin_scalper/tests/core/mac/test_ml_pipeline.py:315: PytestUnknownMarkWarning: Unknown pytest.mark.timeout - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
-    @pytest.mark.timeout(10)
-
-tests/core/mac/test_ml_pipeline.py:430
-  /Users/thibaultleray-beer/bitcoin_scalper/tests/core/mac/test_ml_pipeline.py:430: PytestUnknownMarkWarning: Unknown pytest.mark.timeout - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
-    @pytest.mark.timeout(5)
-
-tests/core/mac/test_ml_pipeline.py:454
-  /Users/thibaultleray-beer/bitcoin_scalper/tests/core/mac/test_ml_pipeline.py:454: PytestUnknownMarkWarning: Unknown pytest.mark.timeout - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
-    @pytest.mark.timeout(5)
-
-tests/core/mac/test_ml_pipeline.py:478
-  /Users/thibaultleray-beer/bitcoin_scalper/tests/core/mac/test_ml_pipeline.py:478: PytestUnknownMarkWarning: Unknown pytest.mark.timeout - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
-    @pytest.mark.timeout(5)
-
-tests/core/mac/test_ml_pipeline.py:502
-  /Users/thibaultleray-beer/bitcoin_scalper/tests/core/mac/test_ml_pipeline.py:502: PytestUnknownMarkWarning: Unknown pytest.mark.timeout - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
-    @pytest.mark.timeout(5)
-
-tests/core/mac/test_ml_pipeline.py:521
-  /Users/thibaultleray-beer/bitcoin_scalper/tests/core/mac/test_ml_pipeline.py:521: PytestUnknownMarkWarning: Unknown pytest.mark.timeout - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
-    @pytest.mark.timeout(5)
-
-tests/core/mac/test_ml_pipeline.py:540
-  /Users/thibaultleray-beer/bitcoin_scalper/tests/core/mac/test_ml_pipeline.py:540: PytestUnknownMarkWarning: Unknown pytest.mark.timeout - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
-    @pytest.mark.timeout(5)
-
-tests/core/mac/test_ml_pipeline.py:595
-  /Users/thibaultleray-beer/bitcoin_scalper/tests/core/mac/test_ml_pipeline.py:595: PytestUnknownMarkWarning: Unknown pytest.mark.timeout - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
-    @pytest.mark.timeout(5)
-
-tests/core/mac/test_ml_pipeline.py:614
-  /Users/thibaultleray-beer/bitcoin_scalper/tests/core/mac/test_ml_pipeline.py:614: PytestUnknownMarkWarning: Unknown pytest.mark.timeout - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
-    @pytest.mark.timeout(5)
-
-tests/core/mac/test_timescaledb_schema.py:17
-  /Users/thibaultleray-beer/bitcoin_scalper/tests/core/mac/test_timescaledb_schema.py:17: PytestUnknownMarkWarning: Unknown pytest.mark.integration - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
-    @pytest.mark.integration
-
-tests/core/mac/test_timescaledb_schema.py:18
-  /Users/thibaultleray-beer/bitcoin_scalper/tests/core/mac/test_timescaledb_schema.py:18: PytestUnknownMarkWarning: Unknown pytest.mark.mac - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
-    @pytest.mark.mac
-
-tests/core/win/test_order_algos.py:8
-  /Users/thibaultleray-beer/bitcoin_scalper/tests/core/win/test_order_algos.py:8: PytestUnknownMarkWarning: Unknown pytest.mark.timeout - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
-    @pytest.mark.timeout(5)
-
-tests/core/win/test_order_algos.py:16
-  /Users/thibaultleray-beer/bitcoin_scalper/tests/core/win/test_order_algos.py:16: PytestUnknownMarkWarning: Unknown pytest.mark.timeout - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
-    @pytest.mark.timeout(5)
-
-tests/core/win/test_order_algos.py:24
-  /Users/thibaultleray-beer/bitcoin_scalper/tests/core/win/test_order_algos.py:24: PytestUnknownMarkWarning: Unknown pytest.mark.timeout - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
-    @pytest.mark.timeout(5)
-
--- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-================================ tests coverage ================================
-______________ coverage: platform darwin, python 3.11.13-final-0 _______________
-
-Name                                          Stmts   Miss  Cover   Missing
----------------------------------------------------------------------------
-bitcoin_scalper/core/backtesting.py              56     48    14%   11-16, 22-46, 50-67, 71-82
-bitcoin_scalper/core/balancing.py                44     34    23%   11, 35-68
-bitcoin_scalper/core/config.py                   59     42    29%   19-31, 34-51, 54, 57, 64-77
-bitcoin_scalper/core/data_cleaner.py             69     58    16%   14-16, 19-21, 29-45, 49-80, 86-105
-bitcoin_scalper/core/data_ingestor.py            94     76    19%   19-29, 33-39, 43-46, 49-55, 58-83, 86-97, 115-127
-bitcoin_scalper/core/data_loading.py             67     54    19%   12, 51-115
-bitcoin_scalper/core/dvc_manager.py              50     34    32%   14, 18, 24-25, 29-30, 34-38, 42-43, 47-48, 52-56, 60-61, 65-66, 70-74, 78-82
-bitcoin_scalper/core/evaluation.py               52     37    29%   14, 24-34, 52-71, 85-91
-bitcoin_scalper/core/export.py                   64     48    25%   14, 32-50, 59-81, 87-89, 96-103
-bitcoin_scalper/core/feature_engineering.py     240    211    12%   18, 46, 55-149, 157-168, 172-222, 225-246, 255-274, 280-293, 299-311, 317-336, 339-354, 366-447
-bitcoin_scalper/core/inference.py                32     19    41%   14, 32-52
-bitcoin_scalper/core/labeling.py                 28     18    36%   11, 29-50
-bitcoin_scalper/core/modeling.py                 67     49    27%   10-11, 22, 45-112, 122-127
-bitcoin_scalper/core/order_algos.py              39     31    21%   14-24, 31-39, 46-56
-bitcoin_scalper/core/order_execution.py          17     12    29%   18-29
-bitcoin_scalper/core/orderbook_monitor.py        39     31    21%   11, 17-33, 40-45, 51-57
-bitcoin_scalper/core/risk_management.py          86     68    21%   50-93, 104-116, 124-132, 140-152
-bitcoin_scalper/core/splitting.py                47     36    23%   12, 38-76
-bitcoin_scalper/core/strategies.py               37     17    54%   6-7, 10, 14, 16, 20, 22, 26, 28, 32, 34, 38, 40-44
-bitcoin_scalper/core/strategies_hybrid.py        93     49    47%   6-7, 9, 13, 15, 19, 21, 25, 27, 31, 34-35, 39, 41-42, 46-49, 53, 57, 59-67, 72-73, 76, 79-83, 87, 89, 91, 93, 95, 97, 99-106
-bitcoin_scalper/core/timescaledb_client.py      162    142    12%   20-27, 30-37, 40-46, 55-123, 126-151, 154-174, 177-198, 201-206, 222-240
-bitcoin_scalper/main.py                         328    254    23%   76, 91-99, 116-331, 341-357, 367-381, 390-407, 411-414, 418-419, 422-462, 465
-bitcoin_scalper/web/api.py                      139     76    45%   20, 22, 24, 39-43, 47-50, 59-62, 66-68, 85-96, 99, 107-111, 114-117, 121, 124-128, 134-140, 144-150, 154-160, 164-170, 175
-bot/connectors/mt5_rest_client.py                50     28    44%   26-41, 45-46, 50-51, 55-65, 69, 73
-threads/trading_worker.py                       211    178    16%   31-48, 51-52, 55-224, 227, 230-232, 235
-utils/logger.py                                  23     17    26%   8-19, 22-27
-utils/settings.py                                18     10    44%   9-12, 15-19, 22-23
----------------------------------------------------------------------------
-TOTAL                                          2211   1677    24%
-FAIL Required test coverage of 95% not reached. Total coverage: 24.15%
+________________ ERROR collecting tests/core/mac/test_rl_env.py ________________
+ImportError while importing test module '/Users/thibaultleray-beer/bitcoin_scalper/tests/core/mac/test_rl_env.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/opt/homebrew/Cellar/python@3.11/3.11.13/Frameworks/Python.framework/Versions/3.11/lib/python3.11/importlib/__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests/core/mac/test_rl_env.py:3: in <module>
+    from bitcoin_scalper.core.rl_env import BitcoinScalperEnv
+bitcoin_scalper/core/rl_env.py:1: in <module>
+    import gym
+E   ModuleNotFoundError: No module named 'gym'
 =========================== short test summary info ============================
-ERROR tests/core/test_feature_engineering.py
-!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
-======================== 22 warnings, 1 error in 3.37s =========================
+ERROR tests/core/mac/test_rl_env.py
+!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!!
+======================== 17 warnings, 1 error in 3.35s =========================

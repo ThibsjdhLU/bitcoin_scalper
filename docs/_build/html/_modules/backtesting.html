@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+
+<html lang="fr" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>backtesting &#8212; Documentation bitcoin_scalper 1.0</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=27fed22d" />
+    <script src="../_static/documentation_options.js?v=7a28dfa3"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/translations.js?v=e6b791cb"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Recherche" href="../search.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Code source de backtesting</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">bitcoin_scalper.core.order_execution</span><span class="w"> </span><span class="kn">import</span> <span class="n">execute_adaptive_trade</span>
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;bitcoin_scalper.backtesting&quot;</span><span class="p">)</span>
+<span class="n">logger</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Backtester">
+<a class="viewcode-back" href="../backtesting.html#backtesting.Backtester">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">Backtester</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Backtest réaliste d&#39;une stratégie ML : PnL, Sharpe, drawdown, frais, slippage, equity curve.</span>
+<span class="sd">    Permet l&#39;injection de coûts dynamiques, contraintes, et la comparaison à un benchmark.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        df (pd.DataFrame): Données historiques avec signaux et prix.</span>
+<span class="sd">        signal_col (str): Colonne des signaux (-1, 0, 1).</span>
+<span class="sd">        price_col (str): Colonne des prix d&#39;exécution.</span>
+<span class="sd">        label_col (Optional[str]): Colonne des labels (pour reporting).</span>
+<span class="sd">        model (Optional[Any]): Modèle ML (optionnel, si signaux à prédire).</span>
+<span class="sd">        initial_capital (float): Capital initial.</span>
+<span class="sd">        fee (float): Frais de transaction (proportionnel, si fee_fn non fourni).</span>
+<span class="sd">        slippage (float): Slippage (proportionnel, si slippage_fn non fourni).</span>
+<span class="sd">        min_trade_size (float): Taille minimale d&#39;un trade.</span>
+<span class="sd">        out_dir (str): Dossier de sortie des rapports.</span>
+<span class="sd">        slippage_fn (Optional[Callable]): Fonction de slippage dynamique (price, volume, orderbook, timestamp) -&gt; float.</span>
+<span class="sd">        spread_series (Optional[Union[pd.Series, Callable]]): Série temporelle ou fonction fournissant le spread à chaque timestamp.</span>
+<span class="sd">        fee_fn (Optional[Callable]): Fonction de calcul des frais (price, volume, timestamp) -&gt; float.</span>
+<span class="sd">        orderbook_series (Optional[pd.Series]): Série temporelle de snapshots orderbook (pour slippage avancé).</span>
+<span class="sd">        latency_fn (Optional[Callable]): Fonction de latence (timestamp, trade_info) -&gt; float (secondes).</span>
+<span class="sd">        reject_fn (Optional[Callable]): Fonction de rejet d&#39;ordre (timestamp, trade_info) -&gt; bool.</span>
+<span class="sd">        benchmarks (Optional[list]): Liste des benchmarks à comparer (ex: [&#39;buy_and_hold&#39;, &#39;rsi2&#39;, ...]).</span>
+<span class="sd">        scheduler (Any): Scheduler adaptatif.</span>
+<span class="sd">        client (Any): Client pour compatibilité interface.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
+        <span class="n">signal_col</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;signal&quot;</span><span class="p">,</span>
+        <span class="n">price_col</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;close&quot;</span><span class="p">,</span>
+        <span class="n">label_col</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">model</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">initial_capital</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">10000.0</span><span class="p">,</span>
+        <span class="n">fee</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0005</span><span class="p">,</span>
+        <span class="n">slippage</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0002</span><span class="p">,</span>
+        <span class="n">min_trade_size</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+        <span class="n">out_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;backtest_reports&quot;</span><span class="p">,</span>
+        <span class="n">slippage_fn</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">spread_series</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">fee_fn</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">orderbook_series</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">latency_fn</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">reject_fn</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">benchmarks</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">list</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">scheduler</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">client</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">signal_col</span> <span class="o">=</span> <span class="n">signal_col</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">price_col</span> <span class="o">=</span> <span class="n">price_col</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">label_col</span> <span class="o">=</span> <span class="n">label_col</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">model</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">initial_capital</span> <span class="o">=</span> <span class="n">initial_capital</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fee</span> <span class="o">=</span> <span class="n">fee</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">slippage</span> <span class="o">=</span> <span class="n">slippage</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">min_trade_size</span> <span class="o">=</span> <span class="n">min_trade_size</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">out_dir</span> <span class="o">=</span> <span class="n">out_dir</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">slippage_fn</span> <span class="o">=</span> <span class="n">slippage_fn</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">spread_series</span> <span class="o">=</span> <span class="n">spread_series</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fee_fn</span> <span class="o">=</span> <span class="n">fee_fn</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">orderbook_series</span> <span class="o">=</span> <span class="n">orderbook_series</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">latency_fn</span> <span class="o">=</span> <span class="n">latency_fn</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">reject_fn</span> <span class="o">=</span> <span class="n">reject_fn</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">benchmarks</span> <span class="o">=</span> <span class="n">benchmarks</span> <span class="ow">or</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">scheduler</span> <span class="o">=</span> <span class="n">scheduler</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">client</span> <span class="o">=</span> <span class="n">client</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">out_dir</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_run_benchmark</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">df</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Calcule les KPIs d&#39;un benchmark donné sur le DataFrame df.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">name</span> <span class="o">==</span> <span class="s1">&#39;buy_and_hold&#39;</span><span class="p">:</span>
+            <span class="c1"># Entrée au premier prix, sortie au dernier, position = 1</span>
+            <span class="n">entry</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">price_col</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">exit</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">price_col</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">returns</span> <span class="o">=</span> <span class="p">(</span><span class="n">exit</span> <span class="o">-</span> <span class="n">entry</span><span class="p">)</span> <span class="o">/</span> <span class="n">entry</span>
+            <span class="n">kpis</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s1">&#39;final_return&#39;</span><span class="p">:</span> <span class="n">returns</span><span class="p">,</span>
+                <span class="s1">&#39;sharpe&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>  <span class="c1"># non pertinent sur un seul trade</span>
+                <span class="s1">&#39;max_drawdown&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+                <span class="s1">&#39;nb_trades&#39;</span><span class="p">:</span> <span class="mi">1</span>
+            <span class="p">}</span>
+            <span class="n">equity_curve</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">entry</span><span class="p">,</span> <span class="n">exit</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="p">))</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;kpis&#39;</span><span class="p">:</span> <span class="n">kpis</span><span class="p">,</span> <span class="s1">&#39;equity_curve&#39;</span><span class="p">:</span> <span class="n">equity_curve</span><span class="p">}</span>
+        <span class="k">elif</span> <span class="n">name</span> <span class="o">==</span> <span class="s1">&#39;rsi2&#39;</span><span class="p">:</span>
+            <span class="c1"># Benchmark RSI2 : achat si RSI&lt;30, vente si RSI&gt;70</span>
+            <span class="k">if</span> <span class="s1">&#39;rsi&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+                <span class="k">return</span> <span class="kc">None</span>
+            <span class="n">capital</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">initial_capital</span>
+            <span class="n">position</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">equity_curve</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">last_price</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">iterrows</span><span class="p">():</span>
+                <span class="n">price</span> <span class="o">=</span> <span class="n">row</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">price_col</span><span class="p">]</span>
+                <span class="n">rsi</span> <span class="o">=</span> <span class="n">row</span><span class="p">[</span><span class="s1">&#39;rsi&#39;</span><span class="p">]</span>
+                <span class="k">if</span> <span class="n">rsi</span> <span class="o">&lt;</span> <span class="mi">30</span> <span class="ow">and</span> <span class="n">position</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">position</span> <span class="o">=</span> <span class="mi">1</span>
+                    <span class="n">last_price</span> <span class="o">=</span> <span class="n">price</span>
+                <span class="k">elif</span> <span class="n">rsi</span> <span class="o">&gt;</span> <span class="mi">70</span> <span class="ow">and</span> <span class="n">position</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="n">capital</span> <span class="o">+=</span> <span class="n">price</span> <span class="o">-</span> <span class="n">last_price</span>
+                    <span class="n">position</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="n">equity_curve</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">capital</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">position</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">capital</span> <span class="o">+=</span> <span class="n">df</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">price_col</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">last_price</span>
+            <span class="n">kpis</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s1">&#39;final_return&#39;</span><span class="p">:</span> <span class="p">(</span><span class="n">capital</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">initial_capital</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span>
+                <span class="s1">&#39;sharpe&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+                <span class="s1">&#39;max_drawdown&#39;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="o">.</span><span class="n">accumulate</span><span class="p">(</span><span class="n">equity_curve</span><span class="p">)</span> <span class="o">-</span> <span class="n">equity_curve</span><span class="p">)),</span>
+                <span class="s1">&#39;nb_trades&#39;</span><span class="p">:</span> <span class="mi">1</span>
+            <span class="p">}</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;kpis&#39;</span><span class="p">:</span> <span class="n">kpis</span><span class="p">,</span> <span class="s1">&#39;equity_curve&#39;</span><span class="p">:</span> <span class="n">equity_curve</span><span class="p">}</span>
+        <span class="c1"># Ajouter d&#39;autres benchmarks ici</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+<div class="viewcode-block" id="Backtester.run">
+<a class="viewcode-back" href="../backtesting.html#backtesting.Backtester.run">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="nb">list</span><span class="p">,</span> <span class="nb">dict</span><span class="p">,</span> <span class="nb">dict</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Exécute le backtest avec application des coûts dynamiques si fournis.</span>
+<span class="sd">        Retourne :</span>
+<span class="sd">            - out_df : DataFrame enrichi (equity, returns)</span>
+<span class="sd">            - trades : liste des trades exécutés</span>
+<span class="sd">            - kpis : dictionnaire des métriques post-trade (Sharpe, drawdown, profit factor, win rate, expectancy, max losing streak, etc.)</span>
+<span class="sd">            - benchmarks_results : résultats des benchmarks (si demandés)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">df</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">features</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span> <span class="k">if</span> <span class="n">c</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">signal_col</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">price_col</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">label_col</span><span class="p">]]</span>
+            <span class="n">df</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">signal_col</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="n">features</span><span class="p">])</span>
+        <span class="n">capital</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">initial_capital</span>
+        <span class="n">position</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">equity_curve</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">returns</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">trades</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">rejected_orders</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">last_price</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">entry_price</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">iterrows</span><span class="p">():</span>
+            <span class="n">price</span> <span class="o">=</span> <span class="n">row</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">price_col</span><span class="p">]</span>
+            <span class="n">signal</span> <span class="o">=</span> <span class="n">row</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">signal_col</span><span class="p">]</span>
+            <span class="n">timestamp</span> <span class="o">=</span> <span class="n">row</span><span class="o">.</span><span class="n">name</span>
+            <span class="n">proba</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">,</span> <span class="s2">&quot;predict_proba&quot;</span><span class="p">):</span>
+                <span class="n">features_row</span> <span class="o">=</span> <span class="n">row</span><span class="o">.</span><span class="n">drop</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">signal_col</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">price_col</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">label_col</span><span class="p">],</span> <span class="n">errors</span><span class="o">=</span><span class="s2">&quot;ignore&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+                <span class="n">proba</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">predict_proba</span><span class="p">(</span><span class="n">features_row</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">()</span>
+            <span class="c1"># --- Exécution adaptative si scheduler fourni ---</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">scheduler</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">proba</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">res</span> <span class="o">=</span> <span class="n">execute_adaptive_trade</span><span class="p">(</span>
+                    <span class="n">scheduler</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">scheduler</span><span class="p">,</span>
+                    <span class="n">symbol</span><span class="o">=</span><span class="s2">&quot;BTCUSD&quot;</span><span class="p">,</span>  <span class="c1"># TODO: rendre générique</span>
+                    <span class="n">signal</span><span class="o">=</span><span class="n">signal</span><span class="p">,</span>
+                    <span class="n">proba</span><span class="o">=</span><span class="n">proba</span><span class="p">,</span>
+                    <span class="n">client</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">client</span>
+                <span class="p">)</span>
+                <span class="k">if</span> <span class="n">res</span><span class="p">[</span><span class="s2">&quot;success&quot;</span><span class="p">]:</span>
+                    <span class="n">trades</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">res</span><span class="p">)</span>
+                    <span class="c1"># TODO: maj capital selon PnL réel</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># Exécution classique (simulation)</span>
+                <span class="k">if</span> <span class="n">signal</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">position</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+                        <span class="n">pnl</span> <span class="o">=</span> <span class="p">(</span><span class="n">price</span> <span class="o">-</span> <span class="n">last_price</span><span class="p">)</span> <span class="o">*</span> <span class="n">position</span> <span class="o">-</span> <span class="nb">abs</span><span class="p">(</span><span class="n">position</span><span class="p">)</span> <span class="o">*</span> <span class="n">price</span> <span class="o">*</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fee</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">slippage</span><span class="p">)</span>
+                        <span class="n">capital</span> <span class="o">+=</span> <span class="n">pnl</span>
+                        <span class="n">trades</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s2">&quot;entry&quot;</span><span class="p">:</span> <span class="n">last_price</span><span class="p">,</span> <span class="s2">&quot;exit&quot;</span><span class="p">:</span> <span class="n">price</span><span class="p">,</span> <span class="s2">&quot;side&quot;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="n">position</span><span class="p">),</span> <span class="s2">&quot;pnl&quot;</span><span class="p">:</span> <span class="n">pnl</span><span class="p">,</span> <span class="s2">&quot;date&quot;</span><span class="p">:</span> <span class="n">i</span><span class="p">})</span>
+                    <span class="n">position</span> <span class="o">=</span> <span class="n">signal</span>
+                    <span class="n">last_price</span> <span class="o">=</span> <span class="n">price</span>
+            <span class="n">equity_curve</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">capital</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">position</span> <span class="o">!=</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">last_price</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">price</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="bp">self</span><span class="o">.</span><span class="n">price_col</span><span class="p">]</span>
+            <span class="n">timestamp</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">spread</span> <span class="o">=</span> <span class="mf">0.0</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">spread_series</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">if</span> <span class="nb">callable</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">spread_series</span><span class="p">):</span>
+                    <span class="n">spread</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">spread_series</span><span class="p">(</span><span class="n">timestamp</span><span class="p">)</span>
+                <span class="k">elif</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">spread_series</span><span class="p">,</span> <span class="s1">&#39;get&#39;</span><span class="p">):</span>
+                    <span class="n">spread</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">spread_series</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">timestamp</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span>
+                <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">spread_series</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">):</span>
+                    <span class="n">spread</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">spread_series</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">timestamp</span><span class="p">]</span> <span class="k">if</span> <span class="n">timestamp</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">spread_series</span><span class="o">.</span><span class="n">index</span> <span class="k">else</span> <span class="mf">0.0</span>
+            <span class="n">exec_price</span> <span class="o">=</span> <span class="n">price</span> <span class="o">+</span> <span class="n">spread</span><span class="o">/</span><span class="mi">2</span> <span class="k">if</span> <span class="n">position</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="n">price</span> <span class="o">-</span> <span class="n">spread</span><span class="o">/</span><span class="mi">2</span>
+            <span class="n">slippage_val</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">slippage</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">slippage_fn</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">orderbook</span> <span class="o">=</span> <span class="kc">None</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">orderbook_series</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">orderbook_series</span><span class="p">,</span> <span class="s1">&#39;get&#39;</span><span class="p">):</span>
+                        <span class="n">orderbook</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">orderbook_series</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">timestamp</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+                    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">orderbook_series</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">):</span>
+                        <span class="n">orderbook</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">orderbook_series</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">timestamp</span><span class="p">]</span> <span class="k">if</span> <span class="n">timestamp</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">orderbook_series</span><span class="o">.</span><span class="n">index</span> <span class="k">else</span> <span class="kc">None</span>
+                <span class="n">slippage_val</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">slippage_fn</span><span class="p">(</span><span class="n">price</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="n">orderbook</span><span class="p">,</span> <span class="n">timestamp</span><span class="p">)</span>
+            <span class="n">fee_val</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fee</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">fee_fn</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">fee_val</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fee_fn</span><span class="p">(</span><span class="n">price</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="n">timestamp</span><span class="p">)</span>
+            <span class="n">pnl</span> <span class="o">=</span> <span class="p">(</span><span class="n">exec_price</span> <span class="o">-</span> <span class="n">last_price</span><span class="p">)</span> <span class="o">*</span> <span class="n">position</span> <span class="o">-</span> <span class="nb">abs</span><span class="p">(</span><span class="n">position</span><span class="p">)</span> <span class="o">*</span> <span class="n">exec_price</span> <span class="o">*</span> <span class="p">(</span><span class="n">fee_val</span> <span class="o">+</span> <span class="n">slippage_val</span><span class="p">)</span>
+            <span class="n">capital</span> <span class="o">+=</span> <span class="n">pnl</span>
+            <span class="n">returns</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pnl</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">initial_capital</span><span class="p">)</span>
+            <span class="n">trades</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s2">&quot;entry&quot;</span><span class="p">:</span> <span class="n">last_price</span><span class="p">,</span> <span class="s2">&quot;exit&quot;</span><span class="p">:</span> <span class="n">exec_price</span><span class="p">,</span> <span class="s2">&quot;side&quot;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="n">position</span><span class="p">),</span> <span class="s2">&quot;pnl&quot;</span><span class="p">:</span> <span class="n">pnl</span><span class="p">,</span> <span class="s2">&quot;date&quot;</span><span class="p">:</span> <span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]})</span>
+            <span class="n">equity_curve</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">capital</span>
+        <span class="n">equity_curve</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">equity_curve</span><span class="p">)</span>
+        <span class="n">returns</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">returns</span><span class="p">)</span>
+        <span class="n">pnl</span> <span class="o">=</span> <span class="n">capital</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">initial_capital</span>
+        <span class="n">max_drawdown</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="o">.</span><span class="n">accumulate</span><span class="p">(</span><span class="n">equity_curve</span><span class="p">)</span> <span class="o">-</span> <span class="n">equity_curve</span><span class="p">))</span>
+        <span class="n">sharpe</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">returns</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">returns</span><span class="p">)</span> <span class="o">+</span> <span class="mf">1e-9</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">252</span><span class="p">))</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">returns</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="k">else</span> <span class="mi">0</span>
+        <span class="n">nb_trades</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">trades</span><span class="p">)</span>
+        <span class="n">win_trades</span> <span class="o">=</span> <span class="p">[</span><span class="n">t</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">trades</span> <span class="k">if</span> <span class="n">t</span><span class="p">[</span><span class="s2">&quot;pnl&quot;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">]</span>
+        <span class="n">loss_trades</span> <span class="o">=</span> <span class="p">[</span><span class="n">t</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">trades</span> <span class="k">if</span> <span class="n">t</span><span class="p">[</span><span class="s2">&quot;pnl&quot;</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">]</span>
+        <span class="n">profit_factor</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="nb">sum</span><span class="p">(</span><span class="n">t</span><span class="p">[</span><span class="s2">&quot;pnl&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">win_trades</span><span class="p">)</span> <span class="o">/</span> <span class="nb">abs</span><span class="p">(</span><span class="nb">sum</span><span class="p">(</span><span class="n">t</span><span class="p">[</span><span class="s2">&quot;pnl&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">loss_trades</span><span class="p">)))</span> <span class="k">if</span> <span class="n">loss_trades</span> <span class="k">else</span> <span class="nb">float</span><span class="p">(</span><span class="s1">&#39;inf&#39;</span><span class="p">)</span>
+        <span class="n">win_rate</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">win_trades</span><span class="p">)</span> <span class="o">/</span> <span class="n">nb_trades</span><span class="p">)</span> <span class="k">if</span> <span class="n">nb_trades</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="mi">0</span>
+        <span class="n">final_return</span> <span class="o">=</span> <span class="nb">float</span><span class="p">((</span><span class="n">capital</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">initial_capital</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">expectancy</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">([</span><span class="n">t</span><span class="p">[</span><span class="s2">&quot;pnl&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">trades</span><span class="p">]))</span> <span class="k">if</span> <span class="n">trades</span> <span class="k">else</span> <span class="mf">0.0</span>
+        <span class="n">max_losing_streak</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">current_streak</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">trades</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">t</span><span class="p">[</span><span class="s2">&quot;pnl&quot;</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">current_streak</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="k">if</span> <span class="n">current_streak</span> <span class="o">&gt;</span> <span class="n">max_losing_streak</span><span class="p">:</span>
+                    <span class="n">max_losing_streak</span> <span class="o">=</span> <span class="n">current_streak</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">current_streak</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">kpis</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;sharpe&quot;</span><span class="p">:</span> <span class="n">sharpe</span><span class="p">,</span>
+            <span class="s2">&quot;max_drawdown&quot;</span><span class="p">:</span> <span class="n">max_drawdown</span><span class="p">,</span>
+            <span class="s2">&quot;profit_factor&quot;</span><span class="p">:</span> <span class="n">profit_factor</span><span class="p">,</span>
+            <span class="s2">&quot;win_rate&quot;</span><span class="p">:</span> <span class="n">win_rate</span><span class="p">,</span>
+            <span class="s2">&quot;nb_trades&quot;</span><span class="p">:</span> <span class="n">nb_trades</span><span class="p">,</span>
+            <span class="s2">&quot;final_return&quot;</span><span class="p">:</span> <span class="n">final_return</span><span class="p">,</span>
+            <span class="s2">&quot;final_capital&quot;</span><span class="p">:</span> <span class="n">capital</span><span class="p">,</span>
+            <span class="s2">&quot;expectancy&quot;</span><span class="p">:</span> <span class="n">expectancy</span><span class="p">,</span>
+            <span class="s2">&quot;max_losing_streak&quot;</span><span class="p">:</span> <span class="n">max_losing_streak</span>
+        <span class="p">}</span>
+        <span class="n">out_df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">out_df</span><span class="p">[</span><span class="s2">&quot;equity_curve&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">equity_curve</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">initial_capital</span>
+        <span class="n">out_df</span><span class="p">[</span><span class="s2">&quot;returns&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="mi">0</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">equity_curve</span><span class="p">)</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">initial_capital</span><span class="p">)</span>
+        <span class="c1"># --- Benchmarks ---</span>
+        <span class="n">benchmarks_results</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">benchmarks</span><span class="p">:</span>
+            <span class="n">res</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_run_benchmark</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">df</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">res</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">benchmarks_results</span><span class="p">[</span><span class="n">b</span><span class="p">]</span> <span class="o">=</span> <span class="n">res</span>
+        <span class="c1"># Reporting fichiers (inchangé)</span>
+        <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">trades</span><span class="p">)</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">out_dir</span><span class="p">,</span> <span class="s2">&quot;trades.csv&quot;</span><span class="p">),</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">rejected_orders</span><span class="p">)</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">out_dir</span><span class="p">,</span> <span class="s2">&quot;rejected_orders.csv&quot;</span><span class="p">),</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s2">&quot;equity&quot;</span><span class="p">:</span> <span class="n">equity_curve</span><span class="p">},</span> <span class="n">index</span><span class="o">=</span><span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="p">)</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">out_dir</span><span class="p">,</span> <span class="s2">&quot;equity_curve.csv&quot;</span><span class="p">))</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">out_dir</span><span class="p">,</span> <span class="s2">&quot;metrics.json&quot;</span><span class="p">),</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">kpis</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">out_dir</span><span class="p">,</span> <span class="s2">&quot;benchmarks.json&quot;</span><span class="p">),</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">({</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span><span class="p">[</span><span class="s1">&#39;kpis&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">benchmarks_results</span><span class="o">.</span><span class="n">items</span><span class="p">()},</span> <span class="n">f</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span><span class="mi">4</span><span class="p">))</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="n">equity_curve</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s2">&quot;Equity curve&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s2">&quot;Date&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&quot;Capital&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">out_dir</span><span class="p">,</span> <span class="s2">&quot;equity_curve.png&quot;</span><span class="p">))</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="n">drawdown</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="o">.</span><span class="n">accumulate</span><span class="p">(</span><span class="n">equity_curve</span><span class="p">)</span> <span class="o">-</span> <span class="n">equity_curve</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span><span class="mi">4</span><span class="p">))</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="n">drawdown</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s2">&quot;Drawdown&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s2">&quot;Date&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&quot;Drawdown&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">out_dir</span><span class="p">,</span> <span class="s2">&quot;drawdown.png&quot;</span><span class="p">))</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">label_col</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">label_col</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+            <span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.metrics</span><span class="w"> </span><span class="kn">import</span> <span class="n">confusion_matrix</span>
+            <span class="n">cm</span> <span class="o">=</span> <span class="n">confusion_matrix</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">label_col</span><span class="p">],</span> <span class="n">df</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">signal_col</span><span class="p">],</span> <span class="n">labels</span><span class="o">=</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">])</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span><span class="mi">4</span><span class="p">))</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">cm</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="s2">&quot;Blues&quot;</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s2">&quot;Confusion matrix (backtest)&quot;</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s2">&quot;Signal&quot;</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&quot;Label&quot;</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">colorbar</span><span class="p">()</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">cm</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+                <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">cm</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+                    <span class="n">plt</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="n">j</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">cm</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">],</span> <span class="n">ha</span><span class="o">=</span><span class="s2">&quot;center&quot;</span><span class="p">,</span> <span class="n">va</span><span class="o">=</span><span class="s2">&quot;center&quot;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;red&quot;</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">out_dir</span><span class="p">,</span> <span class="s2">&quot;confusion_backtest.png&quot;</span><span class="p">))</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Rapport backtest exporté : </span><span class="si">{</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">out_dir</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;backtest_report.json&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">benchmarks</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">out_df</span><span class="p">,</span> <span class="n">trades</span><span class="p">,</span> <span class="n">kpis</span><span class="p">,</span> <span class="n">benchmarks_results</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">out_df</span><span class="p">,</span> <span class="n">trades</span><span class="p">,</span> <span class="n">kpis</span> </div>
+</div>
+
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">bitcoin_scalper</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../web_api.html">Web API (FastAPI)</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Modules</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../config.html">config module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../config.html#gestion-securisee-de-la-configuration">Gestion sécurisée de la configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../data_cleaner.html">data_cleaner module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../data_ingestor.html">data_ingestor module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dvc_manager.html">dvc_manager module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../feature_engineering.html">feature_engineering module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml_pipeline.html">ml_pipeline module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../order_algos.html">order_algos module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../risk_management.html">risk_management module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../timescaledb_client.html">timescaledb_client module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../backtesting.html">backtesting module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../backtesting.html#module-bitcoin_scalper.core.backtesting">Backtesting avancé</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">Code du module</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2025, Thibault Leray.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

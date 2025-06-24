@@ -65,4 +65,24 @@ def test_send_order_payload_format():
     assert captured['price'] == 12345.6
     assert captured['order_type'] == 'market'
     assert captured['sl'] == 100
-    assert captured['tp'] == 200 
+    assert captured['tp'] == 200
+
+def test_execute_adaptive_trade_adaptive(monkeypatch):
+    class DummyScheduler:
+        def schedule_trade(self, symbol, signal, proba, **kwargs):
+            if signal == 0:
+                return None
+            return {"action": "buy" if signal == 1 else "sell", "volume": 0.1, "reason": "test"}
+    class DummyClient:
+        def send_order(self, symbol, volume, action, **kwargs):
+            return {"order_id": 123, "status": "filled"}
+    from bitcoin_scalper.core.order_execution import execute_adaptive_trade
+    scheduler = DummyScheduler()
+    client = DummyClient()
+    res = execute_adaptive_trade(scheduler, "BTCUSD", 1, 0.9, client)
+    assert res["success"]
+    assert res["data"]["order_id"] == 123
+    assert res["reason"] == "test"
+    res2 = execute_adaptive_trade(scheduler, "BTCUSD", 0, 0.9, client)
+    assert not res2["success"]
+    assert res2["reason"].startswith("Aucun trade") 

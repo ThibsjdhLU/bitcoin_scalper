@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+
+<html lang="fr" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>UI (Interface graphique) &#8212; Documentation bitcoin_scalper 1.0</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=27fed22d" />
+    <script src="_static/documentation_options.js?v=7a28dfa3"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/translations.js?v=e6b791cb"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Recherche" href="search.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="module-ui.main_window">
+<span id="ui-interface-graphique"></span><h1>UI (Interface graphique)<a class="headerlink" href="#module-ui.main_window" title="Lien vers cette rubrique">¶</a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="ui.main_window.MainWindow">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ui.main_window.</span></span><span class="sig-name descname"><span class="pre">MainWindow</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">logger</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">settings</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">positions_model</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ui/main_window.html#MainWindow"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ui.main_window.MainWindow" title="Lien vers cette définition">¶</a></dt>
+<dd><p>Bases : <code class="xref py py-class docutils literal notranslate"><span class="pre">QMainWindow</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="ui.main_window.MainWindow.append_log">
+<span class="sig-name descname"><span class="pre">append_log</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">message</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ui/main_window.html#MainWindow.append_log"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ui.main_window.MainWindow.append_log" title="Lien vers cette définition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ui.main_window.MainWindow.apply_dark_theme">
+<span class="sig-name descname"><span class="pre">apply_dark_theme</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/ui/main_window.html#MainWindow.apply_dark_theme"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ui.main_window.MainWindow.apply_dark_theme" title="Lien vers cette définition">¶</a></dt>
+<dd><p>Charge la feuille de style sombre personnalisée.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ui.main_window.MainWindow.on_settings_reloaded">
+<span class="sig-name descname"><span class="pre">on_settings_reloaded</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/ui/main_window.html#MainWindow.on_settings_reloaded"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ui.main_window.MainWindow.on_settings_reloaded" title="Lien vers cette définition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ui.main_window.MainWindow.on_worker_finished">
+<span class="sig-name descname"><span class="pre">on_worker_finished</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/ui/main_window.html#MainWindow.on_worker_finished"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ui.main_window.MainWindow.on_worker_finished" title="Lien vers cette définition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ui.main_window.MainWindow.reload_settings">
+<span class="sig-name descname"><span class="pre">reload_settings</span></span><a class="headerlink" href="#ui.main_window.MainWindow.reload_settings" title="Lien vers cette définition">¶</a></dt>
+<dd><p>pyqtSignal(<a href="#id1"><span class="problematic" id="id2">*</span></a>types, name: str = …, revision: int = …, arguments: Sequence = …) -&gt; PYQT_SIGNAL</p>
+<p>types is normally a sequence of individual types.  Each type is either a
+type object or a string that is the name of a C++ type.  Alternatively
+each type could itself be a sequence of types each describing a different
+overloaded signal.
+name is the optional C++ name of the signal.  If it is not specified then
+the name of the class attribute that is bound to the signal is used.
+revision is the optional revision of the signal that is exported to QML.
+If it is not specified then 0 is used.
+arguments is the optional sequence of the names of the signal’s arguments.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ui.main_window.MainWindow.start_trading">
+<span class="sig-name descname"><span class="pre">start_trading</span></span><a class="headerlink" href="#ui.main_window.MainWindow.start_trading" title="Lien vers cette définition">¶</a></dt>
+<dd><p>pyqtSignal(<a href="#id3"><span class="problematic" id="id4">*</span></a>types, name: str = …, revision: int = …, arguments: Sequence = …) -&gt; PYQT_SIGNAL</p>
+<p>types is normally a sequence of individual types.  Each type is either a
+type object or a string that is the name of a C++ type.  Alternatively
+each type could itself be a sequence of types each describing a different
+overloaded signal.
+name is the optional C++ name of the signal.  If it is not specified then
+the name of the class attribute that is bound to the signal is used.
+revision is the optional revision of the signal that is exported to QML.
+If it is not specified then 0 is used.
+arguments is the optional sequence of the names of the signal’s arguments.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ui.main_window.MainWindow.stop_trading">
+<span class="sig-name descname"><span class="pre">stop_trading</span></span><a class="headerlink" href="#ui.main_window.MainWindow.stop_trading" title="Lien vers cette définition">¶</a></dt>
+<dd><p>pyqtSignal(<a href="#id5"><span class="problematic" id="id6">*</span></a>types, name: str = …, revision: int = …, arguments: Sequence = …) -&gt; PYQT_SIGNAL</p>
+<p>types is normally a sequence of individual types.  Each type is either a
+type object or a string that is the name of a C++ type.  Alternatively
+each type could itself be a sequence of types each describing a different
+overloaded signal.
+name is the optional C++ name of the signal.  If it is not specified then
+the name of the class attribute that is bound to the signal is used.
+revision is the optional revision of the signal that is exported to QML.
+If it is not specified then 0 is used.
+arguments is the optional sequence of the names of the signal’s arguments.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ui.main_window.MainWindow.update_graph">
+<span class="sig-name descname"><span class="pre">update_graph</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ui/main_window.html#MainWindow.update_graph"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ui.main_window.MainWindow.update_graph" title="Lien vers cette définition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ui.main_window.MainWindow.update_positions">
+<span class="sig-name descname"><span class="pre">update_positions</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">positions</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ui/main_window.html#MainWindow.update_positions"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ui.main_window.MainWindow.update_positions" title="Lien vers cette définition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ui.main_window.MainWindow.update_risk_display">
+<span class="sig-name descname"><span class="pre">update_risk_display</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">risk_metrics</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ui/main_window.html#MainWindow.update_risk_display"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ui.main_window.MainWindow.update_risk_display" title="Lien vers cette définition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ui.main_window.MainWindow.update_signal_display">
+<span class="sig-name descname"><span class="pre">update_signal_display</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">signal</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ui/main_window.html#MainWindow.update_signal_display"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ui.main_window.MainWindow.update_signal_display" title="Lien vers cette définition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class" id="module-ui.account_info_panel">
+<dt class="sig sig-object py" id="ui.account_info_panel.AccountInfoPanel">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ui.account_info_panel.</span></span><span class="sig-name descname"><span class="pre">AccountInfoPanel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">parent</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ui/account_info_panel.html#AccountInfoPanel"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ui.account_info_panel.AccountInfoPanel" title="Lien vers cette définition">¶</a></dt>
+<dd><p>Bases : <code class="xref py py-class docutils literal notranslate"><span class="pre">QWidget</span></code></p>
+<p>Widget d’informations de compte pour l’application de trading.
+Affiche :</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Solde</p></li>
+<li><p>Profit/Perte</p></li>
+<li><p>Statut du bot (avec icône)</p></li>
+<li><p>Dernier prix</p></li>
+</ul>
+</div></blockquote>
+<dl class="py method">
+<dt class="sig sig-object py" id="ui.account_info_panel.AccountInfoPanel.set_balance">
+<span class="sig-name descname"><span class="pre">set_balance</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">balance</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ui/account_info_panel.html#AccountInfoPanel.set_balance"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ui.account_info_panel.AccountInfoPanel.set_balance" title="Lien vers cette définition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ui.account_info_panel.AccountInfoPanel.set_disconnected">
+<span class="sig-name descname"><span class="pre">set_disconnected</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/ui/account_info_panel.html#AccountInfoPanel.set_disconnected"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ui.account_info_panel.AccountInfoPanel.set_disconnected" title="Lien vers cette définition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ui.account_info_panel.AccountInfoPanel.set_last_price">
+<span class="sig-name descname"><span class="pre">set_last_price</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">price</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ui/account_info_panel.html#AccountInfoPanel.set_last_price"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ui.account_info_panel.AccountInfoPanel.set_last_price" title="Lien vers cette définition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ui.account_info_panel.AccountInfoPanel.set_pnl">
+<span class="sig-name descname"><span class="pre">set_pnl</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pnl</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ui/account_info_panel.html#AccountInfoPanel.set_pnl"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ui.account_info_panel.AccountInfoPanel.set_pnl" title="Lien vers cette définition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ui.account_info_panel.AccountInfoPanel.set_status">
+<span class="sig-name descname"><span class="pre">set_status</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">status</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ui/account_info_panel.html#AccountInfoPanel.set_status"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ui.account_info_panel.AccountInfoPanel.set_status" title="Lien vers cette définition">¶</a></dt>
+<dd><p>Met à jour l’icône et le texte du statut du bot.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class" id="module-ui.dashboard_simple">
+<dt class="sig sig-object py" id="ui.dashboard_simple.DashboardSimple">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ui.dashboard_simple.</span></span><span class="sig-name descname"><span class="pre">DashboardSimple</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">parent</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ui/dashboard_simple.html#DashboardSimple"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ui.dashboard_simple.DashboardSimple" title="Lien vers cette définition">¶</a></dt>
+<dd><p>Bases : <code class="xref py py-class docutils literal notranslate"><span class="pre">QWidget</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="ui.dashboard_simple.DashboardSimple.hide_alert">
+<span class="sig-name descname"><span class="pre">hide_alert</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/ui/dashboard_simple.html#DashboardSimple.hide_alert"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ui.dashboard_simple.DashboardSimple.hide_alert" title="Lien vers cette définition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ui.dashboard_simple.DashboardSimple.set_capital">
+<span class="sig-name descname"><span class="pre">set_capital</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">capital</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ui/dashboard_simple.html#DashboardSimple.set_capital"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ui.dashboard_simple.DashboardSimple.set_capital" title="Lien vers cette définition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ui.dashboard_simple.DashboardSimple.set_pnl">
+<span class="sig-name descname"><span class="pre">set_pnl</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pnl_eur</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pnl_pct</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ui/dashboard_simple.html#DashboardSimple.set_pnl"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ui.dashboard_simple.DashboardSimple.set_pnl" title="Lien vers cette définition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ui.dashboard_simple.DashboardSimple.set_positions">
+<span class="sig-name descname"><span class="pre">set_positions</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ui/dashboard_simple.html#DashboardSimple.set_positions"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ui.dashboard_simple.DashboardSimple.set_positions" title="Lien vers cette définition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ui.dashboard_simple.DashboardSimple.set_status">
+<span class="sig-name descname"><span class="pre">set_status</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">running</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ui/dashboard_simple.html#DashboardSimple.set_status"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ui.dashboard_simple.DashboardSimple.set_status" title="Lien vers cette définition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ui.dashboard_simple.DashboardSimple.show_alert">
+<span class="sig-name descname"><span class="pre">show_alert</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">message</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ui/dashboard_simple.html#DashboardSimple.show_alert"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ui.dashboard_simple.DashboardSimple.show_alert" title="Lien vers cette définition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ui.dashboard_simple.DashboardSimple.stop_requested">
+<span class="sig-name descname"><span class="pre">stop_requested</span></span><a class="headerlink" href="#ui.dashboard_simple.DashboardSimple.stop_requested" title="Lien vers cette définition">¶</a></dt>
+<dd><p>pyqtSignal(<a href="#id7"><span class="problematic" id="id8">*</span></a>types, name: str = …, revision: int = …, arguments: Sequence = …) -&gt; PYQT_SIGNAL</p>
+<p>types is normally a sequence of individual types.  Each type is either a
+type object or a string that is the name of a C++ type.  Alternatively
+each type could itself be a sequence of types each describing a different
+overloaded signal.
+name is the optional C++ name of the signal.  If it is not specified then
+the name of the class attribute that is bound to the signal is used.
+revision is the optional revision of the signal that is exported to QML.
+If it is not specified then 0 is used.
+arguments is the optional sequence of the names of the signal’s arguments.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ui.dashboard_simple.DashboardSimple.update_graph">
+<span class="sig-name descname"><span class="pre">update_graph</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">capital_history</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ui/dashboard_simple.html#DashboardSimple.update_graph"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ui.dashboard_simple.DashboardSimple.update_graph" title="Lien vers cette définition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<section id="nouveautes-ui-2024">
+<h2>Nouveautés UI (2024)<a class="headerlink" href="#nouveautes-ui-2024" title="Lien vers cette rubrique">¶</a></h2>
+<ul class="simple">
+<li><p>Thème sombre professionnel (voir ui/styles/dark_theme.qss)</p></li>
+<li><p>Widget AccountInfoPanel : affiche solde, PnL, statut bot (avec icône), dernier prix, statut dynamique</p></li>
+<li><p>Affichage du statut bot et du dernier prix mis à jour dès réception de données</p></li>
+<li><p>Message explicite sur le graphique si aucune donnée OHLCV reçue ou colonnes manquantes</p></li>
+<li><dl class="simple">
+<dt>Nouvelle organisation :</dt><dd><ul>
+<li><p>Infos compte/statut à gauche (haut)</p></li>
+<li><p>Positions à gauche (bas)</p></li>
+<li><p>Graphique au centre</p></li>
+<li><p>Contrôles/signaux/risque à droite (onglets)</p></li>
+<li><p>Logs en bas (affichage couleur, niveau, timestamp)</p></li>
+<li><p>Barre d’état pour messages système</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><p>Icônes SVG pour statuts et actions (dossier resources/ à la racine)</p></li>
+</ul>
+</section>
+<section id="nouveau-module-dashboardsimple">
+<h2>Nouveau module : DashboardSimple<a class="headerlink" href="#nouveau-module-dashboardsimple" title="Lien vers cette rubrique">¶</a></h2>
+<ul class="simple">
+<li><p>Mode débutant/synthétique</p></li>
+<li><p>Statut bot (ON/OFF), PnL temps réel, capital, nombre de positions</p></li>
+<li><p>Graphique capital simple</p></li>
+<li><p>Bouton STOP toujours visible</p></li>
+<li><p>Bandeau d’alerte critique</p></li>
+<li><p>Design moderne, dark mode, responsive</p></li>
+</ul>
+<dl class="py class" id="module-0">
+<dt class="sig sig-object py" id="id0">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ui.main_window.</span></span><span class="sig-name descname"><span class="pre">MainWindow</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">logger</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">settings</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">positions_model</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ui/main_window.html#MainWindow"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#id0" title="Lien vers cette définition">¶</a></dt>
+<dd><p>Bases : <code class="xref py py-class docutils literal notranslate"><span class="pre">QMainWindow</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="id9">
+<span class="sig-name descname"><span class="pre">append_log</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">message</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ui/main_window.html#MainWindow.append_log"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#id9" title="Lien vers cette définition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="id10">
+<span class="sig-name descname"><span class="pre">apply_dark_theme</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/ui/main_window.html#MainWindow.apply_dark_theme"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#id10" title="Lien vers cette définition">¶</a></dt>
+<dd><p>Charge la feuille de style sombre personnalisée.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="id11">
+<span class="sig-name descname"><span class="pre">on_settings_reloaded</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/ui/main_window.html#MainWindow.on_settings_reloaded"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#id11" title="Lien vers cette définition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="id12">
+<span class="sig-name descname"><span class="pre">on_worker_finished</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/ui/main_window.html#MainWindow.on_worker_finished"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#id12" title="Lien vers cette définition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id13">
+<span class="sig-name descname"><span class="pre">reload_settings</span></span><a class="headerlink" href="#id13" title="Lien vers cette définition">¶</a></dt>
+<dd><p>pyqtSignal(<a href="#id14"><span class="problematic" id="id15">*</span></a>types, name: str = …, revision: int = …, arguments: Sequence = …) -&gt; PYQT_SIGNAL</p>
+<p>types is normally a sequence of individual types.  Each type is either a
+type object or a string that is the name of a C++ type.  Alternatively
+each type could itself be a sequence of types each describing a different
+overloaded signal.
+name is the optional C++ name of the signal.  If it is not specified then
+the name of the class attribute that is bound to the signal is used.
+revision is the optional revision of the signal that is exported to QML.
+If it is not specified then 0 is used.
+arguments is the optional sequence of the names of the signal’s arguments.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id16">
+<span class="sig-name descname"><span class="pre">start_trading</span></span><a class="headerlink" href="#id16" title="Lien vers cette définition">¶</a></dt>
+<dd><p>pyqtSignal(<a href="#id17"><span class="problematic" id="id18">*</span></a>types, name: str = …, revision: int = …, arguments: Sequence = …) -&gt; PYQT_SIGNAL</p>
+<p>types is normally a sequence of individual types.  Each type is either a
+type object or a string that is the name of a C++ type.  Alternatively
+each type could itself be a sequence of types each describing a different
+overloaded signal.
+name is the optional C++ name of the signal.  If it is not specified then
+the name of the class attribute that is bound to the signal is used.
+revision is the optional revision of the signal that is exported to QML.
+If it is not specified then 0 is used.
+arguments is the optional sequence of the names of the signal’s arguments.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id19">
+<span class="sig-name descname"><span class="pre">stop_trading</span></span><a class="headerlink" href="#id19" title="Lien vers cette définition">¶</a></dt>
+<dd><p>pyqtSignal(<a href="#id20"><span class="problematic" id="id21">*</span></a>types, name: str = …, revision: int = …, arguments: Sequence = …) -&gt; PYQT_SIGNAL</p>
+<p>types is normally a sequence of individual types.  Each type is either a
+type object or a string that is the name of a C++ type.  Alternatively
+each type could itself be a sequence of types each describing a different
+overloaded signal.
+name is the optional C++ name of the signal.  If it is not specified then
+the name of the class attribute that is bound to the signal is used.
+revision is the optional revision of the signal that is exported to QML.
+If it is not specified then 0 is used.
+arguments is the optional sequence of the names of the signal’s arguments.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="id22">
+<span class="sig-name descname"><span class="pre">update_graph</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ui/main_window.html#MainWindow.update_graph"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#id22" title="Lien vers cette définition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="id23">
+<span class="sig-name descname"><span class="pre">update_positions</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">positions</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ui/main_window.html#MainWindow.update_positions"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#id23" title="Lien vers cette définition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="id24">
+<span class="sig-name descname"><span class="pre">update_risk_display</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">risk_metrics</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ui/main_window.html#MainWindow.update_risk_display"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#id24" title="Lien vers cette définition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="id25">
+<span class="sig-name descname"><span class="pre">update_signal_display</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">signal</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ui/main_window.html#MainWindow.update_signal_display"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#id25" title="Lien vers cette définition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class" id="module-1">
+<dt class="sig sig-object py" id="id26">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ui.account_info_panel.</span></span><span class="sig-name descname"><span class="pre">AccountInfoPanel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">parent</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ui/account_info_panel.html#AccountInfoPanel"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#id26" title="Lien vers cette définition">¶</a></dt>
+<dd><p>Bases : <code class="xref py py-class docutils literal notranslate"><span class="pre">QWidget</span></code></p>
+<p>Widget d’informations de compte pour l’application de trading.
+Affiche :</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Solde</p></li>
+<li><p>Profit/Perte</p></li>
+<li><p>Statut du bot (avec icône)</p></li>
+<li><p>Dernier prix</p></li>
+</ul>
+</div></blockquote>
+<dl class="py method">
+<dt class="sig sig-object py" id="id27">
+<span class="sig-name descname"><span class="pre">set_balance</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">balance</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ui/account_info_panel.html#AccountInfoPanel.set_balance"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#id27" title="Lien vers cette définition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="id28">
+<span class="sig-name descname"><span class="pre">set_disconnected</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/ui/account_info_panel.html#AccountInfoPanel.set_disconnected"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#id28" title="Lien vers cette définition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="id29">
+<span class="sig-name descname"><span class="pre">set_last_price</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">price</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ui/account_info_panel.html#AccountInfoPanel.set_last_price"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#id29" title="Lien vers cette définition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="id30">
+<span class="sig-name descname"><span class="pre">set_pnl</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pnl</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ui/account_info_panel.html#AccountInfoPanel.set_pnl"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#id30" title="Lien vers cette définition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="id31">
+<span class="sig-name descname"><span class="pre">set_status</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">status</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ui/account_info_panel.html#AccountInfoPanel.set_status"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#id31" title="Lien vers cette définition">¶</a></dt>
+<dd><p>Met à jour l’icône et le texte du statut du bot.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">bitcoin_scalper</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="web_api.html">Web API (FastAPI)</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Modules</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="config.html">config module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="config.html#gestion-securisee-de-la-configuration">Gestion sécurisée de la configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data_cleaner.html">data_cleaner module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data_ingestor.html">data_ingestor module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dvc_manager.html">dvc_manager module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="feature_engineering.html">feature_engineering module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ml_pipeline.html">ml_pipeline module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="order_algos.html">order_algos module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="risk_management.html">risk_management module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="timescaledb_client.html">timescaledb_client module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="backtesting.html">backtesting module</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2025, Thibault Leray.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="_sources/ui.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

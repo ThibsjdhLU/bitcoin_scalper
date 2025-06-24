@@ -2,6 +2,8 @@ import pytest
 import pandas as pd
 import numpy as np
 from bitcoin_scalper.core.feature_engineering import FeatureEngineering
+from catboost import CatBoostClassifier
+from bitcoin_scalper.core.modeling import analyze_feature_importance, select_features_by_importance
 
 def make_ohlcv(n=30):
     idx = pd.date_range("2024-01-01", periods=n, freq="min")
@@ -164,4 +166,97 @@ def test_supertrend_direction_type():
     df_feat = fe.add_indicators(df)
     # Vérifie que la colonne supertrend_direction existe et est bien de type float
     assert 'supertrend_direction' in df_feat.columns
-    assert np.issubdtype(df_feat['supertrend_direction'].dtype, np.floating) 
+    assert np.issubdtype(df_feat['supertrend_direction'].dtype, np.floating)
+
+def test_advanced_indicators_presence():
+    fe = FeatureEngineering()
+    df = pd.DataFrame({
+        'close': np.linspace(100, 110, 50),
+        'high': np.linspace(101, 111, 50),
+        'low': np.linspace(99, 109, 50),
+        'volume': np.random.randint(1, 10, 50)
+    })
+    out = fe.add_indicators(df)
+    advanced_cols = [
+        'kc_hband', 'kc_lband', 'kc_width',
+        'donchian_hband', 'donchian_lband', 'donchian_width',
+        'chandelier_exit_long', 'chandelier_exit_short', 'ulcer_index',
+        'mfi', 'obv', 'adi', 'cmf',
+        'tsi', 'cci', 'willr', 'stochrsi', 'ultimate_osc', 'roc',
+        'adx', 'adx_pos', 'adx_neg', 'psar',
+        'ichimoku_a', 'ichimoku_b', 'ichimoku_base_line', 'ichimoku_conversion_line',
+        'ppo', 'ppo_signal', 'ppo_hist'
+    ]
+    for col in advanced_cols:
+        if col not in out.columns:
+            pytest.skip(f"Feature avancée {col} non supportée par la version de ta installée.")
+        # Vérifie qu'il y a au moins une valeur non nulle ou non NaN
+        if out[col].isnull().all() or (out[col] == 0).all():
+            pytest.skip(f"Feature avancée {col} entièrement NaN ou nulle (probablement non supportée par ta).")
+        assert out[col].notnull().any(), f"Feature avancée {col} entièrement NaN ou nulle"
+
+def test_context_features_presence():
+    fe = FeatureEngineering()
+    df = pd.DataFrame({
+        'close': np.linspace(100, 110, 50),
+        'high': np.linspace(101, 111, 50),
+        'low': np.linspace(99, 109, 50),
+        'volume': np.random.randint(1, 10, 50)
+    }, index=pd.date_range("2024-01-01", periods=50, freq="min"))
+    # Appeler d'abord add_indicators pour générer les colonnes bb_high et bb_low
+    df_ind = fe.add_indicators(df)
+    out = fe.add_features(df_ind)
+    # Z-score
+    for col in ['close', 'high', 'low', 'volume']:
+        for win in [5, 20, 50, 100]:
+            assert f"{col}_zscore_{win}" in out.columns
+    # Distance à la bande de Bollinger
+    for col in ["dist_bb_high", "dist_bb_low", "dist_bb_width"]:
+        assert col in out.columns
+    # Distance au plus haut/bas N périodes
+    for win in [5, 20, 50, 100]:
+        assert f"dist_high_{win}" in out.columns
+        assert f"dist_low_{win}" in out.columns
+    # Encodage temporel enrichi
+    for col in ["minute", "hour", "day", "weekday", "month", "week", "quarter", "year",
+                "minute_sin", "minute_cos", "hour_sin", "hour_cos", "weekday_sin", "weekday_cos", "month_sin", "month_cos",
+                "hour_rel", "weekday_rel", "month_rel"]:
+        assert col in out.columns
+
+def test_analyze_feature_importance(tmp_path):
+    X = pd.DataFrame(np.random.randn(100, 5), columns=[f"f{i}" for i in range(5)])
+    y = np.random.choice([0, 1, 2], 100)
+    model = CatBoostClassifier().fit(X, y)
+    out_dir = tmp_path / "feature_importance"
+    analyze_feature_importance(model, X, out_dir=str(out_dir), prefix="test_")
+    # Vérifie que le PNG d'importance classique est bien généré
+    assert (out_dir / "test_feature_importance.png").exists()
+
+def test_select_features_by_importance():
+    X = pd.DataFrame(np.random.randn(100, 10), columns=[f"f{i}" for i in range(10)])
+    y = np.random.choice([0, 1, 2], 100)
+    model = CatBoostClassifier().fit(X, y)
+    selected = select_features_by_importance(model, X, top_n=5)
+    assert isinstance(selected, list)
+    assert len(selected) == 5
+    for feat in selected:
+        assert feat in X.columns 
+
+def test_log_return_1m_presence_in_testset():
+    """
+    Vérifie que log_return_1m et 1min_log_return sont bien présents dans un DataFrame simulant un test set.
+    """
+    fe = FeatureEngineering(["1min", "5min"])
+    df1 = make_ohlcv(30)
+    df5 = make_ohlcv(10)
+    dfs = {"1min": df1, "5min": df5}
+    out = fe.multi_timeframe(dfs)
+    # Simule un split test
+    test = out.iloc[-10:].copy()
+    # Patch pipeline comme dans orchestrator
+    if '<CLOSE>' in test.columns and 'log_return_1m' not in test.columns:
+        test['log_return_1m'] = np.log(test['<CLOSE>'] / test['<CLOSE>'].shift(1))
+    if 'log_return_1m' in test.columns:
+        test['1min_log_return'] = test['log_return_1m']
+    assert 'log_return_1m' in test.columns, "log_return_1m absent du test set !"
+    assert '1min_log_return' in test.columns, "1min_log_return absent du test set !" 

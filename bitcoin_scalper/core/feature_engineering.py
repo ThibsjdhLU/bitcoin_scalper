@@ -1,9 +1,10 @@
 import pandas as pd
 import pandas_ta as ta  # Réactivation : nécessaire pour SuperTrend
 import numpy as np
-from ta.momentum import RSIIndicator
-from ta.trend import MACD, EMAIndicator, SMAIndicator
-from ta.volatility import BollingerBands, AverageTrueRange
+from ta.momentum import RSIIndicator, TSIIndicator, StochRSIIndicator, WilliamsRIndicator, UltimateOscillator, ROCIndicator
+from ta.trend import MACD, EMAIndicator, SMAIndicator, ADXIndicator, PSARIndicator, IchimokuIndicator, CCIIndicator
+from ta.volatility import BollingerBands, AverageTrueRange, KeltnerChannel, DonchianChannel, UlcerIndex
+from ta.volume import MFIIndicator, OnBalanceVolumeIndicator, AccDistIndexIndicator, ChaikinMoneyFlowIndicator
 # from ta.trend import SuperTrendIndicator # Suppression : SuperTrendIndicator n'existe pas dans ta
 from typing import List, Dict, Any, Optional
 import logging
@@ -47,7 +48,7 @@ class FeatureEngineering:
 
     def add_indicators(self, df: pd.DataFrame, price_col: str = "close", high_col: str = "high", low_col: str = "low", volume_col: str = "volume", prefix: str = "") -> pd.DataFrame:
         """
-        Ajoute les indicateurs techniques principaux au DataFrame OHLCV.
+        Ajoute les indicateurs techniques principaux et avancés au DataFrame OHLCV.
         Sécurité :
             - Tous les indicateurs sont décalés d'une bougie (shift(1)) pour éviter tout look-ahead bias.
             - VWAP est calculé de façon cumulative et décalée.
@@ -139,20 +140,115 @@ class FeatureEngineering:
             if col in df.columns:
                 df[col] = df[col].shift(1)
         # 3. Calcul des features dérivées UNIQUEMENT à partir des colonnes déjà décalées
-        df[f"{prefix}close_sma_3"] = df[f"{prefix}close"].rolling(window=3, min_periods=1).mean() if f"{prefix}close" in df.columns else df[price_col].shift(1).rolling(window=3, min_periods=1).mean()
+        if f"{prefix}close" in df.columns:
+            df[f"{prefix}close_sma_3"] = df[f"{prefix}close"].rolling(window=3, min_periods=1).mean().shift(1)
+        else:
+            df[f"{prefix}close_sma_3"] = df[price_col].shift(1).rolling(window=3, min_periods=1).mean().shift(1)
         if f"{prefix}atr" in df.columns:
             df[f"{prefix}atr_sma_20"] = df[f"{prefix}atr"].rolling(window=20, min_periods=1).mean()
         else:
             df[f"{prefix}atr_sma_20"] = np.nan
         # 4. Ne jamais re-shifter les features dérivées !
         # Toutes les features sont désormais temporellement sûres.
+        # --- Indicateurs avancés (volatilité, volume, momentum, trend) ---
+        try:
+            # Volatilité
+            kc = KeltnerChannel(df[high_col], df[low_col], df[price_col], window=20, window_atr=10, fillna=True)
+            df[f"{prefix}kc_hband"] = kc.keltner_channel_hband()
+            df[f"{prefix}kc_lband"] = kc.keltner_channel_lband()
+            df[f"{prefix}kc_width"] = kc.keltner_channel_wband()
+            dc = DonchianChannel(df[high_col], df[low_col], df[price_col], window=20, fillna=True)
+            df[f"{prefix}donchian_hband"] = dc.donchian_channel_hband()
+            df[f"{prefix}donchian_lband"] = dc.donchian_channel_lband()
+            df[f"{prefix}donchian_width"] = dc.donchian_channel_wband()
+            try:
+                from ta.volatility import ChandelierExit
+                ce = ChandelierExit(df[high_col], df[low_col], df[price_col], window=22, window_atr=22, fillna=True)
+                df[f"{prefix}chandelier_exit_long"] = ce.chandelier_exit_long()
+                df[f"{prefix}chandelier_exit_short"] = ce.chandelier_exit_short()
+            except ImportError:
+                logger.warning("ChandelierExit non disponible dans ta.volatility pour cette version de ta.")
+                df[f"{prefix}chandelier_exit_long"] = np.nan
+                df[f"{prefix}chandelier_exit_short"] = np.nan
+            except Exception as e:
+                logger.warning(f"Erreur lors du calcul de ChandelierExit : {e}")
+                df[f"{prefix}chandelier_exit_long"] = np.nan
+                df[f"{prefix}chandelier_exit_short"] = np.nan
+            ui = UlcerIndex(df[price_col], window=14, fillna=True)
+            df[f"{prefix}ulcer_index"] = ui.ulcer_index()
+            # Volume
+            mfi = MFIIndicator(df[high_col], df[low_col], df[price_col], df[volume_col], window=14, fillna=True)
+            df[f"{prefix}mfi"] = mfi.money_flow_index()
+            obv = OnBalanceVolumeIndicator(df[price_col], df[volume_col], fillna=True)
+            df[f"{prefix}obv"] = obv.on_balance_volume()
+            adi = AccDistIndexIndicator(df[high_col], df[low_col], df[price_col], df[volume_col], fillna=True)
+            df[f"{prefix}adi"] = adi.acc_dist_index()
+            cmf = ChaikinMoneyFlowIndicator(df[high_col], df[low_col], df[price_col], df[volume_col], window=20, fillna=True)
+            df[f"{prefix}cmf"] = cmf.chaikin_money_flow()
+            # Momentum
+            tsi = TSIIndicator(df[price_col], window_slow=25, window_fast=13, fillna=True)
+            df[f"{prefix}tsi"] = tsi.tsi()
+            cci = CCIIndicator(df[high_col], df[low_col], df[price_col], window=20, fillna=True)
+            df[f"{prefix}cci"] = cci.cci()
+            willr = WilliamsRIndicator(df[high_col], df[low_col], df[price_col], lbp=14, fillna=True)
+            df[f"{prefix}willr"] = willr.williams_r()
+            stochrsi = StochRSIIndicator(df[price_col], window=14, smooth1=3, smooth2=3, fillna=True)
+            df[f"{prefix}stochrsi"] = stochrsi.stochrsi()
+            uo = UltimateOscillator(df[high_col], df[low_col], df[price_col], window1=7, window2=14, window3=28, fillna=True)
+            df[f"{prefix}ultimate_osc"] = uo.ultimate_oscillator()
+            roc = ROCIndicator(df[price_col], window=12, fillna=True)
+            df[f"{prefix}roc"] = roc.roc()
+            # Trend
+            adx = ADXIndicator(df[high_col], df[low_col], df[price_col], window=14, fillna=True)
+            df[f"{prefix}adx"] = adx.adx()
+            df[f"{prefix}adx_pos"] = adx.adx_pos()
+            df[f"{prefix}adx_neg"] = adx.adx_neg()
+            psar = PSARIndicator(df[high_col], df[low_col], df[price_col], step=0.02, max_step=0.2, fillna=True)
+            df[f"{prefix}psar"] = psar.psar()
+            ichimoku = IchimokuIndicator(df[high_col], df[low_col], window1=9, window2=26, window3=52, fillna=True)
+            df[f"{prefix}ichimoku_a"] = ichimoku.ichimoku_a()
+            df[f"{prefix}ichimoku_b"] = ichimoku.ichimoku_b()
+            df[f"{prefix}ichimoku_base_line"] = ichimoku.ichimoku_base_line()
+            df[f"{prefix}ichimoku_conversion_line"] = ichimoku.ichimoku_conversion_line()
+            try:
+                from ta.trend import PPOIndicator
+                ppo = PPOIndicator(df[price_col], window_slow=26, window_fast=12, window_sign=9, fillna=True)
+                df[f"{prefix}ppo"] = ppo.ppo()
+                df[f"{prefix}ppo_signal"] = ppo.ppo_signal()
+                df[f"{prefix}ppo_hist"] = ppo.ppo_hist()
+            except ImportError:
+                logger.warning("PPOIndicator non disponible dans ta.trend pour cette version de ta.")
+                df[f"{prefix}ppo"] = np.nan
+                df[f"{prefix}ppo_signal"] = np.nan
+                df[f"{prefix}ppo_hist"] = np.nan
+        except Exception as e:
+            logger.warning(f"Erreur lors du calcul des indicateurs avancés : {e}")
+        # Décalage immédiat de tous les indicateurs avancés (sécurité temporelle)
+        advanced_cols = [
+            f"{prefix}kc_hband", f"{prefix}kc_lband", f"{prefix}kc_width",
+            f"{prefix}donchian_hband", f"{prefix}donchian_lband", f"{prefix}donchian_width",
+            f"{prefix}chandelier_exit_long", f"{prefix}chandelier_exit_short", f"{prefix}ulcer_index",
+            f"{prefix}mfi", f"{prefix}obv", f"{prefix}adi", f"{prefix}cmf",
+            f"{prefix}tsi", f"{prefix}cci", f"{prefix}willr", f"{prefix}stochrsi", f"{prefix}ultimate_osc", f"{prefix}roc",
+            f"{prefix}adx", f"{prefix}adx_pos", f"{prefix}adx_neg", f"{prefix}psar",
+            f"{prefix}ichimoku_a", f"{prefix}ichimoku_b", f"{prefix}ichimoku_base_line", f"{prefix}ichimoku_conversion_line",
+            f"{prefix}ppo", f"{prefix}ppo_signal", f"{prefix}ppo_hist"
+        ]
+        for col in advanced_cols:
+            if col in df.columns:
+                df[col] = df[col].shift(1)
         return df
 
     def add_features(self, df: pd.DataFrame, price_col: str = "close", volume_col: str = "volume", prefix: str = "") -> pd.DataFrame:
         """
-        Ajoute des features dérivées (retours, volatilité, ratios, etc).
+        Ajoute des features dérivées (retours, volatilité, ratios, z-score, distances, encodages temporels, etc).
         Sécurité :
             - Toutes les features sont décalées d'une bougie (shift(1)) pour éviter tout look-ahead bias.
+        :param df: DataFrame d'entrée
+        :param price_col: Colonne de prix (par défaut 'close')
+        :param volume_col: Colonne de volume (par défaut 'volume')
+        :param prefix: Préfixe optionnel pour les colonnes
+        :return: DataFrame enrichi
         """
         df = df.copy()
         required_cols = [price_col, volume_col]
@@ -161,14 +257,62 @@ class FeatureEngineering:
         # Retours log et simples
         df[f"{prefix}return"] = df[price_col].pct_change().shift(1)
         df[f"{prefix}log_return"] = np.log(df[price_col] / df[price_col].shift(1)).shift(1)
+        # Ajout harmonisé de log_return_1m (pour compatibilité labeling et backtest)
+        if prefix == "1min_" or (prefix == "" and price_col in ["close", "<CLOSE>"]):
+            if 'log_return_1m' not in df.columns:
+                if price_col in df.columns:
+                    df['log_return_1m'] = np.log(df[price_col] / df[price_col].shift(1))
         # Volatilité rolling
         df[f"{prefix}volatility_20"] = df[f"{prefix}return"].rolling(window=20, min_periods=1).std().shift(1)
         # Ratio volume/prix (pas besoin de shift)
         df[f"{prefix}vol_price_ratio"] = df[volume_col] / (df[price_col] + 1e-9)
+        # --- Z-score généralisé ---
+        for col in [price_col, "high", "low", volume_col]:
+            if col in df.columns:
+                for win in [5, 20, 50, 100]:
+                    mean = df[col].rolling(window=win, min_periods=1).mean()
+                    std = df[col].rolling(window=win, min_periods=1).std() + 1e-9
+                    df[f"{prefix}{col}_zscore_{win}"] = ((df[col] - mean) / std).shift(1)
+        # --- Distance à la bande de Bollinger ---
+        if f"{prefix}bb_high" in df.columns and f"{prefix}bb_low" in df.columns:
+            df[f"{prefix}dist_bb_high"] = (df[price_col] - df[f"{prefix}bb_high"]).shift(1)
+            df[f"{prefix}dist_bb_low"] = (df[price_col] - df[f"{prefix}bb_low"]).shift(1)
+            df[f"{prefix}dist_bb_width"] = (df[f"{prefix}bb_high"] - df[f"{prefix}bb_low"]).shift(1)
+        # --- Distance au plus haut/bas N périodes ---
+        for win in [5, 20, 50, 100]:
+            if price_col in df.columns:
+                df[f"{prefix}dist_high_{win}"] = (df[price_col] - df[price_col].rolling(window=win, min_periods=1).max()).shift(1)
+                df[f"{prefix}dist_low_{win}"] = (df[price_col] - df[price_col].rolling(window=win, min_periods=1).min()).shift(1)
+        # --- Encodage temporel enrichi ---
+        if hasattr(df.index, 'hour'):
+            df[f"{prefix}minute"] = df.index.minute
+            df[f"{prefix}hour"] = df.index.hour
+            df[f"{prefix}day"] = df.index.day
+            df[f"{prefix}weekday"] = df.index.weekday
+            df[f"{prefix}month"] = df.index.month
+            df[f"{prefix}week"] = df.index.isocalendar().week.astype(int) if hasattr(df.index, 'isocalendar') else df.index.week
+            df[f"{prefix}quarter"] = df.index.quarter if hasattr(df.index, 'quarter') else ((df.index.month-1)//3+1)
+            df[f"{prefix}year"] = df.index.year
+            # Encodage cyclique
+            df[f"{prefix}minute_sin"] = np.sin(2 * np.pi * df.index.minute / 60)
+            df[f"{prefix}minute_cos"] = np.cos(2 * np.pi * df.index.minute / 60)
+            df[f"{prefix}hour_sin"] = np.sin(2 * np.pi * df.index.hour / 24)
+            df[f"{prefix}hour_cos"] = np.cos(2 * np.pi * df.index.hour / 24)
+            df[f"{prefix}weekday_sin"] = np.sin(2 * np.pi * df.index.weekday / 7)
+            df[f"{prefix}weekday_cos"] = np.cos(2 * np.pi * df.index.weekday / 7)
+            df[f"{prefix}month_sin"] = np.sin(2 * np.pi * (df.index.month-1) / 12)
+            df[f"{prefix}month_cos"] = np.cos(2 * np.pi * (df.index.month-1) / 12)
+            # Position relative dans la journée/semaine/mois
+            df[f"{prefix}hour_rel"] = df.index.hour / 23
+            df[f"{prefix}weekday_rel"] = df.index.weekday / 6
+            df[f"{prefix}month_rel"] = (df.index.month-1) / 11
         return df
 
     def multi_timeframe(self, dfs: Dict[str, pd.DataFrame], price_col: str = "<CLOSE>", high_col: str = "<HIGH>", low_col: str = "<LOW>", volume_col: str = "<TICKVOL>") -> pd.DataFrame:
         """Fusionne et concatène les features multi-timeframe (clé = timeframe, valeur = DataFrame OHLCV)."""
+        if not dfs or len(dfs) == 0:
+            # Retourne un DataFrame vide indexé sur rien
+            return pd.DataFrame()
         base = None
         # S'assurer que le timeframe de base (1min) est traité en premier si possible
         timeframes_ordered = sorted(dfs.keys())
@@ -177,48 +321,38 @@ class FeatureEngineering:
 
         for tf in timeframes_ordered:
             df = dfs[tf]
-            # Appliquer add_indicators et add_features pour chaque timeframe
-            # add_features est maintenant appelé DANS add_indicators et gère le préfixage
+            # Auto-mapping des colonnes si elles sont en minuscules (cas test)
+            col_map = {
+                "open": price_col.replace("<CLOSE>", "<OPEN>").replace("close", "open"),
+                "high": high_col,
+                "low": low_col,
+                "close": price_col,
+                "volume": volume_col,
+                "tickvol": volume_col if volume_col == "tickvol" else "tickvol"
+            }
+            # Si les colonnes sont en minuscules, on les renomme pour matcher l'API
+            if set(["open", "high", "low", "close", "volume"]).issubset(df.columns):
+                df = df.rename(columns=col_map)
+            # Appliquer add_indicators puis add_features pour chaque timeframe
             df_tf_features = self.add_indicators(df.copy(), price_col, high_col, low_col, volume_col, prefix=f"{tf}_")
-
+            df_tf_features = self.add_features(df_tf_features, price_col=f"{tf}_close" if f"{tf}_close" in df_tf_features.columns else price_col, volume_col=f"{tf}_volume" if f"{tf}_volume" in df_tf_features.columns else volume_col, prefix=f"{tf}_")
             if base is None:
                 base = df_tf_features
             else:
-                # Fusion sur l'index (timestamp) en utilisant un left join pour conserver l'index de base
-                # Conserver uniquement les colonnes préfixées du dataframe à joindre, sauf l'index
-                # Exclure les colonnes OHLCV de base si elles sont préfixées et déjà dans 'base'
                 cols_to_join = [col for col in df_tf_features.columns if col.startswith(f"{tf}_") and col != df_tf_features.index.name]
-
-                # S'assurer que les colonnes OHLCV originales non préfixées du dataframe joint ne sont pas incluses
                 original_ohlcv_cols = [price_col, high_col, low_col, volume_col, "tickvol"]
                 cols_to_join = [col for col in cols_to_join if col not in original_ohlcv_cols]
-
                 base = base.join(df_tf_features[cols_to_join], how="left")
 
-        # Remplir les NaN potentiels introduits par le join (pour les timestamps 1min sans correspondance exacte dans les autres timeframes)
-        # Une simple ffill ou bfill pourrait suffire pour les features des timeframes > 1min
-        # base = base.ffill().bfill() # Optionnel : remplir les NaN après le join
-
-        # Après la jointure de tous les timeframes, s'assurer que les colonnes OHLCV 1min dans 'base'
-        # sont bien préfixées et supprimer les éventuelles colonnes OHLCV originales non préfixées.
-        # Ceci devrait être déjà géré par l'application du préfixe dans add_indicators et la logique ci-dessus,
-        # mais une vérification finale peut être ajoutée si nécessaire.
-
-        # La suppression des colonnes OHLCV originales sans préfixe était déjà présente, la laisser
-        # Modifier la logique de suppression pour préserver les colonnes OHLCV 1min préfixées
-        cols_to_drop_original = [price_col, high_col, low_col, volume_col] # tickvol est géré à part si ajouté
-        # Ajouter 'tickvol' seulement si ce n'est pas le volume_col original et qu'il existe.
+        if base is None:
+            return pd.DataFrame()
+        # Suppression des colonnes OHLCV originales si leur version 1min_ préfixée existe
+        cols_to_drop_original = [price_col, high_col, low_col, volume_col]
         if 'tickvol' in base.columns and 'tickvol' not in cols_to_drop_original:
-             cols_to_drop_original.append('tickvol')
-
-        # Nouvelle logique de suppression : Supprimer les colonnes OHLCV originales UNIQUEMENT si leur version 1min_ préfixée existe.
-        # Cela garantit que si 1min_OHLCV est créé, l'original non préfixé est supprimé pour éviter la confusion.
-        # Si 1min_OHLCV n'est pas créé (ce qui ne devrait pas arriver pour tf='1min'), on garde l'original.
+            cols_to_drop_original.append('tickvol')
         cols_to_drop_if_1min_prefixed_exists = [price_col, high_col, low_col, volume_col, "tickvol"]
         final_cols_to_drop = [col for col in cols_to_drop_if_1min_prefixed_exists if f"1min_{col}" in base.columns and col in base.columns]
-
         base = base.drop(columns=final_cols_to_drop, errors='ignore')
-
         return base
 
 def test_add_indicators_all_features():
@@ -355,11 +489,9 @@ def test_supertrend_typing():
 
 def add_features(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Enrichit un DataFrame minute BTC avec toutes les features financières et temporelles requises pour le ML.
-
+    Enrichit un DataFrame minute BTC avec toutes les features financières et temporelles requises pour le ML, dont log_return_1m systématique.
     Toutes les features sont calculées de façon causale (aucune fuite d'information vers le futur).
     Les NaN générés par les rollings sont explicitement traqués et loggés.
-
     :param df: DataFrame prétraité, indexé par datetime UTC, colonnes : OPEN, HIGH, LOW, CLOSE, TICKVOL
     :return: DataFrame enrichi avec les features demandées
     """
@@ -372,6 +504,8 @@ def add_features(df: pd.DataFrame) -> pd.DataFrame:
     logger.debug("Prix moyens calculés : HL2, HLC3, OC2.")
     # 2. Retours log
     df['log_return_1m'] = np.log(df['<CLOSE>'] / df['<CLOSE>'].shift(1))
+    # Alias pour compatibilité orchestrator/backtest
+    df['1min_log_return'] = df['log_return_1m']
     for w in [3, 5, 15]:
         df[f'log_return_{w}m'] = np.log(df['<CLOSE>'] / df['<CLOSE>'].shift(w))
     logger.debug("Retours log calculés sur 1, 3, 5, 15 minutes.")

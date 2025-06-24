@@ -6,13 +6,14 @@ import pandas as pd
 import numpy as np
 from bitcoin_scalper.core.data_loading import load_minute_csv
 from bitcoin_scalper.core.feature_engineering import FeatureEngineering
-from bitcoin_scalper.core.labeling import generate_labels
+from bitcoin_scalper.core.labeling import generate_labels, generate_q_values
 from bitcoin_scalper.core.balancing import balance_by_block
 from bitcoin_scalper.core.splitting import split_dataset
-from bitcoin_scalper.core.modeling import train_model, predict
+from bitcoin_scalper.core.modeling import train_model, predict, train_qvalue_model
 from bitcoin_scalper.core.evaluation import evaluate_classification, evaluate_financial, plot_pnl_curve
 from bitcoin_scalper.core.export import save_objects, load_objects
 from bitcoin_scalper.core.inference import inference
+import bitcoin_scalper.core.ml_orchestrator as ml_orch
 
 # Logging global
 logger = logging.getLogger("bitcoin_scalper.orchestrator")
@@ -44,12 +45,24 @@ def main():
     parser.add_argument('--export', action='store_true', help='Sauvegarder les objets finaux')
     parser.add_argument('--inference', action='store_true', help='Effectuer l\'inférence sur le test set')
     parser.add_argument('--plot', action='store_true', help='Tracer la courbe de PnL')
+    parser.add_argument('--fill_missing', action='store_true', help='Active le comblement automatique des trous temporels (ffill)')
+    parser.add_argument('--qvalue', action='store_true', help='Utiliser la régression Q-value (expected return net) au lieu de la classification directionnelle')
+    parser.add_argument('--pipeline', default='ml', choices=['ml', 'tuning', 'backtest', 'rl', 'stacking', 'hybrid'], help='Pipeline ML à exécuter')
     args = parser.parse_args()
 
     try:
         # 1. Chargement et nettoyage des données 1 minute
         logger.info('Chargement et nettoyage du CSV minute...')
         df_1min = load_minute_csv(args.csv, report_missing="rapport_trous_temporals.txt")
+        if args.fill_missing:
+            logger.info('Comblement automatique des trous temporels (réindexation 1min + ffill)...')
+            full_index = pd.date_range(df_1min.index.min(), df_1min.index.max(), freq='1min', tz=df_1min.index.tz)
+            missing_before = full_index.difference(df_1min.index)
+            if len(missing_before) > 0:
+                logger.warning(f"{len(missing_before)} lignes manquantes détectées, application du ffill...")
+            df_1min = df_1min.reindex(full_index)
+            df_1min = df_1min.ffill()
+            logger.info(f"Après comblement : {df_1min.shape[0]} lignes, {df_1min.isna().sum().sum()} valeurs NaN restantes.")
         df_1min.to_pickle('artf_data_cleaned_1min.pkl')
 
         # Agrégation des données en 5 minutes
@@ -75,26 +88,39 @@ def main():
         df_feat = fe.multi_timeframe(dfs)
         df_feat.to_pickle('artf_features.pkl')
 
-        # 3. Labeling (sur les données 1min, après le join)
-        logger.info('Labeling...')
-        # Assurez-vous que les labels sont générés sur le dataframe de base (1min) avant le merge
-        # ou que le merge est fait de manière à conserver l'index 1min
-        # Pour l'instant, on génère les labels sur df_feat (qui a l'index 1min)
-        # et on s'assure que les colonnes OHLCV 1min sont présentes pour le labeling
-        required_label_cols = ['1min_<CLOSE>', '1min_<HIGH>', '1min_<LOW>']
-        if not all(col in df_feat.columns for col in required_label_cols):
-             logger.error("Colonnes OHLCV 1min manquantes pour le labeling après feature engineering multi-timeframe.")
-             sys.exit(1)
+        # Calculer log_return_1m si absent ou mal calculé
+        if '<CLOSE>' in df_feat.columns and 'log_return_1m' not in df_feat.columns:
+            df_feat['log_return_1m'] = np.log(df_feat['<CLOSE>'] / df_feat['<CLOSE>'].shift(1))
+        # S'assurer que 1min_log_return est bien un alias de log_return_1m
+        if 'log_return_1m' in df_feat.columns:
+            df_feat['1min_log_return'] = df_feat['log_return_1m']
+        logger.info(f"Colonnes disponibles avant labeling : {df_feat.columns.tolist()}")
 
-        labels = generate_labels(df_feat, horizon=args.label_horizon, k=args.label_k)
-        df_feat['label'] = labels
-        df_feat = df_feat.dropna(subset=['label'])
-        df_feat.to_pickle('artf_labeled.pkl')
+        # 3. Labeling ou Q-value
+        if args.qvalue:
+            logger.info('Génération des Q-values (expected return net)...')
+            q_df = generate_q_values(df_feat, horizon=args.label_horizon, fee=0.001, spread=0.0005, slippage=0.0002)
+            df_feat = pd.concat([df_feat, q_df], axis=1)
+            df_feat = df_feat.dropna(subset=['q_buy', 'q_sell', 'q_hold'])
+            df_feat.to_pickle('artf_qvalues.pkl')
+        else:
+            logger.info('Labeling...')
+            required_label_cols = ['1min_<CLOSE>', '1min_<HIGH>', '1min_<LOW>']
+            if not all(col in df_feat.columns for col in required_label_cols):
+                logger.error("Colonnes OHLCV 1min manquantes pour le labeling après feature engineering multi-timeframe.")
+                sys.exit(1)
+            labels = generate_labels(df_feat, horizon=args.label_horizon, k=args.label_k)
+            df_feat['label'] = labels
+            df_feat = df_feat.dropna(subset=['label'])
+            df_feat.to_pickle('artf_labeled.pkl')
 
-        # 4. Balancing
-        logger.info('Balancing...')
-        df_bal = balance_by_block(df_feat, label_col='label', block_duration=args.block_duration, min_block_size=args.min_block_size)
-        df_bal.to_pickle('artf_balanced.pkl')
+        # 4. Balancing (seulement pour classification)
+        if not args.qvalue:
+            logger.info('Balancing...')
+            df_bal = balance_by_block(df_feat, label_col='label', block_duration=args.block_duration, min_block_size=args.min_block_size)
+            df_bal.to_pickle('artf_balanced.pkl')
+        else:
+            df_bal = df_feat
 
         # 5. Splitting
         logger.info('Splitting...')
@@ -110,38 +136,40 @@ def main():
         val.to_pickle('artf_val.pkl')
         test.to_pickle('artf_test.pkl')
 
-        # 6. Modeling
-        logger.info('Modeling...')
-        # Supprimer la colonne 'label' pour le modeling
-        X_train = train.drop(columns=['label'])
-        y_train = train['label']
-        X_val = val.drop(columns=['label'])
-        y_val = val['label']
-        X_test = test.drop(columns=['label'])
-        y_test = test['label']
+        # Après le split, garantir la présence de log_return_1m et 1min_log_return dans chaque split
+        for split_name, split_df in zip(['train', 'val', 'test'], [train, val, test]):
+            if 'log_return_1m' not in split_df.columns and '<CLOSE>' in split_df.columns:
+                split_df['log_return_1m'] = np.log(split_df['<CLOSE>'] / split_df['<CLOSE>'].shift(1))
+            if 'log_return_1m' in split_df.columns:
+                split_df['1min_log_return'] = split_df['log_return_1m']
+            else:
+                logger.warning(f"log_return_1m absent dans le split {split_name} !")
+        # Réaffecter les splits corrigés
+        train, val, test = [df for df in [train, val, test]]
+        logger.info(f"Présence de log_return_1m et 1min_log_return dans splits : train={('log_return_1m' in train.columns and '1min_log_return' in train.columns)}, val={('log_return_1m' in val.columns and '1min_log_return' in val.columns)}, test={('log_return_1m' in test.columns and '1min_log_return' in test.columns)}")
 
-        model = train_model(X_train, y_train, X_val, y_val, method=args.tuning, early_stopping_rounds=args.early_stopping_rounds)
-
-        # 7. Evaluation
-        logger.info('Evaluation...')
-        y_pred = predict(model, X_test)
-
-        class_metrics = evaluate_classification(y_test.values, y_pred)
-        print('--- Classification report ---')
-        print(class_metrics['classification_report'])
-
-        # PnL/Sharpe
-        # Utiliser la colonne de retour log du timeframe 1min pour le calcul du PnL
-        returns_col = '1min_log_return' # Le nom de la colonne sera préfixé par le timeframe
-        if returns_col in X_test.columns:
-            returns = X_test[returns_col].values
+        # --- Orchestration dynamique selon le pipeline choisi ---
+        if args.pipeline == 'ml':
+            logger.info('Exécution du pipeline ML classique...')
+            ml_orch.run_ml_pipeline(df_bal, label_col='label', out_dir='ml_reports')
+        elif args.pipeline == 'tuning':
+            logger.info('Exécution du pipeline tuning...')
+            ml_orch.run_tuning_pipeline(df_bal, label_col='label', out_dir='tuning_reports')
+        elif args.pipeline == 'backtest':
+            logger.info('Exécution du pipeline backtest...')
+            ml_orch.run_backtest_pipeline(df_bal, signal_col='label', price_col='<CLOSE>', out_dir='backtest_reports')
+        elif args.pipeline == 'rl':
+            logger.info('Exécution du pipeline RL...')
+            ml_orch.run_rl_pipeline(df_bal, out_dir='rl_reports')
+        elif args.pipeline == 'stacking':
+            logger.info('Exécution du pipeline stacking...')
+            ml_orch.run_stacking_pipeline(df_bal, label_col='label', out_dir='stacking_reports')
+        elif args.pipeline == 'hybrid':
+            logger.info('Exécution du pipeline hybrid...')
+            ml_orch.run_hybrid_strategy_pipeline(df_bal, out_dir='hybrid_reports')
         else:
-            logger.warning(f"Colonne de retour log 1min ({returns_col}) non trouvée dans X_test. Calcul du PnL basé sur des retours nuls.")
-            returns = np.zeros_like(y_pred)
-
-        fin_metrics = evaluate_financial(y_pred, returns, index=X_test.index)
-        print('--- Financial metrics ---')
-        print({k: v for k, v in fin_metrics.items() if k != 'pnl_cum_curve'})
+            logger.error(f"Pipeline inconnu : {args.pipeline}")
+            sys.exit(1)
 
         if args.plot:
             logger.info('Tracé de la courbe de PnL...')

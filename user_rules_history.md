@@ -141,3 +141,5 @@ Ce fichier consigne chaque action majeure réalisée sur le projet (création, m
 - Automatisation de la suppression des colonnes ayant >10% de NaN dans le train avant l'entraînement ML, avec log de la liste des colonnes supprimées et des features finales conservées.
 - Automatisation du décalage du début du train à la première date où toutes les features sont valides (pas de NaN), avec log de la date de début effective et du nombre de lignes ignorées, dans ml_orchestrator.py.
 - Création d'une fiche d'installation détaillée pour le projet Bitcoin Scalper sous Windows (docs/source/installation_windows.rst) et ajout à la documentation Sphinx, afin de faciliter l'onboarding des utilisateurs Windows et garantir la portabilité du projet.
+
+- Modification de l'URL du serveur MT5 dans tous les modules clients (export_mt5_btc_history.py, trading_worker.py, main.py, web/api.py, core/data_ingestor.py) pour pointer vers http://192.168.1.157:8000, afin d'assurer la connexion correcte au serveur REST MT5 sur le réseau local.

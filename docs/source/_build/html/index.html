@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+
+<html lang="fr" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>bitcoin_scalper documentation &#8212; Documentation bitcoin_scalper 1.0</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=27fed22d" />
+    <script src="_static/documentation_options.js?v=7a28dfa3"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/translations.js?v=e6b791cb"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Recherche" href="search.html" />
+    <link rel="next" title="Web API (FastAPI)" href="web_api.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="bitcoin-scalper-documentation">
+<h1>bitcoin_scalper documentation<a class="headerlink" href="#bitcoin-scalper-documentation" title="Lien vers cette rubrique">¶</a></h1>
+<p>Add your content using <code class="docutils literal notranslate"><span class="pre">reStructuredText</span></code> syntax. See the
+<a class="reference external" href="https://www.sphinx-doc.org/en/master/usage/restructuredtext/index.html">reStructuredText</a>
+documentation for details.</p>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="web_api.html">Web API (FastAPI)</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="web_api.html#endpoints-principaux">Endpoints principaux</a></li>
+<li class="toctree-l2"><a class="reference internal" href="web_api.html#securite">Sécurité</a></li>
+<li class="toctree-l2"><a class="reference internal" href="web_api.html#securite-des-secrets">Sécurité des secrets</a></li>
+<li class="toctree-l2"><a class="reference internal" href="web_api.html#exemple-d-utilisation">Exemple d’utilisation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="web_api.html#connexion-au-coeur-metier">Connexion au cœur métier</a></li>
+<li class="toctree-l2"><a class="reference internal" href="web_api.html#gestion-des-erreurs-et-robustesse">Gestion des erreurs et robustesse</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">Modules</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="config.html">config module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="config.html#config.ConfigError"><code class="docutils literal notranslate"><span class="pre">ConfigError</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="config.html#config.SecureConfig"><code class="docutils literal notranslate"><span class="pre">SecureConfig</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="config.html#gestion-securisee-de-la-configuration">Gestion sécurisée de la configuration</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="config.html#securite">Sécurité :</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="data_cleaner.html">data_cleaner module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="data_cleaner.html#data_cleaner.DataCleaner"><code class="docutils literal notranslate"><span class="pre">DataCleaner</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="data_cleaner.html#data_cleaner.test_clean_ticks_timestamp_fallback"><code class="docutils literal notranslate"><span class="pre">test_clean_ticks_timestamp_fallback()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="data_ingestor.html">data_ingestor module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="data_ingestor.html#data_ingestor.DataIngestor"><code class="docutils literal notranslate"><span class="pre">DataIngestor</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="data_ingestor.html#data_ingestor.test_ingest_ticks_symbol"><code class="docutils literal notranslate"><span class="pre">test_ingest_ticks_symbol()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="dvc_manager.html">dvc_manager module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="dvc_manager.html#dvc_manager.DVCManager"><code class="docutils literal notranslate"><span class="pre">DVCManager</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="feature_engineering.html">feature_engineering module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="feature_engineering.html#feature_engineering.FeatureEngineering"><code class="docutils literal notranslate"><span class="pre">FeatureEngineering</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="feature_engineering.html#feature_engineering.add_features"><code class="docutils literal notranslate"><span class="pre">add_features()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="feature_engineering.html#feature_engineering.test_add_indicators_all_features"><code class="docutils literal notranslate"><span class="pre">test_add_indicators_all_features()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="feature_engineering.html#feature_engineering.test_add_indicators_incomplete_df"><code class="docutils literal notranslate"><span class="pre">test_add_indicators_incomplete_df()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="feature_engineering.html#feature_engineering.test_add_indicators_with_tickvol"><code class="docutils literal notranslate"><span class="pre">test_add_indicators_with_tickvol()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="feature_engineering.html#feature_engineering.test_feature_order_matches_reference"><code class="docutils literal notranslate"><span class="pre">test_feature_order_matches_reference()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="feature_engineering.html#feature_engineering.test_features_compatibility_with_reference"><code class="docutils literal notranslate"><span class="pre">test_features_compatibility_with_reference()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="feature_engineering.html#feature_engineering.test_supertrend_typing"><code class="docutils literal notranslate"><span class="pre">test_supertrend_typing()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="ml_pipeline.html">ml_pipeline module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="order_algos.html">order_algos module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="order_algos.html#order_algos.execute_iceberg"><code class="docutils literal notranslate"><span class="pre">execute_iceberg()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="order_algos.html#order_algos.execute_twap"><code class="docutils literal notranslate"><span class="pre">execute_twap()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="order_algos.html#order_algos.execute_vwap"><code class="docutils literal notranslate"><span class="pre">execute_vwap()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="risk_management.html">risk_management module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="risk_management.html#risk_management.RiskManager"><code class="docutils literal notranslate"><span class="pre">RiskManager</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="timescaledb_client.html">timescaledb_client module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="timescaledb_client.html#timescaledb_client.TimescaleDBClient"><code class="docutils literal notranslate"><span class="pre">TimescaleDBClient</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="timescaledb_client.html#timescaledb_client.TimescaleDBError"><code class="docutils literal notranslate"><span class="pre">TimescaleDBError</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="timescaledb_client.html#timescaledb_client.test_insert_ohlcv_duplicate"><code class="docutils literal notranslate"><span class="pre">test_insert_ohlcv_duplicate()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="backtesting.html">backtesting module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="backtesting.html#backtesting.Backtester"><code class="docutils literal notranslate"><span class="pre">Backtester</span></code></a></li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+<section id="securite-et-gestion-des-secrets">
+<h1>Sécurité et gestion des secrets<a class="headerlink" href="#securite-et-gestion-des-secrets" title="Lien vers cette rubrique">¶</a></h1>
+<ul class="simple">
+<li><p><strong>Aucun secret ne doit être codé en dur ni avoir de valeur par défaut.</strong></p></li>
+<li><p>Tous les secrets (API_ADMIN_PASSWORD, API_ADMIN_TOTP, API_ADMIN_TOKEN, CONFIG_AES_KEY, etc.) doivent être injectés via variables d’environnement ou gestionnaire de secrets.</p></li>
+<li><p>Le bot et l’API refusent de démarrer si un secret est absent ou trop faible.</p></li>
+<li><p>Voir la section <code class="docutils literal notranslate"><span class="pre">config</span></code> pour la gestion sécurisée de la configuration.</p></li>
+</ul>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="#">bitcoin_scalper</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="web_api.html">Web API (FastAPI)</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Modules</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="config.html">config module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="config.html#gestion-securisee-de-la-configuration">Gestion sécurisée de la configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data_cleaner.html">data_cleaner module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data_ingestor.html">data_ingestor module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dvc_manager.html">dvc_manager module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="feature_engineering.html">feature_engineering module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ml_pipeline.html">ml_pipeline module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="order_algos.html">order_algos module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="risk_management.html">risk_management module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="timescaledb_client.html">timescaledb_client module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="backtesting.html">backtesting module</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="#">Documentation overview</a><ul>
+      <li>Next: <a href="web_api.html" title="Chapitre suivant">Web API (FastAPI)</a></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2025, Thibault Leray.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="_sources/index.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

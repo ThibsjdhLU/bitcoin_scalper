@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+
+<html lang="fr" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>feature_engineering module &#8212; Documentation bitcoin_scalper 1.0</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=27fed22d" />
+    <script src="_static/documentation_options.js?v=7a28dfa3"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/translations.js?v=e6b791cb"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Recherche" href="search.html" />
+    <link rel="next" title="ml_pipeline module" href="ml_pipeline.html" />
+    <link rel="prev" title="dvc_manager module" href="dvc_manager.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="module-feature_engineering">
+<span id="feature-engineering-module"></span><h1>feature_engineering module<a class="headerlink" href="#module-feature_engineering" title="Lien vers cette rubrique">¶</a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="feature_engineering.FeatureEngineering">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">feature_engineering.</span></span><span class="sig-name descname"><span class="pre">FeatureEngineering</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">timeframes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/feature_engineering.html#FeatureEngineering"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#feature_engineering.FeatureEngineering" title="Lien vers cette définition">¶</a></dt>
+<dd><p>Bases : <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Calcul vectorisé d’indicateurs techniques et extraction de features dérivées pour pipeline ML.
+Génère systématiquement :</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>rsi, macd, macd_signal, macd_diff</p></li>
+<li><p>ema_21, ema_50, sma_20</p></li>
+<li><p>bb_high, bb_low, bb_width</p></li>
+<li><p>atr, supertrend, vwap</p></li>
+<li><p>tickvol (copie de volume si absent)</p></li>
+<li><p>close_sma_3 (SMA 3 sur close)</p></li>
+<li><p>atr_sma_20 (SMA 20 sur ATR)</p></li>
+</ul>
+</div></blockquote>
+<p>Support multi-timeframe, API flexible, pas d’IO (purement transformation DataFrame).</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="feature_engineering.FeatureEngineering.add_features">
+<span class="sig-name descname"><span class="pre">add_features</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">price_col</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'close'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">volume_col</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'volume'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prefix</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="_modules/feature_engineering.html#FeatureEngineering.add_features"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#feature_engineering.FeatureEngineering.add_features" title="Lien vers cette définition">¶</a></dt>
+<dd><p>Ajoute des features dérivées (retours, volatilité, ratios, z-score, distances, encodages temporels, etc).
+Sécurité :</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Toutes les features sont décalées d’une bougie (shift(1)) pour éviter tout look-ahead bias.</p></li>
+</ul>
+</div></blockquote>
+<dl class="field-list simple">
+<dt class="field-odd">Paramètres<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>df</strong> – DataFrame d’entrée</p></li>
+<li><p><strong>price_col</strong> – Colonne de prix (par défaut “close”)</p></li>
+<li><p><strong>volume_col</strong> – Colonne de volume (par défaut “volume”)</p></li>
+<li><p><strong>prefix</strong> – Préfixe optionnel pour les colonnes</p></li>
+</ul>
+</dd>
+<dt class="field-even">Renvoie<span class="colon">:</span></dt>
+<dd class="field-even"><p>DataFrame enrichi</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="feature_engineering.FeatureEngineering.add_indicators">
+<span class="sig-name descname"><span class="pre">add_indicators</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">price_col</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'close'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">high_col</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'high'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">low_col</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'low'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">volume_col</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'volume'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prefix</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="_modules/feature_engineering.html#FeatureEngineering.add_indicators"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#feature_engineering.FeatureEngineering.add_indicators" title="Lien vers cette définition">¶</a></dt>
+<dd><p>Ajoute les indicateurs techniques principaux et avancés au DataFrame OHLCV.
+Sécurité :</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Tous les indicateurs sont décalés d’une bougie (shift(1)) pour éviter tout look-ahead bias.</p></li>
+<li><p>VWAP est calculé de façon cumulative et décalée.</p></li>
+</ul>
+</div></blockquote>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="feature_engineering.FeatureEngineering.multi_timeframe">
+<span class="sig-name descname"><span class="pre">multi_timeframe</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dfs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">DataFrame</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">price_col</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'&lt;CLOSE&gt;'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">high_col</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'&lt;HIGH&gt;'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">low_col</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'&lt;LOW&gt;'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">volume_col</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'&lt;TICKVOL&gt;'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="_modules/feature_engineering.html#FeatureEngineering.multi_timeframe"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#feature_engineering.FeatureEngineering.multi_timeframe" title="Lien vers cette définition">¶</a></dt>
+<dd><p>Fusionne et concatène les features multi-timeframe (clé = timeframe, valeur = DataFrame OHLCV).</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="feature_engineering.add_features">
+<span class="sig-prename descclassname"><span class="pre">feature_engineering.</span></span><span class="sig-name descname"><span class="pre">add_features</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="_modules/feature_engineering.html#add_features"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#feature_engineering.add_features" title="Lien vers cette définition">¶</a></dt>
+<dd><p>Enrichit un DataFrame minute BTC avec toutes les features financières et temporelles requises pour le ML, dont log_return_1m systématique.
+Toutes les features sont calculées de façon causale (aucune fuite d’information vers le futur).
+Les NaN générés par les rollings sont explicitement traqués et loggés.
+:param df: DataFrame prétraité, indexé par datetime UTC, colonnes : OPEN, HIGH, LOW, CLOSE, TICKVOL
+:return: DataFrame enrichi avec les features demandées</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="feature_engineering.test_add_indicators_all_features">
+<span class="sig-prename descclassname"><span class="pre">feature_engineering.</span></span><span class="sig-name descname"><span class="pre">test_add_indicators_all_features</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/feature_engineering.html#test_add_indicators_all_features"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#feature_engineering.test_add_indicators_all_features" title="Lien vers cette définition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="feature_engineering.test_add_indicators_incomplete_df">
+<span class="sig-prename descclassname"><span class="pre">feature_engineering.</span></span><span class="sig-name descname"><span class="pre">test_add_indicators_incomplete_df</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/feature_engineering.html#test_add_indicators_incomplete_df"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#feature_engineering.test_add_indicators_incomplete_df" title="Lien vers cette définition">¶</a></dt>
+<dd><p>Vérifie que add_indicators ne plante pas et retourne un DataFrame même si des colonnes sont manquantes.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="feature_engineering.test_add_indicators_with_tickvol">
+<span class="sig-prename descclassname"><span class="pre">feature_engineering.</span></span><span class="sig-name descname"><span class="pre">test_add_indicators_with_tickvol</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/feature_engineering.html#test_add_indicators_with_tickvol"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#feature_engineering.test_add_indicators_with_tickvol" title="Lien vers cette définition">¶</a></dt>
+<dd><p>Vérifie que add_indicators fonctionne si le DataFrame utilise “tickvol” comme colonne de volume.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="feature_engineering.test_feature_order_matches_reference">
+<span class="sig-prename descclassname"><span class="pre">feature_engineering.</span></span><span class="sig-name descname"><span class="pre">test_feature_order_matches_reference</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/feature_engineering.html#test_feature_order_matches_reference"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#feature_engineering.test_feature_order_matches_reference" title="Lien vers cette définition">¶</a></dt>
+<dd><p>Vérifie que l’ordre des features générées correspond à la liste de référence (features_list.pkl).</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="feature_engineering.test_features_compatibility_with_reference">
+<span class="sig-prename descclassname"><span class="pre">feature_engineering.</span></span><span class="sig-name descname"><span class="pre">test_features_compatibility_with_reference</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/feature_engineering.html#test_features_compatibility_with_reference"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#feature_engineering.test_features_compatibility_with_reference" title="Lien vers cette définition">¶</a></dt>
+<dd><p>Vérifie que toutes les features attendues (ex: features_list.pkl) sont bien générées par add_indicators.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="feature_engineering.test_supertrend_typing">
+<span class="sig-prename descclassname"><span class="pre">feature_engineering.</span></span><span class="sig-name descname"><span class="pre">test_supertrend_typing</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/feature_engineering.html#test_supertrend_typing"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#feature_engineering.test_supertrend_typing" title="Lien vers cette définition">¶</a></dt>
+<dd></dd></dl>
+
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">bitcoin_scalper</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="web_api.html">Web API (FastAPI)</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Modules</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="config.html">config module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="config.html#gestion-securisee-de-la-configuration">Gestion sécurisée de la configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data_cleaner.html">data_cleaner module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data_ingestor.html">data_ingestor module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dvc_manager.html">dvc_manager module</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">feature_engineering module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#feature_engineering.FeatureEngineering"><code class="docutils literal notranslate"><span class="pre">FeatureEngineering</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#feature_engineering.add_features"><code class="docutils literal notranslate"><span class="pre">add_features()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#feature_engineering.test_add_indicators_all_features"><code class="docutils literal notranslate"><span class="pre">test_add_indicators_all_features()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#feature_engineering.test_add_indicators_incomplete_df"><code class="docutils literal notranslate"><span class="pre">test_add_indicators_incomplete_df()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#feature_engineering.test_add_indicators_with_tickvol"><code class="docutils literal notranslate"><span class="pre">test_add_indicators_with_tickvol()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#feature_engineering.test_feature_order_matches_reference"><code class="docutils literal notranslate"><span class="pre">test_feature_order_matches_reference()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#feature_engineering.test_features_compatibility_with_reference"><code class="docutils literal notranslate"><span class="pre">test_features_compatibility_with_reference()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#feature_engineering.test_supertrend_typing"><code class="docutils literal notranslate"><span class="pre">test_supertrend_typing()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="ml_pipeline.html">ml_pipeline module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="order_algos.html">order_algos module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="risk_management.html">risk_management module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="timescaledb_client.html">timescaledb_client module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="backtesting.html">backtesting module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="backtesting.html#module-bitcoin_scalper.core.backtesting">Backtesting avancé</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="dvc_manager.html" title="Chapitre précédent">dvc_manager module</a></li>
+      <li>Next: <a href="ml_pipeline.html" title="Chapitre suivant">ml_pipeline module</a></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2025, Thibault Leray.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="_sources/feature_engineering.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
