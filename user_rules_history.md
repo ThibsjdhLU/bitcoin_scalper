@@ -143,3 +143,5 @@ Ce fichier consigne chaque action majeure réalisée sur le projet (création, m
 - Création d'une fiche d'installation détaillée pour le projet Bitcoin Scalper sous Windows (docs/source/installation_windows.rst) et ajout à la documentation Sphinx, afin de faciliter l'onboarding des utilisateurs Windows et garantir la portabilité du projet.
 
 - Modification de l'URL du serveur MT5 dans tous les modules clients (export_mt5_btc_history.py, trading_worker.py, main.py, web/api.py, core/data_ingestor.py) pour pointer vers http://192.168.1.157:8000, afin d'assurer la connexion correcte au serveur REST MT5 sur le réseau local.
+
+- Correction du mapping des clés dans PositionsModel (models/positions_model.py) pour correspondre aux champs réels retournés par MT5 (ticket, symbol, volume, price_open, type) et ajout d'une gestion d'erreur pour éviter les KeyError. Raison : garantir la compatibilité avec la structure des positions et éviter les plantages lors de l'affichage des positions dans l'UI.

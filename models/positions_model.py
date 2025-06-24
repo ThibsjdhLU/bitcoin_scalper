@@ -18,8 +18,25 @@ class PositionsModel(QAbstractTableModel):
         if not index.isValid() or role != Qt.ItemDataRole.DisplayRole:
             return None
         pos = self.positions[index.row()]
-        mapping = ["id", "symbol", "qty", "price", "side"]
-        return str(pos[mapping[index.column()]])
+        # Mapping des colonnes vers les clés du dict MT5
+        mapping = [
+            ("ticket", "ID"),        # id
+            ("symbol", "Symbole"),   # symbole
+            ("volume", "Quantité"),  # qty
+            ("price_open", "Prix"),  # prix
+            ("type", "Sens")         # sens (0=achat, 1=vente)
+        ]
+        key, _ = mapping[index.column()]
+        value = pos.get(key, "")
+        # Pour la colonne Sens, afficher 'Achat' ou 'Vente'
+        if key == "type":
+            if value == 0:
+                return "Achat"
+            elif value == 1:
+                return "Vente"
+            else:
+                return str(value)
+        return str(value)
 
     def headerData(self, section, orientation, role=Qt.ItemDataRole.DisplayRole):
         if role == Qt.ItemDataRole.DisplayRole and orientation == Qt.Orientation.Horizontal:
