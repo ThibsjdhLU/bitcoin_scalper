@@ -259,7 +259,7 @@ class MainWindow(QMainWindow):
         self.alert_banner.setVisible(False)
 
     def update_account_info(self, info: dict) -> None:
-        """Met à jour dynamiquement le panneau d'infos compte avec les vraies données du backend."""
+        print("DEBUG ACCOUNT INFO:", info)  # Log temporaire pour diagnostic
         if not info:
             self.account_info_panel.set_balance(None)
             self.account_info_panel.set_pnl(None)
