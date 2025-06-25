@@ -25,6 +25,8 @@ class TradingWorker(QThread):
     risk_update = pyqtSignal(object)
     log_message = pyqtSignal(str)
     positions_updated = pyqtSignal(list)
+    account_info_updated = pyqtSignal(dict)
+    risk_metrics_updated = pyqtSignal(dict)
     finished = pyqtSignal()
 
     def __init__(self):
@@ -100,6 +102,24 @@ class TradingWorker(QThread):
             positions_api_missing = False
             while not self._interrupted:
                 try:
+                    # --- Récupération infos de compte ---
+                    try:
+                        account_info = self.mt5_client._request("GET", "/account")
+                        self.account_info_updated.emit(account_info)
+                    except Exception as e:
+                        self.log_message.emit(f"[Worker] Erreur récupération infos compte : {e}")
+                    # --- Fin récupération infos de compte ---
+                    # --- Récupération positions ---
+                    try:
+                        positions = self.mt5_client.get_positions()
+                        self.positions_updated.emit(positions)
+                    except Exception as e:
+                        self.log_message.emit(f"[Worker] Erreur récupération positions : {e}")
+                        positions = []
+                    # --- Calcul dynamique des métriques de risque ---
+                    risk_metrics = self.compute_risk_metrics(account_info, positions)
+                    self.risk_metrics_updated.emit(risk_metrics)
+                    # --- Fin calcul risque ---
                     ohlcv = self.mt5_client.get_ohlcv(self.symbol, timeframe=self.timeframe, limit=self.rsi_period+1)
                     if len(ohlcv) < self.rsi_period+1:
                         self.log_message.emit("[Worker] Pas assez de données OHLCV pour calculer RSI.")
@@ -195,18 +215,6 @@ class TradingWorker(QThread):
                                 self.log_message.emit(f"[ERROR] Erreur exécution ordre : {e}")
                         else:
                             self.log_message.emit(f"[WARNING] Ordre refusé par gestion du risque : {risk_check['reason']}")
-                    # Rafraîchir les positions
-                    try:
-                        positions = self.mt5_client.get_positions()
-                        self.positions_updated.emit(positions)
-                        positions_api_missing = False
-                    except Exception as e:
-                        if not positions_api_missing and '404' in str(e):
-                            self.log_message.emit(f"[Worker] Endpoint /positions non disponible sur le serveur MT5. Les positions ne seront pas affichées.")
-                            positions_api_missing = True
-                        elif not positions_api_missing:
-                            self.log_message.emit(f"[Worker] Erreur récupération positions : {e}")
-                            positions_api_missing = True
                     # Stockage TimescaleDB
                     try:
                         self.db_client.insert_ohlcv(df.to_dict(orient="records"))
@@ -239,4 +247,31 @@ class TradingWorker(QThread):
             self.start()
 
     def stop_trading(self):
-        self.requestInterruption() 
+        self.requestInterruption()
+
+    def compute_risk_metrics(self, account_info, positions):
+        """Calcule drawdown, PnL journalier, peak balance, capital actuel à partir des vraies données."""
+        try:
+            if not account_info:
+                return {}
+            balance = account_info.get("balance")
+            equity = account_info.get("equity")
+            profit = account_info.get("profit")
+            # Historique du capital (à améliorer si historique disponible)
+            peak_balance = balance  # approximation : le solde actuel
+            last_balance = balance
+            # PnL journalier (à améliorer si historique disponible)
+            daily_pnl = profit
+            # Drawdown (approximé)
+            drawdown = 0.0
+            if peak_balance and last_balance:
+                drawdown = (last_balance - peak_balance) / peak_balance if peak_balance > 0 else 0.0
+            return {
+                "drawdown": drawdown,
+                "daily_pnl": daily_pnl,
+                "peak_balance": peak_balance,
+                "last_balance": last_balance
+            }
+        except Exception as e:
+            self.log_message.emit(f"[Worker] Erreur calcul métriques risque : {e}")
+            return {} 

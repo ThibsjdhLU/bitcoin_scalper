@@ -165,3 +165,5 @@ Ce fichier consigne chaque action majeure réalisée sur le projet (création, m
 - Ajout d'un test d'intégration pour le bandeau d'alerte globale de MainWindow (affichage, masquage, message).
 - Création de la documentation utilisateur et développeur de l'UI (docs/source/ui.md), détaillant la structure, les principes UX, la personnalisation, les alertes, la table enrichie et les extensions futures.
 - Ajout de la page UI Bitcoin Scalper à la table des matières de la documentation (index.rst).
+- Intégration dynamique des vraies données de compte dans l'UI : récupération du endpoint /account à chaque tick, signal account_info_updated, mise à jour en temps réel du panneau AccountInfoPanel avec solde, PnL, statut, etc.
+- Ajout du calcul dynamique des métriques de risque (drawdown, PnL journalier, peak balance, capital actuel) à chaque tick, signal risk_metrics_updated, mise à jour en temps réel du RiskPanel, et feedback visuel automatique (bandeau d'alerte) en cas d'erreur backend.

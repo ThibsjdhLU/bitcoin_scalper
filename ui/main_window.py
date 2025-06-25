@@ -16,13 +16,18 @@ class MainWindow(QMainWindow):
     stop_trading = pyqtSignal()
     reload_settings = pyqtSignal()
 
-    def __init__(self, logger, settings, positions_model):
+    def __init__(self, logger, settings, positions_model, trading_worker=None):
         super().__init__()
         self.setWindowTitle("Bitcoin Scalper Demo (PyQt6)")
         self.resize(1200, 800)
         self.logger = logger
         self.settings = settings
         self.positions_model = positions_model
+        self.trading_worker = trading_worker
+        if self.trading_worker is not None:
+            self.trading_worker.account_info_updated.connect(self.update_account_info)
+            self.trading_worker.risk_metrics_updated.connect(self.update_risk_metrics)
+            self.trading_worker.log_message.connect(self.handle_worker_log)
         # --- Correction structure centrale ---
         central_widget = QWidget()
         self.central_layout = QVBoxLayout()
@@ -251,4 +256,29 @@ class MainWindow(QMainWindow):
 
     def hide_global_alert(self) -> None:
         """Masque le bandeau d'alerte critique."""
-        self.alert_banner.setVisible(False) 
+        self.alert_banner.setVisible(False)
+
+    def update_account_info(self, info: dict) -> None:
+        """Met à jour dynamiquement le panneau d'infos compte avec les vraies données du backend."""
+        if not info:
+            self.account_info_panel.set_balance(None)
+            self.account_info_panel.set_pnl(None)
+            self.account_info_panel.set_last_price(None)
+            self.account_info_panel.set_status("disconnected")
+            return
+        self.account_info_panel.set_balance(info.get("balance"))
+        self.account_info_panel.set_pnl(info.get("profit"))
+        self.account_info_panel.set_last_price(info.get("equity"))
+        # Statut : running si account_info reçu, sinon disconnected
+        self.account_info_panel.set_status("running")
+
+    def update_risk_metrics(self, metrics: dict) -> None:
+        """Met à jour dynamiquement le panneau de risque avec les vraies métriques du backend."""
+        self.risk_panel.set_metrics(metrics)
+
+    def handle_worker_log(self, message: str) -> None:
+        """Affiche un bandeau d'alerte si le message du worker signale une erreur critique backend."""
+        if any(word in message for word in ["Erreur", "ERROR", "WARNING", "refusé", "non disponible"]):
+            self.show_global_alert(message)
+        else:
+            self.hide_global_alert() 
