@@ -24,6 +24,8 @@ class OrderRequest(BaseModel):
     volume: float
     price: Optional[float] = None
     order_type: str = "market"  # 'market' ou 'limit'
+    sl: Optional[float] = None
+    tp: Optional[float] = None
 
     class Config:
         extra = Extra.allow  # Autorise les champs additionnels (sl, tp, etc.)
@@ -127,6 +129,11 @@ async def send_order(order: OrderRequest, request: Request):
         "magic": 123456,
         "comment": "REST order"
     }
+    # Ajout SL/TP si présents
+    if hasattr(order, "sl") and order.sl is not None:
+        req["sl"] = order.sl
+    if hasattr(order, "tp") and order.tp is not None:
+        req["tp"] = order.tp
     result = mt5.order_send(req)
     if result.retcode != mt5.TRADE_RETCODE_DONE:
         raise HTTPException(status_code=400, detail=f"Order failed: {result.comment}")

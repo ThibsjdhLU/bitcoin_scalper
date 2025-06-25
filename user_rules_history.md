@@ -145,3 +145,5 @@ Ce fichier consigne chaque action majeure réalisée sur le projet (création, m
 - Modification de l'URL du serveur MT5 dans tous les modules clients (export_mt5_btc_history.py, trading_worker.py, main.py, web/api.py, core/data_ingestor.py) pour pointer vers http://192.168.1.157:8000, afin d'assurer la connexion correcte au serveur REST MT5 sur le réseau local.
 
 - Correction du mapping des clés dans PositionsModel (models/positions_model.py) pour correspondre aux champs réels retournés par MT5 (ticket, symbol, volume, price_open, type) et ajout d'une gestion d'erreur pour éviter les KeyError. Raison : garantir la compatibilité avec la structure des positions et éviter les plantages lors de l'affichage des positions dans l'UI.
+
+- Correction du serveur MT5 (scripts/mt5_rest_server.py) : ajout de la prise en compte des champs SL et TP dans l'endpoint /order pour permettre au bot de placer le stop loss et le take profit lors de l'envoi d'un ordre. Raison : garantir la gestion complète du risque à chaque ordre transmis.
