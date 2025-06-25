@@ -195,10 +195,10 @@ class MainWindow(QMainWindow):
                     self.account_info_panel.set_status("running")
                     self.account_info_panel.set_last_price(float(close_prices[-1]))
             else:
-                self.append_log("[WARNING] Données OHLCV vides ou invalides pour le graphique.")
                 self.graph_widget.clear()
                 self.graph_widget.setBackground('dimgrey')
-                self.graph_widget.addItem(pg.TextItem("Aucune donnée OHLCV reçue", color='w', anchor=(0.5,0.5)))
+                self.graph_widget.addItem(pg.TextItem("Aucune donnée à afficher", color='w', anchor=(0.5,0.5)))
+                self.graph_widget.setTitle("")
         except Exception as e:
             self.append_log(f"[ERROR] Erreur update_graph : {e}")
 

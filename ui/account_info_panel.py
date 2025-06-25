@@ -73,23 +73,35 @@ class AccountInfoPanel(QWidget):
         elif status == "stopped":
             self.status_label.setText("Statut : Arrêté")
             self.status_label.setProperty("state", "stopped")
-        else:
+        elif status == "disconnected":
             self.status_label.setText("Statut : Déconnecté")
             self.status_label.setProperty("state", "disconnected")
+        else:
+            self.status_label.setText("")
+            self.status_label.setProperty("state", "unknown")
 
     def set_balance(self, balance: float) -> None:
         """Met à jour l'affichage du solde du compte."""
-        self.balance_label.setText(f"Solde : {balance:,.2f} $")
+        if balance is None:
+            self.balance_label.setText("Solde : -")
+        else:
+            self.balance_label.setText(f"Solde : {balance:,.2f} $")
 
     def set_pnl(self, pnl: float) -> None:
         """Met à jour l'affichage du profit/perte du compte."""
-        color = "#4caf50" if pnl >= 0 else "#f44336"
-        self.pnl_label.setText(f"Profit/Perte : <span style='color:{color};'>{pnl:,.2f} $</span>")
-        self.pnl_label.setProperty("positive", str(pnl >= 0).lower())
+        if pnl is None:
+            self.pnl_label.setText("Profit/Perte : -")
+        else:
+            color = "#4caf50" if pnl >= 0 else "#f44336"
+            self.pnl_label.setText(f"Profit/Perte : <span style='color:{color};'>{pnl:,.2f} $</span>")
+            self.pnl_label.setProperty("positive", str(pnl >= 0).lower())
 
     def set_last_price(self, price: float) -> None:
         """Met à jour l'affichage du dernier prix connu."""
-        self.price_label.setText(f"Dernier prix : {price:,.2f} $")
+        if price is None:
+            self.price_label.setText("Dernier prix : -")
+        else:
+            self.price_label.setText(f"Dernier prix : {price:,.2f} $")
 
     def set_disconnected(self) -> None:
         """Affiche le statut 'déconnecté'."""

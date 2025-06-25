@@ -77,22 +77,31 @@ class DashboardSimple(QWidget):
 
     def set_pnl(self, pnl_eur: float, pnl_pct: float) -> None:
         """Met à jour l'affichage du PnL en euros et en pourcentage."""
-        color = "#4caf50" if pnl_eur >= 0 else "#f44336"
-        self.pnl_label.setText(f"PnL : <span style='color:{color};'>{pnl_eur:,.2f} € ({pnl_pct:.2f}%)</span>")
-        self.pnl_label.setProperty("positive", str(pnl_eur >= 0).lower())
+        if pnl_eur is None or pnl_pct is None:
+            self.pnl_label.setText("PnL : -")
+        else:
+            color = "#4caf50" if pnl_eur >= 0 else "#f44336"
+            self.pnl_label.setText(f"PnL : <span style='color:{color};'>{pnl_eur:,.2f} € ({pnl_pct:.2f}%)</span>")
+            self.pnl_label.setProperty("positive", str(pnl_eur >= 0).lower())
 
     def set_capital(self, capital: float) -> None:
         """Met à jour l'affichage du capital actuel."""
-        self.capital_label.setText(f"Capital : {capital:,.2f} €")
+        if capital is None:
+            self.capital_label.setText("Capital : -")
+        else:
+            self.capital_label.setText(f"Capital : {capital:,.2f} €")
 
     def set_positions(self, n: int) -> None:
         """Met à jour l'affichage du nombre de positions ouvertes."""
-        self.positions_label.setText(f"Positions : {n}")
+        if n is None:
+            self.positions_label.setText("Positions : -")
+        else:
+            self.positions_label.setText(f"Positions : {n}")
 
     def update_graph(self, capital_history: list[float]) -> None:
         """Met à jour le graphique d'évolution du capital."""
         self.graph.clear()
-        if capital_history:
+        if capital_history and any(capital_history):
             self.graph.plot(list(range(len(capital_history))), capital_history, pen=pg.mkPen('#4caf50', width=2))
         else:
             self.graph.addItem(pg.TextItem("Aucune donnée de capital", color='w', anchor=(0.5,0.5)))

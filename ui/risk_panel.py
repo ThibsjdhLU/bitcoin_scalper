@@ -38,10 +38,13 @@ class RiskPanel(QWidget):
         """Met à jour l'affichage des métriques de risque à partir d'un dictionnaire."""
         try:
             if metrics:
-                self.labels["drawdown"].setText(f"Drawdown: {metrics.get('drawdown', 0.0):.2%}")
-                self.labels["daily_pnl"].setText(f"PnL Journalier: {metrics.get('daily_pnl', 0.0):.2f}")
-                self.labels["peak_balance"].setText(f"Pic Capital: {metrics.get('peak_balance', 0.0):.2f}")
-                self.labels["last_balance"].setText(f"Capital Actuel: {metrics.get('last_balance', 0.0):.2f}")
+                self.labels["drawdown"].setText(f"Drawdown: {metrics.get('drawdown', '-') if metrics.get('drawdown') is not None else '-'}")
+                self.labels["daily_pnl"].setText(f"PnL Journalier: {metrics.get('daily_pnl', '-') if metrics.get('daily_pnl') is not None else '-'}")
+                self.labels["peak_balance"].setText(f"Pic Capital: {metrics.get('peak_balance', '-') if metrics.get('peak_balance') is not None else '-'}")
+                self.labels["last_balance"].setText(f"Capital Actuel: {metrics.get('last_balance', '-') if metrics.get('last_balance') is not None else '-'}")
+            else:
+                for label in self.labels.values():
+                    label.setText("")
         except Exception as e:
             print(f"Erreur dans RiskPanel.set_metrics: {e}")
  
