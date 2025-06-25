@@ -152,4 +152,4 @@ Ce fichier consigne chaque action majeure réalisée sur le projet (création, m
 
 - Ajout de la logique dans main.py pour lancer automatiquement le serveur MT5 REST sous Windows, afin de faciliter l'orchestration multiplateforme du bot et garantir la disponibilité du backend MT5 lors de l'exécution sur cet OS.
 
-- Correction dans main.py : remplacement de logger.info/logger.error par logger.append_log pour la compatibilité avec QtLogger lors du lancement automatique du serveur MT5 sous Windows, afin d'éviter les erreurs d'attribut et garantir le logging multiplateforme.
+- Correction dans main.py : suppression de la redirection stdout/stderr lors du lancement automatique du serveur MT5 REST sous Windows, afin que la console du serveur soit visible et que l'utilisateur puisse vérifier le lancement effectif et voir les logs en temps réel.

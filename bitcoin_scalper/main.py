@@ -463,13 +463,13 @@ def main():
     window.show()
 
     if platform.system().lower() == "windows":
-        # Lancer le serveur MT5 REST automatiquement sous Windows
+        # Lancer le serveur MT5 REST automatiquement sous Windows (console visible)
         mt5_server_script = os.path.join(os.path.dirname(__file__), '..', 'scripts', 'mt5_rest_server.py')
         try:
             subprocess.Popen([
                 sys.executable, mt5_server_script
-            ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            logger.append_log("[INFO] Serveur MT5 REST lancé automatiquement (Windows).")
+            ])  # Console visible pour debug
+            logger.append_log("[INFO] Serveur MT5 REST lancé automatiquement (Windows, console visible).")
         except Exception as e:
             logger.append_log(f"[ERROR] Erreur lors du lancement automatique du serveur MT5 REST : {e}")
 
