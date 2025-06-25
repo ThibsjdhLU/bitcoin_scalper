@@ -151,3 +151,5 @@ Ce fichier consigne chaque action majeure réalisée sur le projet (création, m
 - Durcissement de la stratégie sans ML (scripts/prepare_features.py) : seuils RSI plus stricts, ajout d'un filtre ATR, confirmation Supertrend, et blocage des signaux consécutifs identiques, afin de limiter le sur-trading et rendre la stratégie plus sélective et robuste.
 
 - Ajout de la logique dans main.py pour lancer automatiquement le serveur MT5 REST sous Windows, afin de faciliter l'orchestration multiplateforme du bot et garantir la disponibilité du backend MT5 lors de l'exécution sur cet OS.
+
+- Correction dans main.py : remplacement de logger.info/logger.error par logger.append_log pour la compatibilité avec QtLogger lors du lancement automatique du serveur MT5 sous Windows, afin d'éviter les erreurs d'attribut et garantir le logging multiplateforme.

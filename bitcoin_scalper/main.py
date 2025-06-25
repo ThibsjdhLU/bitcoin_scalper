@@ -469,9 +469,9 @@ def main():
             subprocess.Popen([
                 sys.executable, mt5_server_script
             ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            logger.info("Serveur MT5 REST lancé automatiquement (Windows).")
+            logger.append_log("[INFO] Serveur MT5 REST lancé automatiquement (Windows).")
         except Exception as e:
-            logger.error(f"Erreur lors du lancement automatique du serveur MT5 REST : {e}")
+            logger.append_log(f"[ERROR] Erreur lors du lancement automatique du serveur MT5 REST : {e}")
 
     sys.exit(app.exec())
 
