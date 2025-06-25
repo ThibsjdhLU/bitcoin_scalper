@@ -82,6 +82,7 @@ class AccountInfoPanel(QWidget):
 
     def set_balance(self, balance: float) -> None:
         """Met à jour l'affichage du solde du compte."""
+        print("DEBUG set_balance:", balance)
         if balance is None:
             self.balance_label.setText("Solde : -")
         else:
@@ -89,6 +90,7 @@ class AccountInfoPanel(QWidget):
 
     def set_pnl(self, pnl: float) -> None:
         """Met à jour l'affichage du profit/perte du compte."""
+        print("DEBUG set_pnl:", pnl)
         if pnl is None:
             self.pnl_label.setText("Profit/Perte : -")
         else:
