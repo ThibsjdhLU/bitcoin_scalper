@@ -259,7 +259,8 @@ class MainWindow(QMainWindow):
         self.alert_banner.setVisible(False)
 
     def update_account_info(self, info: dict) -> None:
-        print("DEBUG ACCOUNT INFO:", info)  # Log temporaire pour diagnostic
+        print("DEBUG update_account_info:", info)
+        print("balance:", info.get("balance"), "profit:", info.get("profit"), "equity:", info.get("equity"))
         if not info:
             self.account_info_panel.set_balance(None)
             self.account_info_panel.set_pnl(None)
@@ -273,7 +274,7 @@ class MainWindow(QMainWindow):
         self.account_info_panel.set_status("running")
 
     def update_risk_metrics(self, metrics: dict) -> None:
-        """Met à jour dynamiquement le panneau de risque avec les vraies métriques du backend."""
+        print("DEBUG update_risk_metrics:", metrics)
         self.risk_panel.set_metrics(metrics)
 
     def handle_worker_log(self, message: str) -> None:
