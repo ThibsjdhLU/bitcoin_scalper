@@ -1,8 +1,17 @@
+"""
+RiskPanel : panneau d'affichage des métriques de risque pour le bot de trading Bitcoin Scalper.
+Affiche drawdown, PnL journalier, pic de capital et capital actuel.
+"""
+
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel, QGridLayout
 from PyQt6.QtCore import Qt
 
 class RiskPanel(QWidget):
-    def __init__(self, parent=None):
+    """
+    Widget d'affichage des métriques de risque pour le bot de trading Bitcoin Scalper.
+    Affiche drawdown, PnL journalier, pic de capital et capital actuel.
+    """
+    def __init__(self, parent: QWidget = None) -> None:
         super().__init__(parent)
         self.layout = QVBoxLayout()
         self.grid_layout = QGridLayout()
@@ -16,7 +25,8 @@ class RiskPanel(QWidget):
 
         row = 0
         for text, label in self.labels.items():
-            label.setStyleSheet("font-size: 14px;")
+            label.setObjectName(f"risk_{text}_label")
+            label.setProperty("role", text)
             self.grid_layout.addWidget(label, row, 0)
             row += 1
 
@@ -24,7 +34,8 @@ class RiskPanel(QWidget):
         self.layout.addStretch()
         self.setLayout(self.layout)
 
-    def set_metrics(self, metrics):
+    def set_metrics(self, metrics: dict) -> None:
+        """Met à jour l'affichage des métriques de risque à partir d'un dictionnaire."""
         try:
             if metrics:
                 self.labels["drawdown"].setText(f"Drawdown: {metrics.get('drawdown', 0.0):.2%}")

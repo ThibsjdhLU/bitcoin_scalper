@@ -153,3 +153,15 @@ Ce fichier consigne chaque action majeure réalisée sur le projet (création, m
 - Ajout de la logique dans main.py pour lancer automatiquement le serveur MT5 REST sous Windows, afin de faciliter l'orchestration multiplateforme du bot et garantir la disponibilité du backend MT5 lors de l'exécution sur cet OS.
 
 - Correction dans main.py : suppression de la redirection stdout/stderr lors du lancement automatique du serveur MT5 REST sous Windows, afin que la console du serveur soit visible et que l'utilisateur puisse vérifier le lancement effectif et voir les logs en temps réel.
+
+- Centralisation des styles UI dans le fichier QSS, ajout de classes CSS pour les états (succès, erreur, warning, info) et préparation d'une structure pour un thème clair.
+- Suppression des styles en dur dans dashboard_simple.py, account_info_panel.py, risk_panel.py et signal_panel.py, au profit de propriétés d'objet et d'objectName pour une personnalisation via QSS.
+- Ajout de propriétés et d'objectName sur les widgets principaux dans main_window.py pour permettre la personnalisation avancée via QSS.
+- Préparation de la table des positions (PositionsModel) pour l'enrichissement visuel : coloration des lignes selon le sens (achat/vente), alignement centré, et placeholder pour icônes.
+- Ajout de docstrings de module, de classe et de type hints à tous les modules et classes UI (dashboard_simple, account_info_panel, risk_panel, signal_panel) et au modèle PositionsModel, conformément aux standards de documentation et PEP8.
+- Création d'un delegate custom (PositionDelegate) pour la table des positions : affichage d'une icône achat/vente, coloration de la ligne selon le PnL, tooltips détaillés sur chaque cellule. Installation du delegate dans main_window.py. Conformité PEP8 et documentation assurée.
+- Amélioration du delegate PositionDelegate : surlignage automatique des lignes critiques (perte > 5% ou drawdown > 5%), ajout d'un badge d'alerte visuelle (triangle rouge) dans la colonne Sens pour les positions à risque.
+- Ajout d'un système d'alerte globale (bandeau critique en haut de la fenêtre) dans MainWindow, accessible par tout composant pour signaler une situation à risque ou critique.
+- Ajout d'un test d'intégration pour le bandeau d'alerte globale de MainWindow (affichage, masquage, message).
+- Création de la documentation utilisateur et développeur de l'UI (docs/source/ui.md), détaillant la structure, les principes UX, la personnalisation, les alertes, la table enrichie et les extensions futures.
+- Ajout de la page UI Bitcoin Scalper à la table des matières de la documentation (index.rst).

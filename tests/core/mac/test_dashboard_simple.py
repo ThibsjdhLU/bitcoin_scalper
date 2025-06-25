@@ -18,12 +18,12 @@ def dash(app):
 def test_set_status_on(dash):
     dash.set_status(True)
     assert "ON" in dash.status_label.text()
-    assert "#4caf50" in dash.status_label.styleSheet()
+    assert dash.status_label.property("state") == "on"
 
 def test_set_status_off(dash):
     dash.set_status(False)
     assert "OFF" in dash.status_label.text()
-    assert "#f44336" in dash.status_label.styleSheet()
+    assert dash.status_label.property("state") == "off"
 
 def test_set_pnl_positive(dash):
     dash.set_pnl(100.0, 2.5)
@@ -68,4 +68,16 @@ def test_stop_signal(qtbot, dash):
     triggered = []
     dash.stop_requested.connect(lambda: triggered.append(True))
     dash._on_stop()
-    assert triggered 
+    assert triggered
+
+def test_global_alert_banner(qtbot):
+    from ui.main_window import MainWindow
+    from models.positions_model import PositionsModel
+    import logging
+    mw = MainWindow(logger=logging.getLogger(), settings=None, positions_model=PositionsModel())
+    qtbot.addWidget(mw)
+    mw.show_global_alert("ALERTE CRITIQUE !")
+    assert mw.alert_banner.isVisible()
+    assert "ALERTE CRITIQUE" in mw.alert_banner.text()
+    mw.hide_global_alert()
+    assert not mw.alert_banner.isVisible() 

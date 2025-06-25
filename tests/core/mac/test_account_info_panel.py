@@ -20,12 +20,12 @@ def test_default_status(panel):
 def test_set_status_running(panel):
     panel.set_status("running")
     assert "En cours" in panel.status_label.text()
-    assert "#4caf50" in panel.status_label.styleSheet()
+    assert panel.status_label.property("state") == "running"
 
 def test_set_status_stopped(panel):
     panel.set_status("stopped")
     assert "Arrêté" in panel.status_label.text()
-    assert "#f44336" in panel.status_label.styleSheet()
+    assert panel.status_label.property("state") == "stopped"
 
 def test_set_balance(panel):
     panel.set_balance(12345.67)

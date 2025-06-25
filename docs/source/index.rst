@@ -16,6 +16,7 @@ documentation for details.
    :caption: Contents:
 
    web_api
+   ui
 
 .. toctree::
    :maxdepth: 2

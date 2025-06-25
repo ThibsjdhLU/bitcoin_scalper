@@ -9,6 +9,7 @@ import numpy as np
 from .signal_panel import SignalPanel
 from .risk_panel import RiskPanel
 from .account_info_panel import AccountInfoPanel
+from .position_delegate import PositionDelegate
 
 class MainWindow(QMainWindow):
     start_trading = pyqtSignal()
@@ -32,6 +33,14 @@ class MainWindow(QMainWindow):
         # Ajout de la barre d'état
         self.status_bar = self.statusBar()
         self.status_bar.showMessage("Déconnecté", 5000)
+        # Bandeau d'alerte critique (overlay)
+        self.alert_banner = QLabel("")
+        self.alert_banner.setObjectName("global_alert_banner")
+        self.alert_banner.setStyleSheet("background:#f44336;color:white;font-weight:bold;padding:8px 24px;border-radius:6px;font-size:16px;")
+        self.alert_banner.setVisible(False)
+        self.alert_banner.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.setCentralWidget(self.centralWidget())  # S'assure que centralWidget existe
+        self.layout().insertWidget(0, self.alert_banner)
 
     def _init_menu(self):
         menubar = self.menuBar()
@@ -61,6 +70,9 @@ class MainWindow(QMainWindow):
         # Positions dock (gauche, bas)
         self.positions_view = QTableView()
         self.positions_view.setModel(self.positions_model)
+        self.positions_view.setObjectName("positions_view")
+        self.positions_view.setProperty("role", "positions")
+        self.positions_view.setItemDelegate(PositionDelegate(self.positions_view))
         positions_dock = QDockWidget("Positions", self)
         positions_dock.setWidget(self.positions_view)
         positions_dock.setFeatures(QDockWidget.DockWidgetFeature.NoDockWidgetFeatures)
@@ -92,6 +104,8 @@ class MainWindow(QMainWindow):
         # Log dock (bas)
         self.log_console = QTextEdit()
         self.log_console.setReadOnly(True)
+        self.log_console.setObjectName("log_console")
+        self.log_console.setProperty("role", "log")
         log_dock = QDockWidget("Logs", self)
         log_dock.setWidget(self.log_console)
         log_dock.setFeatures(QDockWidget.DockWidgetFeature.NoDockWidgetFeatures)
@@ -219,4 +233,13 @@ class MainWindow(QMainWindow):
 
     def update_risk_display(self, risk_metrics):
         # risk_metrics est un dictionnaire
-        self.risk_panel.set_metrics(risk_metrics) 
+        self.risk_panel.set_metrics(risk_metrics)
+
+    def show_global_alert(self, message: str) -> None:
+        """Affiche un bandeau d'alerte critique en haut de la fenêtre."""
+        self.alert_banner.setText(message)
+        self.alert_banner.setVisible(True)
+
+    def hide_global_alert(self) -> None:
+        """Masque le bandeau d'alerte critique."""
+        self.alert_banner.setVisible(False) 

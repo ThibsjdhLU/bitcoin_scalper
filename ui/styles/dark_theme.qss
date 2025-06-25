@@ -1,5 +1,17 @@
 /* Thème sombre Bitcoin Scalper - inspiré trading pro */
 
+/* Variables de couleur (à dupliquer pour un thème clair) */
+/*
+@color-bg: #181a20;
+@color-bg-alt: #23272f;
+@color-fg: #e0e0e3;
+@color-accent: #4caf50;
+@color-error: #f44336;
+@color-warning: #ffa726;
+@color-info: #2196f3;
+@color-border: #31363f;
+*/
+
 QWidget {
     background-color: #181a20;
     color: #e0e0e3;
@@ -82,4 +94,26 @@ QLabel[role="title"] {
     font-size: 18px;
     font-weight: bold;
     color: #e0e0e3;
+}
+
+/* États génériques */
+.success {
+    color: #4caf50;
+    background: #23272f;
+    font-weight: bold;
+}
+.error {
+    color: #f44336;
+    background: #23272f;
+    font-weight: bold;
+}
+.warning {
+    color: #ffa726;
+    background: #23272f;
+    font-weight: bold;
+}
+.info {
+    color: #2196f3;
+    background: #23272f;
+    font-weight: bold;
 } 
