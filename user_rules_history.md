@@ -149,3 +149,5 @@ Ce fichier consigne chaque action majeure réalisée sur le projet (création, m
 - Correction du serveur MT5 (scripts/mt5_rest_server.py) : ajout de la prise en compte des champs SL et TP dans l'endpoint /order pour permettre au bot de placer le stop loss et le take profit lors de l'envoi d'un ordre. Raison : garantir la gestion complète du risque à chaque ordre transmis.
 
 - Durcissement de la stratégie sans ML (scripts/prepare_features.py) : seuils RSI plus stricts, ajout d'un filtre ATR, confirmation Supertrend, et blocage des signaux consécutifs identiques, afin de limiter le sur-trading et rendre la stratégie plus sélective et robuste.
+
+- Ajout de la logique dans main.py pour lancer automatiquement le serveur MT5 REST sous Windows, afin de faciliter l'orchestration multiplateforme du bot et garantir la disponibilité du backend MT5 lors de l'exécution sur cet OS.

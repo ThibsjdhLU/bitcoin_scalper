@@ -40,6 +40,8 @@ from utils.logger import QtLogger
 from utils.settings import SettingsManager
 from models.positions_model import PositionsModel
 import pyqtgraph as pg
+import platform
+import subprocess
 
 # --- Config logging ---
 logging.basicConfig(level=logging.INFO)
@@ -459,6 +461,18 @@ def main():
     pwd_dialog.exec()
 
     window.show()
+
+    if platform.system().lower() == "windows":
+        # Lancer le serveur MT5 REST automatiquement sous Windows
+        mt5_server_script = os.path.join(os.path.dirname(__file__), '..', 'scripts', 'mt5_rest_server.py')
+        try:
+            subprocess.Popen([
+                sys.executable, mt5_server_script
+            ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            logger.info("Serveur MT5 REST lancé automatiquement (Windows).")
+        except Exception as e:
+            logger.error(f"Erreur lors du lancement automatique du serveur MT5 REST : {e}")
+
     sys.exit(app.exec())
 
 if __name__ == "__main__":
