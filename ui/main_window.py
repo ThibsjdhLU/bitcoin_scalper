@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QMainWindow, QDockWidget, QTableView, QTextEdit, QMenuBar, QMessageBox, QLabel, QGraphicsRectItem
+from PyQt6.QtWidgets import QMainWindow, QDockWidget, QTableView, QTextEdit, QMenuBar, QMessageBox, QLabel, QGraphicsRectItem, QVBoxLayout, QWidget
 from PyQt6.QtGui import QAction, QBrush
 from PyQt6.QtCore import pyqtSignal, Qt
 import pyqtgraph as pg
@@ -23,6 +23,23 @@ class MainWindow(QMainWindow):
         self.logger = logger
         self.settings = settings
         self.positions_model = positions_model
+        # --- Correction structure centrale ---
+        central_widget = QWidget()
+        self.central_layout = QVBoxLayout()
+        self.central_layout.setContentsMargins(0, 0, 0, 0)
+        self.central_layout.setSpacing(0)
+        self.alert_banner = QLabel("")
+        self.alert_banner.setObjectName("global_alert_banner")
+        self.alert_banner.setStyleSheet("background:#f44336;color:white;font-weight:bold;padding:8px 24px;border-radius:6px;font-size:16px;")
+        self.alert_banner.setVisible(False)
+        self.alert_banner.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.central_layout.addWidget(self.alert_banner)
+        # Placeholder pour le contenu principal (docks)
+        self.content_placeholder = QWidget()
+        self.central_layout.addWidget(self.content_placeholder, 1)
+        central_widget.setLayout(self.central_layout)
+        self.setCentralWidget(central_widget)
+        # --- Fin correction structure centrale ---
         self._init_menu()
         self._init_docks()
         self._ohlcv_history_df = pd.DataFrame()
@@ -33,14 +50,6 @@ class MainWindow(QMainWindow):
         # Ajout de la barre d'état
         self.status_bar = self.statusBar()
         self.status_bar.showMessage("Déconnecté", 5000)
-        # Bandeau d'alerte critique (overlay)
-        self.alert_banner = QLabel("")
-        self.alert_banner.setObjectName("global_alert_banner")
-        self.alert_banner.setStyleSheet("background:#f44336;color:white;font-weight:bold;padding:8px 24px;border-radius:6px;font-size:16px;")
-        self.alert_banner.setVisible(False)
-        self.alert_banner.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.setCentralWidget(self.centralWidget())  # S'assure que centralWidget existe
-        self.layout().insertWidget(0, self.alert_banner)
 
     def _init_menu(self):
         menubar = self.menuBar()
