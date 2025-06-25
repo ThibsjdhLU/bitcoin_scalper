@@ -147,3 +147,5 @@ Ce fichier consigne chaque action majeure réalisée sur le projet (création, m
 - Correction du mapping des clés dans PositionsModel (models/positions_model.py) pour correspondre aux champs réels retournés par MT5 (ticket, symbol, volume, price_open, type) et ajout d'une gestion d'erreur pour éviter les KeyError. Raison : garantir la compatibilité avec la structure des positions et éviter les plantages lors de l'affichage des positions dans l'UI.
 
 - Correction du serveur MT5 (scripts/mt5_rest_server.py) : ajout de la prise en compte des champs SL et TP dans l'endpoint /order pour permettre au bot de placer le stop loss et le take profit lors de l'envoi d'un ordre. Raison : garantir la gestion complète du risque à chaque ordre transmis.
+
+- Durcissement de la stratégie sans ML (scripts/prepare_features.py) : seuils RSI plus stricts, ajout d'un filtre ATR, confirmation Supertrend, et blocage des signaux consécutifs identiques, afin de limiter le sur-trading et rendre la stratégie plus sélective et robuste.

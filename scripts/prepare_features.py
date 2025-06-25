@@ -43,21 +43,46 @@ def check_temporal_integrity(df: pd.DataFrame, indicator_cols=None) -> bool:
 def generate_signal(df: pd.DataFrame) -> pd.DataFrame:
     """
     Génère la colonne 'signal' (1=long, -1=short, 0=neutre) sur la base des indicateurs décalés.
-    Stratégie très permissive : seulement EMA et RSI, seuils larges, pas de supertrend ni ATR.
+    Stratégie sélective : seuils RSI stricts, filtre ATR, confirmation Supertrend, pas de signaux consécutifs identiques.
     """
+    # Paramètres ajustables
+    rsi_long_thresh = 1.02  # plus strict que 0.95
+    rsi_short_thresh = 0.98 # plus strict que 1.05
+    min_atr_ratio = 0.005   # 0.5% du prix
+    use_supertrend = True
+
     df = df.copy()
     df['rsi_mean'] = df['rsi'].rolling(100, min_periods=10).mean()
+    df['atr_ratio'] = df['atr'] / df['close']
+    # Conditions de base
     long_condition = (
         (df['ema_21'].fillna(0) > df['ema_50'].fillna(0)) &
-        (df['rsi'].fillna(0) > df['rsi_mean'].fillna(0) * 0.95)
+        (df['rsi'].fillna(0) > df['rsi_mean'].fillna(0) * rsi_long_thresh) &
+        (df['atr_ratio'] > min_atr_ratio)
     )
     short_condition = (
         (df['ema_21'].fillna(0) < df['ema_50'].fillna(0)) &
-        (df['rsi'].fillna(0) < df['rsi_mean'].fillna(0) * 1.05)
+        (df['rsi'].fillna(0) < df['rsi_mean'].fillna(0) * rsi_short_thresh) &
+        (df['atr_ratio'] > min_atr_ratio)
     )
+    # Confirmation Supertrend
+    if use_supertrend and 'supertrend' in df.columns:
+        long_condition &= (df['supertrend'] == 1)
+        short_condition &= (df['supertrend'] == -1)
     df['signal'] = 0
     df.loc[long_condition, 'signal'] = 1
     df.loc[short_condition, 'signal'] = -1
+    # Limiter les signaux consécutifs identiques (pas de double entrée)
+    df['signal_final'] = df['signal']
+    prev_signal = 0
+    for i in range(len(df)):
+        if df['signal'].iloc[i] == prev_signal and df['signal'].iloc[i] != 0:
+            df['signal_final'].iloc[i] = 0
+        elif df['signal'].iloc[i] != 0:
+            prev_signal = df['signal'].iloc[i]
+        else:
+            prev_signal = 0
+    df['signal'] = df['signal_final']
     df['signal_binary'] = (df['signal'] == 1).astype(int)
     print("[DEBUG] Distribution des signaux (signal) :\n", df['signal'].value_counts(normalize=True))
     return df
