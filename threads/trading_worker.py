@@ -105,6 +105,7 @@ class TradingWorker(QThread):
                     # --- Récupération infos de compte ---
                     try:
                         account_info = self.mt5_client._request("GET", "/account")
+                        print("DEBUG WORKER ACCOUNT INFO:", account_info)  # Log temporaire pour diagnostic
                         self.account_info_updated.emit(account_info)
                     except Exception as e:
                         self.log_message.emit(f"[Worker] Erreur récupération infos compte : {e}")
