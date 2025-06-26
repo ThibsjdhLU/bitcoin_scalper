@@ -259,6 +259,7 @@ class MainWindow(QMainWindow):
         self.alert_banner.setVisible(False)
 
     def update_account_info(self, info: dict) -> None:
+        print("DEBUG update_account_info panel id:", id(self.account_info_panel))
         print("DEBUG update_account_info:", info)
         print("balance:", info.get("balance"), "profit:", info.get("profit"), "equity:", info.get("equity"))
         if not info:

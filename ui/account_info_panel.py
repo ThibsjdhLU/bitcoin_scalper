@@ -15,6 +15,7 @@ class AccountInfoPanel(QWidget):
     """
     def __init__(self, parent: QWidget = None) -> None:
         super().__init__(parent)
+        print("DEBUG AccountInfoPanel __init__", id(self))
         self.setObjectName("AccountInfoPanel")
         self.layout = QVBoxLayout()
         self.layout.setSpacing(10)
