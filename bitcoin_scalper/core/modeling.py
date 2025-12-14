@@ -24,12 +24,14 @@ try:
     import torch.optim as optim
     from torch.utils.data import TensorDataset, DataLoader
     _HAS_TORCH = True
-except ImportError:
+except (ImportError, OSError):
+    logger.warning("PyTorch not available or failed to load (OSError/ImportError).")
     _HAS_TORCH = False
 try:
     from tensorflow import keras
     _HAS_KERAS = True
-except ImportError:
+except (ImportError, OSError):
+    logger.warning("TensorFlow/Keras not available or failed to load (OSError/ImportError).")
     _HAS_KERAS = False
 
 import os
@@ -39,14 +41,6 @@ try:
     _HAS_SHAP = True
 except ImportError:
     _HAS_SHAP = False
-
-logger = logging.getLogger("bitcoin_scalper.modeling")
-logger.setLevel(logging.DEBUG)
-handler = logging.StreamHandler()
-formatter = logging.Formatter('[%(asctime)s][%(levelname)s] %(message)s')
-handler.setFormatter(formatter)
-if not logger.hasHandlers():
-    logger.addHandler(handler)
 
 def train_model(
     X_train: pd.DataFrame,

@@ -1,9 +1,0 @@
-{
-  "sharpe": 0,
-  "max_drawdown": 0.0,
-  "profit_factor": Infinity,
-  "win_rate": 0,
-  "nb_trades": 0,
-  "final_return": 0.0,
-  "final_capital": 10000.0
-}
