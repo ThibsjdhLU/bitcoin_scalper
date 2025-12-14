@@ -2,6 +2,15 @@ import numpy as np
 import pandas as pd
 import logging
 from typing import Tuple, Optional
+
+logger = logging.getLogger("bitcoin_scalper.modeling")
+logger.setLevel(logging.DEBUG)
+handler = logging.StreamHandler()
+formatter = logging.Formatter('[%(asctime)s][%(levelname)s] %(message)s')
+handler.setFormatter(formatter)
+if not logger.hasHandlers():
+    logger.addHandler(handler)
+
 from catboost import CatBoostClassifier, Pool
 from sklearn.model_selection import GridSearchCV
 try:
