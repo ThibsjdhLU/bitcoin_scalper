@@ -30,7 +30,9 @@ try:
         # Fallback to older optuna layout if available
         from optuna.integration import CatBoostPruningCallback, XGBoostPruningCallback
     _HAS_OPTUNA = True
-except ImportError:
+except ImportError as e:
+    # Log the specific error to help user debug missing dependencies
+    logger.warning(f"Optuna integration not available: {e}. Falling back to default parameters.")
     _HAS_OPTUNA = False
 
 try:
@@ -244,6 +246,10 @@ class ModelTrainer:
              raise ValueError("Model not trained yet.")
 
         preds = self.model.predict(X_test)
+
+        # Ensure 1D array
+        if isinstance(preds, np.ndarray) and preds.ndim > 1:
+            preds = preds.ravel()
 
         # Inverse transform labels if needed
         if self.label_encoder:
