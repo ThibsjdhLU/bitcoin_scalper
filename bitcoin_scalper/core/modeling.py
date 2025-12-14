@@ -42,14 +42,6 @@ try:
 except ImportError:
     _HAS_SHAP = False
 
-logger = logging.getLogger("bitcoin_scalper.modeling")
-logger.setLevel(logging.DEBUG)
-handler = logging.StreamHandler()
-formatter = logging.Formatter('[%(asctime)s][%(levelname)s] %(message)s')
-handler.setFormatter(formatter)
-if not logger.hasHandlers():
-    logger.addHandler(handler)
-
 def train_model(
     X_train: pd.DataFrame,
     y_train: pd.Series,
