@@ -342,7 +342,12 @@ class FeatureEngineering:
                 cols_to_join = [col for col in df_tf_features.columns if col.startswith(f"{tf}_") and col != df_tf_features.index.name]
                 original_ohlcv_cols = [price_col, high_col, low_col, volume_col, "tickvol"]
                 cols_to_join = [col for col in cols_to_join if col not in original_ohlcv_cols]
-                base = base.join(df_tf_features[cols_to_join], how="left")
+
+                # Réalignement temporel intelligent (ffill) pour éviter les NaNs lors du join
+                # Ex: une feature 5min à 10:05 doit être propagée sur 10:06, 10:07, 10:08, 10:09
+                # reindex avec method='ffill' assure que chaque timestamp 1min reçoit la dernière valeur 5min connue
+                to_join = df_tf_features[cols_to_join].reindex(base.index, method='ffill')
+                base = base.join(to_join, how="left")
 
         if base is None:
             return pd.DataFrame()
