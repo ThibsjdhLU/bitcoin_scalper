@@ -120,8 +120,8 @@ def run_ml_pipeline(
     else:
         raise ValueError(f"Modèle non supporté : {model_type}")
     # 5. Prédiction/évaluation
-    y_val_pred = model.predict(X_val)
-    y_test_pred = model.predict(X_test)
+    y_val_pred = np.array(model.predict(X_val)).ravel()
+    y_test_pred = np.array(model.predict(X_test)).ravel()
     y_val_proba = model.predict_proba(X_val)[:,1] if hasattr(model, "predict_proba") else None
     y_test_proba = model.predict_proba(X_test)[:,1] if hasattr(model, "predict_proba") else None
     metrics = {
