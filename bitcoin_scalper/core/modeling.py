@@ -241,6 +241,16 @@ class ModelTrainer:
             model.fit(X_train, y_train, eval_set=[(X_val, y_val)], eval_metric=eval_metric, early_stopping_rounds=early_stopping, verbose=False)
             return model
 
+    def save_model(self, filepath):
+        if self.model is None:
+             raise ValueError("Model not trained yet.")
+
+        if hasattr(self.model, 'save_model'):
+             self.model.save_model(filepath)
+        else:
+             import joblib
+             joblib.dump(self.model, filepath)
+
     def predict(self, X_test):
         if self.model is None:
              raise ValueError("Model not trained yet.")

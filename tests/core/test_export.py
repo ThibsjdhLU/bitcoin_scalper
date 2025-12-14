@@ -46,4 +46,5 @@ def test_save_load_permission_error(monkeypatch, tmp_path):
         raise PermissionError("forbidden")
     monkeypatch.setattr("builtins.open", bad_open)
     with pytest.raises(PermissionError):
-        save_objects(model, None, None, None, prefix) 
+        # We must provide at least one artifact to trigger `open()`
+        save_objects(model, {'pipeline': True}, None, None, prefix)

@@ -171,7 +171,7 @@ def run_ml_pipeline(
         plt.close()
 
     # Feature Importance
-    trainer.feature_importance(X_train, plot=False, save_path=os.path.join(out_dir, "feature_importance.png"))
+    trainer.feature_importance(X_train, plot=True, save_path=os.path.join(out_dir, "feature_importance.png"))
     # Also save csv
     imp_df = trainer.feature_importance(X_train)
     if imp_df is not None:
