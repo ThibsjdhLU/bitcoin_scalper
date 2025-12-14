@@ -46,7 +46,6 @@ def load_minute_csv(
     :param report_missing: Chemin du fichier de rapport des trous (ou None pour désactiver)
     :param fill_method: None (strict), 'ffill', 'bfill', 'interpolate'
     :return: DataFrame propre, indexé par datetime UTC, colonnes : OPEN, HIGH, LOW, CLOSE, TICKVOL
-    :raises InvalidFrequencyError: si la fréquence n'est pas strictement de 1 minute
     """
     logger.info(f"Chargement du fichier CSV : {csv_path}")
     # Détection automatique du séparateur (tabulation ou virgule)
