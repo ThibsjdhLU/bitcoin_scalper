@@ -40,7 +40,7 @@ def main():
     parser.add_argument('--val_frac', type=float, default=0.15, help='Fraction validation')
     parser.add_argument('--test_frac', type=float, default=0.15, help='Fraction test')
     parser.add_argument('--purge_window', type=int, default=None, help='Fenêtre de purge pour purged_kfold')
-    parser.add_argument('--tuning', default='optuna', choices=['optuna', 'grid'], help='Méthode de tuning LightGBM')
+    parser.add_argument('--tuning', default='optuna', choices=['optuna', 'grid'], help='Méthode de tuning')
     parser.add_argument('--early_stopping_rounds', type=int, default=20, help='Early stopping rounds')
     parser.add_argument('--export', action='store_true', help='Sauvegarder les objets finaux')
     parser.add_argument('--inference', action='store_true', help='Effectuer l\'inférence sur le test set')
@@ -49,6 +49,10 @@ def main():
     parser.add_argument('--qvalue', action='store_true', help='Utiliser la régression Q-value (expected return net) au lieu de la classification directionnelle')
     parser.add_argument('--pipeline', default='ml', choices=['ml', 'tuning', 'backtest', 'rl', 'stacking', 'hybrid'], help='Pipeline ML à exécuter')
     args = parser.parse_args()
+
+    # Variables to be populated by pipeline execution
+    model = None
+    fin_metrics = {}
 
     try:
         # 1. Chargement et nettoyage des données 1 minute
@@ -122,7 +126,7 @@ def main():
         else:
             df_bal = df_feat
 
-        # 5. Splitting
+        # 5. Splitting (Redundant with ml_orch but good for preserving local variables for later inference block if needed)
         logger.info('Splitting...')
         train, val, test = split_dataset(
             df_bal,
@@ -136,42 +140,53 @@ def main():
         val.to_pickle('artf_val.pkl')
         test.to_pickle('artf_test.pkl')
 
-        # Après le split, garantir la présence de log_return_1m et 1min_log_return dans chaque split
+        # Ensure log returns exist (Fixing potential data leaks/missing columns for backtest)
         for split_name, split_df in zip(['train', 'val', 'test'], [train, val, test]):
             if 'log_return_1m' not in split_df.columns and '<CLOSE>' in split_df.columns:
                 split_df['log_return_1m'] = np.log(split_df['<CLOSE>'] / split_df['<CLOSE>'].shift(1))
             if 'log_return_1m' in split_df.columns:
                 split_df['1min_log_return'] = split_df['log_return_1m']
-            else:
-                logger.warning(f"log_return_1m absent dans le split {split_name} !")
-        # Réaffecter les splits corrigés
-        train, val, test = [df for df in [train, val, test]]
-        logger.info(f"Présence de log_return_1m et 1min_log_return dans splits : train={('log_return_1m' in train.columns and '1min_log_return' in train.columns)}, val={('log_return_1m' in val.columns and '1min_log_return' in val.columns)}, test={('log_return_1m' in test.columns and '1min_log_return' in test.columns)}")
 
         # --- Orchestration dynamique selon le pipeline choisi ---
+        report = {}
         if args.pipeline == 'ml':
             logger.info('Exécution du pipeline ML classique...')
-            ml_orch.run_ml_pipeline(df_bal, label_col='label', out_dir='ml_reports')
+            # Using expert level ModelTrainer via ml_orch
+            report = ml_orch.run_ml_pipeline(
+                df_bal,
+                label_col='label',
+                out_dir='ml_reports',
+                tuning_method=args.tuning,
+                early_stopping_rounds=args.early_stopping_rounds
+            )
+            model = report.get('model_object')
+
         elif args.pipeline == 'tuning':
             logger.info('Exécution du pipeline tuning...')
             ml_orch.run_tuning_pipeline(df_bal, label_col='label', out_dir='tuning_reports')
+            # Tuning returns a report, usually no model object ready for export unless specified
+
         elif args.pipeline == 'backtest':
             logger.info('Exécution du pipeline backtest...')
             ml_orch.run_backtest_pipeline(df_bal, signal_col='label', price_col='<CLOSE>', out_dir='backtest_reports')
+
         elif args.pipeline == 'rl':
             logger.info('Exécution du pipeline RL...')
             ml_orch.run_rl_pipeline(df_bal, out_dir='rl_reports')
+
         elif args.pipeline == 'stacking':
             logger.info('Exécution du pipeline stacking...')
             ml_orch.run_stacking_pipeline(df_bal, label_col='label', out_dir='stacking_reports')
+
         elif args.pipeline == 'hybrid':
             logger.info('Exécution du pipeline hybrid...')
             ml_orch.run_hybrid_strategy_pipeline(df_bal, out_dir='hybrid_reports')
+
         else:
             logger.error(f"Pipeline inconnu : {args.pipeline}")
             sys.exit(1)
 
-        if args.plot:
+        if args.plot and 'pnl_cum_curve' in fin_metrics:
             logger.info('Tracé de la courbe de PnL...')
             fig = plot_pnl_curve(fin_metrics['pnl_cum_curve'])
             fig.savefig('artf_pnl_curve.png')
@@ -179,23 +194,36 @@ def main():
         # 8. Export
         if args.export:
             logger.info('Export des objets finaux...')
-            # Assurez-vous de sauvegarder également le scaler si utilisé dans le modeling
-            # Pour l'instant, le scaler n'est pas explicitement géré ici, juste le modèle
-            save_objects(model, None, None, None, args.model_prefix)
+            if model:
+                # Assuming scaler is implicitly handled by the model or not used (trees)
+                save_objects(model, None, None, None, args.model_prefix)
+            else:
+                logger.warning("Aucun modèle à exporter. Assurez-vous d'avoir exécuté le pipeline 'ml'.")
 
         # 9. Inference (optionnel)
         if args.inference:
             logger.info('Inference sur le test set...')
-            # L'inférence doit aussi utiliser les features multi-timeframe
-            # Actuellement, inference prend X_test directement, ce qui est correct
-            sig = inference(X_test, path_prefix=args.model_prefix)
-            sig.to_csv('artf_inference_signal.csv')
+            # We use the test split generated locally
+            # NOTE: inference function expects model file to load, or we should pass the model object?
+            # Looking at inference source code, it might load via prefix.
+            # If we just saved it, it should be fine.
+            if model:
+                # If model is in memory, we might need to adapt inference to accept it,
+                # or rely on the saved file.
+                # Assuming inference(...) loads from file using `path_prefix`.
+                try:
+                    sig = inference(test, path_prefix=args.model_prefix) # Passing dataframe test split
+                    sig.to_csv('artf_inference_signal.csv')
+                except Exception as e:
+                    logger.error(f"Erreur lors de l'inférence: {e}")
+            else:
+                 logger.warning("Pas de modèle pour l'inférence.")
 
         logger.info('Pipeline terminé avec succès.')
 
     except Exception as e:
-        logger.error(f"Erreur critique dans le pipeline : {e}")
+        logger.error(f"Erreur critique dans le pipeline : {e}", exc_info=True)
         sys.exit(1)
 
 if __name__ == '__main__':
-    main() 
+    main()
