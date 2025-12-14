@@ -58,15 +58,27 @@ def main():
         # 1. Chargement et nettoyage des données 1 minute
         logger.info('Chargement et nettoyage du CSV minute...')
         df_1min = load_minute_csv(args.csv, report_missing="rapport_trous_temporals.txt")
-        if args.fill_missing:
-            logger.info('Comblement automatique des trous temporels (réindexation 1min + ffill)...')
-            full_index = pd.date_range(df_1min.index.min(), df_1min.index.max(), freq='1min', tz=df_1min.index.tz)
-            missing_before = full_index.difference(df_1min.index)
-            if len(missing_before) > 0:
-                logger.warning(f"{len(missing_before)} lignes manquantes détectées, application du ffill...")
-            df_1min = df_1min.reindex(full_index)
-            df_1min = df_1min.ffill()
-            logger.info(f"Après comblement : {df_1min.shape[0]} lignes, {df_1min.isna().sum().sum()} valeurs NaN restantes.")
+
+        # Vérification stricte des trous temporels
+        # Les features basées sur des fenêtres glissantes (rolling) seront faussées si les données ne sont pas continues
+        full_index = pd.date_range(df_1min.index.min(), df_1min.index.max(), freq='1min', tz=df_1min.index.tz)
+        has_gaps = len(df_1min) < len(full_index)
+
+        if has_gaps:
+            if args.fill_missing:
+                logger.info('Comblement automatique des trous temporels (réindexation 1min + ffill)...')
+                missing_before = full_index.difference(df_1min.index)
+                if len(missing_before) > 0:
+                    logger.warning(f"{len(missing_before)} lignes manquantes détectées, application du ffill...")
+                df_1min = df_1min.reindex(full_index)
+                df_1min = df_1min.ffill()
+                logger.info(f"Après comblement : {df_1min.shape[0]} lignes, {df_1min.isna().sum().sum()} valeurs NaN restantes.")
+            else:
+                logger.error("Des trous temporels ont été détectés et --fill_missing n'est pas activé.")
+                logger.error("L'entraînement sur des données discontinues fausse les indicateurs techniques (rolling windows).")
+                logger.error("Veuillez activer --fill_missing ou fournir un CSV complet.")
+                sys.exit(1)
+
         df_1min.to_pickle('artf_data_cleaned_1min.pkl')
 
         # Agrégation des données en 5 minutes
