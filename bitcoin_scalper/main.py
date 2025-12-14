@@ -42,6 +42,7 @@ from models.positions_model import PositionsModel
 import pyqtgraph as pg
 import platform
 import subprocess
+import socket
 
 # --- Config logging ---
 logging.basicConfig(level=logging.INFO)
@@ -463,15 +464,20 @@ def main():
     window.show()
 
     if platform.system().lower() == "windows":
-        # Lancer le serveur MT5 REST automatiquement sous Windows (console visible)
-        mt5_server_script = os.path.join(os.path.dirname(__file__), '..', 'scripts', 'mt5_rest_server.py')
-        try:
-            subprocess.Popen([
-                sys.executable, mt5_server_script
-            ])  # Console visible pour debug
-            logger.append_log("[INFO] Serveur MT5 REST lancé automatiquement (Windows, console visible).")
-        except Exception as e:
-            logger.append_log(f"[ERROR] Erreur lors du lancement automatique du serveur MT5 REST : {e}")
+        # Vérifier si le port 8000 est déjà utilisé
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            if s.connect_ex(('localhost', 8000)) == 0:
+                logger.append_log("[INFO] Port 8000 déjà utilisé, lancement automatique du serveur MT5 REST ignoré.")
+            else:
+                # Lancer le serveur MT5 REST automatiquement sous Windows (console visible)
+                mt5_server_script = os.path.join(os.path.dirname(__file__), '..', 'scripts', 'mt5_rest_server.py')
+                try:
+                    subprocess.Popen([
+                        sys.executable, mt5_server_script
+                    ])  # Console visible pour debug
+                    logger.append_log("[INFO] Serveur MT5 REST lancé automatiquement (Windows, console visible).")
+                except Exception as e:
+                    logger.append_log(f"[ERROR] Erreur lors du lancement automatique du serveur MT5 REST : {e}")
 
     sys.exit(app.exec())
 

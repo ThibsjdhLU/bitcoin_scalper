@@ -32,7 +32,22 @@ class MT5RestClient:
                 resp.raise_for_status()
                 return resp.json()
             except requests.RequestException as e:
-                logger.warning(f"Erreur réseau (tentative {attempt}): {e}")
+                logger.warning(f"Erreur réseau (tentative {attempt}) vers {url}: {e}")
+                # Fallback localhost si connexion échouée vers une IP distante
+                if attempt == self.max_retries and "localhost" not in self.base_url and "127.0.0.1" not in self.base_url:
+                    logger.info(f"Tentative de fallback sur localhost:8000 suite aux échecs vers {self.base_url}")
+                    try:
+                        fallback_url = f"http://localhost:8000{endpoint}"
+                        resp = self.session.request(method, fallback_url, timeout=self.timeout, **kwargs)
+                        resp.raise_for_status()
+                        logger.info("Connexion réussie via fallback localhost.")
+                        # On met à jour la base_url pour les prochains appels
+                        self.base_url = "http://localhost:8000"
+                        return resp.json()
+                    except Exception as fallback_e:
+                        logger.error(f"Echec du fallback localhost: {fallback_e}")
+                        raise MT5RestClientError(f"Erreur réseau persistante (y compris fallback localhost): {e}")
+
                 if attempt == self.max_retries:
                     raise MT5RestClientError(f"Erreur réseau persistante: {e}")
             except Exception as e:
