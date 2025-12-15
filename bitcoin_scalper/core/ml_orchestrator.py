@@ -6,6 +6,7 @@ import logging
 from typing import Dict, Any, Optional
 from bitcoin_scalper.core.splitting import temporal_train_val_test_split, generate_time_series_folds
 from bitcoin_scalper.core.modeling import ModelTrainer
+from bitcoin_scalper.core.backtesting import Backtester
 from sklearn.metrics import accuracy_score, f1_score, roc_auc_score, confusion_matrix
 import matplotlib.pyplot as plt
 
@@ -147,6 +148,58 @@ def run_ml_pipeline(
             "confusion": confusion_matrix(y_test, y_test_pred).tolist()
         }
     }
+
+    # 5b. Financial Verification (Backtest on Test Set)
+    # Detect price column (prefer 1min_<CLOSE> or <CLOSE>)
+    price_cols = [c for c in df.columns if 'CLOSE' in c.upper()]
+    # Prefer explicit 1min_<CLOSE> if available, else first match
+    price_col = next((c for c in price_cols if '1MIN_<CLOSE>' in c.upper()), None)
+    if not price_col and price_cols:
+        price_col = price_cols[0]
+
+    if price_col:
+        logger.info(f"Running financial verification on TEST set using price column: {price_col}...")
+
+        # Prepare test dataframe for backtester
+        test_bt_df = test.copy()
+        test_bt_df['signal'] = y_test_pred  # Inject predictions as signals
+
+        # Run Backtester
+        # Use defaults or allow injection? Using safe defaults for quick verification.
+        try:
+            backtester = Backtester(
+                df=test_bt_df,
+                signal_col='signal',
+                price_col=price_col,
+                initial_capital=10000.0,
+                fee=0.0005,      # 0.05% fee
+                slippage=0.0002, # 0.02% slippage
+                out_dir=os.path.join(out_dir, "test_backtest")
+            )
+            _, _, kpis, _ = backtester.run()
+
+            # Add to metrics
+            metrics["test"]["financial"] = kpis
+
+            # Log prominently
+            profit_color = "\033[92m" if kpis['final_return'] > 0 else "\033[91m"
+            reset_color = "\033[0m"
+            logger.info("="*60)
+            logger.info("💰 FINANCIAL VERIFICATION REPORT (TEST SET) 💰")
+            logger.info(f"Price Column: {price_col}")
+            logger.info(f"Initial Capital: $10,000")
+            logger.info(f"Final Capital:   ${kpis['final_capital']:.2f} ({profit_color}{kpis['final_return']*100:+.2f}%{reset_color})")
+            logger.info(f"Sharpe Ratio:    {kpis['sharpe']:.4f}")
+            logger.info(f"Max Drawdown:    {kpis['max_drawdown']:.2f}")
+            logger.info(f"Win Rate:        {kpis['win_rate']*100:.2f}%")
+            logger.info(f"Profit Factor:   {kpis['profit_factor']:.2f}")
+            logger.info("="*60)
+
+        except Exception as e:
+            logger.error(f"Failed to run financial verification: {e}")
+            metrics["test"]["financial_error"] = str(e)
+    else:
+        logger.warning("Could not find a CLOSE column for financial verification.")
 
     # 6. Reporting
     with open(os.path.join(out_dir, "metrics.json"), "w") as f:
