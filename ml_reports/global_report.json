@@ -1,0 +1,11 @@
+{
+  "split": "ml_reports/split_report.json",
+  "cv_folds": "ml_reports/cv_folds.json",
+  "metrics": "ml_reports/metrics.json",
+  "val_predictions": "ml_reports/val_predictions.csv",
+  "test_predictions": "ml_reports/test_predictions.csv",
+  "confusion_val": "ml_reports/confusion_val.png",
+  "confusion_test": "ml_reports/confusion_test.png",
+  "feature_importance": "ml_reports/feature_importance.csv",
+  "feature_importance_png": "ml_reports/feature_importance.png"
+}
