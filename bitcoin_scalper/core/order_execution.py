@@ -1,6 +1,6 @@
 import logging
 from typing import Any, Dict
-from bot.connectors.mt5_rest_client import MT5RestClient, MT5RestClientError
+from bitcoin_scalper.connectors.mt5_rest_client import MT5RestClient, MT5RestClientError
 import time
 import random
 import os

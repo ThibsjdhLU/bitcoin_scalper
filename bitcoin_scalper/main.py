@@ -19,26 +19,26 @@ from bitcoin_scalper.core.export import load_objects
 from bitcoin_scalper.core.modeling import predict
 from bitcoin_scalper.core.backtesting import Backtester
 from bitcoin_scalper.core.order_algos import execute_iceberg, execute_vwap, execute_twap
-from bot.connectors.mt5_rest_client import MT5RestClient
+from bitcoin_scalper.connectors.mt5_rest_client import MT5RestClient
 from prometheus_client import start_http_server, Counter, Gauge
 import threading
 import argparse
 import numpy as np
 from sklearn.metrics import accuracy_score, f1_score, roc_auc_score, precision_score, recall_score
 import joblib
-from scripts.prepare_features import generate_signal
+from bitcoin_scalper.scripts.prepare_features import generate_signal
 import getpass
 import hashlib
 import sys
 from PyQt6.QtWidgets import QApplication, QMainWindow, QDockWidget, QTableView, QTextEdit, QMenuBar, QMessageBox
 from PyQt6.QtGui import QAction
 from PyQt6.QtCore import pyqtSignal, Qt
-from ui.main_window import MainWindow
-from ui.password_dialog import PasswordDialog
-from threads.trading_worker import TradingWorker
-from utils.logger import QtLogger
-from utils.settings import SettingsManager
-from models.positions_model import PositionsModel
+from bitcoin_scalper.ui.main_window import MainWindow
+from bitcoin_scalper.ui.password_dialog import PasswordDialog
+from bitcoin_scalper.threads.trading_worker import TradingWorker
+from bitcoin_scalper.utils.logger import QtLogger
+from bitcoin_scalper.utils.settings import SettingsManager
+from bitcoin_scalper.models.positions_model import PositionsModel
 import pyqtgraph as pg
 import platform
 import subprocess
