@@ -2,7 +2,7 @@ import threading
 import time
 import logging
 from typing import Optional, List, Dict, Any
-from bot.connectors.mt5_rest_client import MT5RestClient
+from bitcoin_scalper.connectors.mt5_rest_client import MT5RestClient
 from bitcoin_scalper.core.timescaledb_client import TimescaleDBClient
 from bitcoin_scalper.core.data_cleaner import DataCleaner
 

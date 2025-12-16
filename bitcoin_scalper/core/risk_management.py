@@ -3,7 +3,7 @@ Gestionnaire de risques REST multiplateforme pour trading BTC/USD.
 Utilise exclusivement MT5RestClient (aucune dépendance native MT5, compatible macOS).
 """
 from typing import Optional, Dict, Any
-from bot.connectors.mt5_rest_client import MT5RestClient, MT5RestClientError
+from bitcoin_scalper.connectors.mt5_rest_client import MT5RestClient, MT5RestClientError
 import logging
 
 logger = logging.getLogger(__name__)
