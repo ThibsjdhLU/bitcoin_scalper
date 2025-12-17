@@ -10,4 +10,7 @@ lint:
 docs:
 	cd docs && make html
 
-.PHONY: init test lint docs
+train:
+	python3 train.py
+
+.PHONY: init test lint docs train

@@ -64,6 +64,18 @@ make docs
 
 ## Utilisation
 
+- **Entraîner le modèle ML** :
+  ```sh
+  python train.py
+  ```
+  ou
+  ```sh
+  make train
+  ```
+  Le modèle utilise automatiquement le fichier CSV dans `/data/BTCUSD_M1_202301010000_202512011647.csv`.
+  
+  Pour plus de détails, consultez [README_TRAINING.md](README_TRAINING.md).
+
 - **Lancer le bot principal** :
   ```sh
   python -m bitcoin_scalper.main
