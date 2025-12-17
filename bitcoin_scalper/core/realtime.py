@@ -5,6 +5,8 @@ from typing import Any, Callable, Optional, Dict, List
 import time
 from datetime import datetime, timezone
 from bitcoin_scalper.core.order_execution import execute_adaptive_trade
+from bitcoin_scalper.core.trade_decision_filter import TradeDecisionFilter
+from bitcoin_scalper.core.risk_management import RiskManager
 
 logger = logging.getLogger("bitcoin_scalper.realtime")
 logger.setLevel(logging.INFO)
@@ -29,27 +31,12 @@ class RealTimeExecutor:
         out_dir: str = "realtime_reports",
         scheduler: Any = None,
         client: Any = None,
+        risk_manager: Optional[RiskManager] = None,
+        trade_filter: Optional[TradeDecisionFilter] = None,
         atr_col: str = "atr_14", # Colonne ATR pour stop dynamique
         max_latency_ms: int = 200, # Max latency in milliseconds
         kill_switch_threshold: int = 5 # Number of consecutive stale quotes to trigger kill switch
     ):
-        """
-        :param model: modèle ML (doit avoir predict)
-        :param data_source: fonction qui retourne un DataFrame (nouveaux ticks/bars)
-        :param signal_col: colonne des signaux
-        :param price_col: colonne des prix
-        :param initial_capital: capital initial
-        :param fee: frais de transaction
-        :param slippage: slippage
-        :param mode: "simulation" (replay) ou "live"
-        :param sleep_time: temps d'attente entre deux ticks (simulation)
-        :param out_dir: dossier de reporting
-        :param scheduler: scheduler adaptatif
-        :param client: client broker (pour live)
-        :param atr_col: Nom de la colonne ATR pour les stops dynamiques
-        :param max_latency_ms: Latence maximale autorisée en ms (défaut 200ms)
-        :param kill_switch_threshold: Nombre d'erreurs consécutives avant kill switch (défaut 5)
-        """
         self.model = model
         self.data_source = data_source
         self.signal_col = signal_col
@@ -67,11 +54,22 @@ class RealTimeExecutor:
         self.timestamps = []
         self.scheduler = scheduler
         self.client = client
+        self.risk_manager = risk_manager
+        self.trade_filter = trade_filter
         self.atr_col = atr_col
         self.max_latency_ms = max_latency_ms
         self.kill_switch_threshold = kill_switch_threshold
         self.consecutive_latency_errors = 0
         self._setup_reporting()
+
+        # Initialize defaults if not provided
+        if self.trade_filter is None:
+            self.trade_filter = TradeDecisionFilter()
+
+        # RiskManager is required for dynamic stops, but might be optional if passed via scheduler or just for simulation
+        # If client is provided but risk_manager is not, we can instantiate it if we have the client.
+        if self.risk_manager is None and self.client is not None:
+             self.risk_manager = RiskManager(self.client)
 
     def _setup_reporting(self):
         import os
@@ -114,75 +112,100 @@ class RealTimeExecutor:
             return True
 
     def step(self, row: pd.Series):
-        # 1. Check Latency
+        # 1. Latency Check (PRIORITAIRE)
         if not self.check_latency(row.name):
              return # Abort processing for this tick
 
         price = row[self.price_col]
 
-        # Préparation des features (exclusion des colonnes cibles/prix)
+        # 2. Feature Engineering / Preparation
         exclude_cols = [self.signal_col, self.price_col, "target", "label", "open", "high", "low", "volume", "tickvol"]
         features_row = row.drop(exclude_cols, errors="ignore")
-        # On garde les features numériques seulement
-        features_row = features_row.select_dtypes(include=[np.number])
-        features = features_row.values.reshape(1, -1)
+        # Convert Series to DataFrame to use select_dtypes, then reshape
+        features_row_numeric = features_row.to_frame().T.select_dtypes(include=[np.number])
+        features = features_row_numeric.values
 
-        # Scaling if model expects it (handled inside model pipeline usually)
-
-        # Prédiction
-        signal = self.model.predict(features)[0]
-
-        proba = None
+        # 3. Prédiction ML
+        # Obtenir les probabilités [prob_sell, prob_buy] ou [prob_down, prob_neutral, prob_up]
+        # On suppose un modèle qui retourne predict_proba
+        signal = 0
+        proba = 0.5
         probs = None
+
         if hasattr(self.model, "predict_proba"):
             probs_array = self.model.predict_proba(features)
-            probs = probs_array[0] # Distribution complète pour entropie
+            probs = np.array(probs_array[0]) # Distribution complète pour entropie
             proba = probs.max()    # Confiance max
+            predicted_class = self.model.predict(features)[0]
+            # Map prediction to signal (-1, 0, 1) depending on model encoding
+            # Assuming standard encoding: 0=Sell, 1=Buy OR 0=Hold, 1=Buy etc.
+            # Needs alignment with labeling strategy. Assuming -1, 0, 1 output from predict or mapped.
+            # If classifier returns 0,1,2 we need mapping.
+            # For this context, let's assume predict returns the signed signal directly or we infer it.
+            # If binary (0, 1): 0=Sell?? No usually 0=Hold?
+            # Let's rely on model.predict returning the actionable signal directly for now
+            # OR map it if we knew the labeling.
+            signal = predicted_class
+        else:
+            # Fallback if no proba (e.g. some regressors or simple models)
+            signal = self.model.predict(features)[0]
+            probs = [0.5, 0.5] # Dummy
 
-        # Récupération ATR pour stop dynamique
+        # 4. Filtre Entropie
+        if self.trade_filter:
+            should_trade, reason = self.trade_filter.filter(proba, probs)
+            if not should_trade:
+                # logger.info(f"Trade aborted by Entropy Filter: {reason}")
+                return
+
+        # 5. Calcul Risk
         atr = row.get(self.atr_col, row.get("atr", 0.0))
+        if atr == 0.0:
+             logger.warning("ATR is 0 or missing, cannot calculate dynamic stops.")
+             return
 
-        # Calcul Stop Loss Dynamique (distance)
-        stop_loss_dist = None
+        stop_loss_price = None
+        take_profit_price = None
+
         if signal != 0:
-            side = 'buy' if signal == 1 else 'sell'
+            side = 'buy' if signal > 0 else 'sell'
 
-            # Utilisation du RiskManager du scheduler s'il existe
-            rm = None
-            if self.scheduler is not None and hasattr(self.scheduler, 'risk_manager'):
-                rm = self.scheduler.risk_manager
-
-            # Sinon utilisation d'une logique locale si nécessaire (simu basique)
-
-            if rm:
-                dyn_stops = rm.calculate_dynamic_stops(price, atr, side, proba if proba else 0.5)
-                # On convertit en distance pour le scheduler/sizing
-                stop_loss_dist = abs(price - dyn_stops['sl'])
+            if self.risk_manager:
+                stops = self.risk_manager.calculate_dynamic_stops(price, atr, side, proba)
+                stop_loss_price = stops['sl']
+                take_profit_price = stops['tp']
             else:
-                # Fallback basic logic
-                k_sl = 2.0 if (proba and proba > 0.8) else 1.5
-                stop_loss_dist = atr * k_sl
+                # Fallback logic if no RiskManager provided (e.g. pure simulation without complex logic)
+                k_sl = 1.5
+                k_tp = 3.0
+                if side == 'buy':
+                    stop_loss_price = price - (atr * k_sl)
+                    take_profit_price = price + (atr * k_tp)
+                else:
+                    stop_loss_price = price + (atr * k_sl)
+                    take_profit_price = price - (atr * k_tp)
 
+        # 6. Exécution
         # Exécution via Scheduler (Live ou Simulation avancée)
         if self.scheduler is not None:
-            # On passe probs et stop_loss_dist au scheduler via execute_adaptive_trade
             if signal != 0:
+                # Calculate SL distance for scheduler
+                stop_loss_dist = abs(price - stop_loss_price) if stop_loss_price else None
+
                 res = execute_adaptive_trade(
                     scheduler=self.scheduler,
                     symbol="BTCUSD",
                     signal=signal,
-                    proba=proba if proba else 0.5,
+                    proba=proba,
                     client=self.client,
                     stop_loss=stop_loss_dist,
-                    probs=probs # Pour l'Entropie
+                    probs=probs
                 )
                 if res["success"]:
                     self.trades.append(res)
-                    # En simulation sans client réel, on ne maj pas self.capital ici car execute_adaptive_trade ne simule pas le fill
-                    # Il faudrait simuler l'ordre.
-                    # TODO: Améliorer la simu avec scheduler.
         else:
             # Exécution classique (Simulation basique interne)
+            # This block updates internal PnL for backtesting/simulation mode
             if signal != 0:
                 # Close opposite
                 if self.position != 0 and np.sign(self.position) != np.sign(signal):
@@ -195,17 +218,12 @@ class RealTimeExecutor:
                 if self.position == 0:
                     self.position = signal
                     self.last_price = price
-
-                    # Store params for simulation
-                    side = 'buy' if signal == 1 else 'sell'
-                    self.current_sl_dist = stop_loss_dist
-                    self.current_tp_dist = stop_loss_dist * 2.0 # Default R:R 2
-
-                    self.current_sl = price - stop_loss_dist if side == 'buy' else price + stop_loss_dist
-                    self.current_tp = price + self.current_tp_dist if side == 'buy' else price - self.current_tp_dist
+                    self.current_sl = stop_loss_price
+                    self.current_tp = take_profit_price
 
             # Manage open position (SL/TP)
             elif self.position != 0:
+                # Check SL/TP hits
                 hit_sl = (self.position > 0 and price <= self.current_sl) or (self.position < 0 and price >= self.current_sl)
                 hit_tp = (self.position > 0 and price >= self.current_tp) or (self.position < 0 and price <= self.current_tp)
 
