@@ -5,6 +5,8 @@ from queue import Queue
 import pandas as pd
 import os
 import joblib
+import numpy as np
+from datetime import datetime
 from bitcoin_scalper.core.config import SecureConfig
 from bitcoin_scalper.core.data_cleaner import DataCleaner
 from bitcoin_scalper.core.feature_engineering import FeatureEngineering
@@ -16,6 +18,9 @@ from bitcoin_scalper.core.modeling import predict
 from bitcoin_scalper.core.order_algos import execute_iceberg, execute_vwap
 from bitcoin_scalper.connectors.mt5_rest_client import MT5RestClient
 from bitcoin_scalper.scripts.prepare_features import generate_signal
+# ✅ PHASE 5: INFERENCE & SAFETY modules
+from bitcoin_scalper.core.inference_safety import InferenceSafetyGuard, DynamicRiskManager
+from bitcoin_scalper.core.monitoring import DriftMonitor
 
 class TradingWorker(QThread):
     new_ohlcv = pyqtSignal(object)
@@ -48,6 +53,22 @@ class TradingWorker(QThread):
         self.ml_loaded = False
         self.risk = None
         self.positions = []
+        
+        # ✅ PHASE 5: Initialize safety guards
+        self.safety_guard = InferenceSafetyGuard(
+            max_latency_ms=200.0,
+            max_entropy=0.8,
+            max_consecutive_errors=5,
+            error_window_seconds=60
+        )
+        self.dynamic_risk = DynamicRiskManager(
+            high_confidence_threshold=0.8,
+            sl_atr_mult_confident=2.0,
+            sl_atr_mult_uncertain=1.5
+        )
+        self.drift_monitor = None  # Initialized after loading training data
+        self.drift_check_counter = 0
+        self.drift_check_interval = 100  # Check drift every 100 ticks
 
     def set_config(self, aes_key, config_path="config.enc"):
         self.aes_key = aes_key
@@ -92,6 +113,26 @@ class TradingWorker(QThread):
                 self.ml_loaded = self.ml_pipe is not None
                 if self.ml_loaded:
                     self.log_message.emit(f"[Worker] Modèle ML chargé depuis {ml_model_path}")
+                    
+                    # ✅ PHASE 5: Initialize Drift Monitor with training data reference
+                    try:
+                        # Try to load reference training data for drift monitoring
+                        train_data_path = "models/train_reference.pkl"
+                        if os.path.exists(train_data_path):
+                            train_ref = joblib.load(train_data_path)
+                            # Select key features for drift monitoring (top 5 most important)
+                            # In a real scenario, you'd load feature importance from model
+                            key_features = list(train_ref.columns[:5]) if len(train_ref.columns) >= 5 else list(train_ref.columns)
+                            self.drift_monitor = DriftMonitor(
+                                reference_data=train_ref,
+                                key_features=key_features,
+                                p_value_threshold=0.05
+                            )
+                            self.log_message.emit(f"[Worker] ✅ Drift Monitor initialized with {len(key_features)} key features")
+                        else:
+                            self.log_message.emit(f"[Worker] ⚠️ No training reference data found for drift monitoring")
+                    except Exception as drift_e:
+                        self.log_message.emit(f"[Worker] ⚠️ Could not initialize drift monitor: {drift_e}")
                 else:
                     self.log_message.emit(f"[Worker] Aucun modèle ML trouvé à {ml_model_path}. Fallback sur stratégie algo projet.")
             except Exception as e:
@@ -136,7 +177,25 @@ class TradingWorker(QThread):
                         continue
                     df = self.fe.add_indicators(df)
                     self.features_ready.emit(df)
+                    
+                    # ✅ PHASE 5: Drift Monitor (Le Radar)
+                    # Périodiquement, un test de Kolmogorov-Smirnov (KS-Test) compare les données live aux données d'entraînement
+                    self.drift_check_counter += 1
+                    if self.drift_monitor and self.drift_check_counter >= self.drift_check_interval:
+                        try:
+                            drift_report = self.drift_monitor.check_drift(df)
+                            if drift_report["drift_detected"]:
+                                self.log_message.emit(f"[Worker] 🚨 DRIFT DETECTED: Model may need retraining! Details: {drift_report['details']}")
+                                # Optional: pause trading or send alert
+                        except Exception as e:
+                            self.log_message.emit(f"[Worker] Drift check error: {e}")
+                        self.drift_check_counter = 0
+                    
                     signal = None
+                    model_confidence = 0.5  # Default confidence
+                    probabilities = None
+                    tick_timestamp = datetime.now()  # Get timestamp of current tick
+                    
                     if self.ml_loaded:
                         try:
                             features_list_path = "features_list.pkl"
@@ -147,23 +206,61 @@ class TradingWorker(QThread):
                                     self.log_message.emit(f"[Worker][ERREUR] Colonnes de features manquantes pour la prédiction ML : {missing_cols}. Fallback automatique sur stratégie alternative.")
                                     # Fallback immédiat
                                     self.ml_loaded = False
+                                    self.safety_guard.record_error()
                                     raise RuntimeError("Features manquantes : fallback sur stratégie alternative.")
                                 X_pred = df[[col for col in features_list if col in df.columns]]
                             else:
                                 self.log_message.emit("[Worker] features_list.pkl introuvable. Fallback sur stratégie algo projet.")
                                 self.ml_loaded = False
+                                self.safety_guard.record_error()
                                 raise RuntimeError("features_list.pkl manquant : fallback sur stratégie algo projet.")
+                            
+                            # Get prediction and probabilities
                             pred = predict(self.ml_pipe, X_pred)[-1]
-                            if pred == 1:
-                                signal = "buy"
-                            elif pred == -1:
-                                signal = "sell"
+                            
+                            # Get probabilities if available
+                            if hasattr(self.ml_pipe, 'predict_proba'):
+                                try:
+                                    probabilities = self.ml_pipe.predict_proba(X_pred)[-1]
+                                    model_confidence = np.max(probabilities)
+                                    self.log_message.emit(f"[Worker] Model confidence: {model_confidence:.3f}")
+                                except Exception:
+                                    probabilities = None
+                                    model_confidence = 0.5
+                            
+                            # ✅ PHASE 5: Full Safety Check before trading
+                            if probabilities is not None:
+                                safe, safety_report = self.safety_guard.full_safety_check(tick_timestamp, probabilities)
+                                
+                                if not safe:
+                                    self.log_message.emit(f"[Worker] ⛔ SAFETY CHECK FAILED: {safety_report}")
+                                    self.safety_guard.record_error()
+                                    signal = None  # Abort trade
+                                    self.prediction_ready.emit("hold - safety abort")
+                                else:
+                                    # Safety checks passed
+                                    self.safety_guard.record_success()
+                                    if pred == 1:
+                                        signal = "buy"
+                                    elif pred == -1:
+                                        signal = "sell"
+                                    else:
+                                        signal = None
+                                    self.prediction_ready.emit(signal or "hold")
                             else:
-                                signal = None
-                            self.prediction_ready.emit(signal or "hold")
+                                # No probabilities available, skip safety checks but still predict
+                                if pred == 1:
+                                    signal = "buy"
+                                elif pred == -1:
+                                    signal = "sell"
+                                else:
+                                    signal = None
+                                self.prediction_ready.emit(signal or "hold")
+                                
                         except Exception as e:
                             self.log_message.emit(f"[Worker] Erreur prédiction ML : {e}. Fallback sur stratégie algo projet.")
                             self.ml_loaded = False
+                            self.safety_guard.record_error()
                     if not self.ml_loaded:
                         df_signal = generate_signal(df)
                         pred = df_signal['signal'].iloc[-1]
@@ -178,7 +275,20 @@ class TradingWorker(QThread):
                         close_price = df["close"].iloc[-1]
                         atr = df["atr"].iloc[-1] if "atr" in df.columns and not pd.isna(df["atr"].iloc[-1]) else None
                         sl, tp = None, None
-                        if atr and not pd.isna(atr) and atr > 0:
+                        
+                        # ✅ PHASE 5: Risk Management Dynamique
+                        # Le SL n'est pas fixe. Il est calculé via l'ATR actuel.
+                        # Règle: Si Confiance Modèle > 0.8 → SL Large (ATR x 2). Sinon → SL Serré.
+                        if atr and not pd.isna(atr) and atr > 0 and model_confidence is not None:
+                            sl, tp, risk_info = self.dynamic_risk.calculate_sl_tp(
+                                signal, close_price, atr, model_confidence
+                            )
+                            self.log_message.emit(
+                                f"[Worker] Dynamic Risk: confidence={model_confidence:.2f}, "
+                                f"SL={risk_info['sl_multiplier']}×ATR, TP={risk_info['tp_multiplier']}×ATR"
+                            )
+                        elif atr and not pd.isna(atr) and atr > 0:
+                            # Fallback to config-based multipliers if no confidence available
                             sl_mult = float(self.config.get("SL_ATR_MULT", 2.0))
                             tp_mult = float(self.config.get("TP_ATR_MULT", 3.0))
                             if signal == "buy":
@@ -188,6 +298,7 @@ class TradingWorker(QThread):
                                 sl = close_price + sl_mult * atr
                                 tp = close_price - tp_mult * atr
                         else:
+                            # Fallback to percentage-based SL/TP if ATR unavailable
                             sl_pct = float(self.config.get("DEFAULT_SL_PCT", 0.01))
                             tp_pct = float(self.config.get("DEFAULT_TP_PCT", 0.02))
                             if signal == "buy":
