@@ -3,6 +3,7 @@ import numpy as np
 import logging
 from typing import Any, Callable, Optional, Dict, List
 import time
+from datetime import datetime, timezone
 from bitcoin_scalper.core.order_execution import execute_adaptive_trade
 
 logger = logging.getLogger("bitcoin_scalper.realtime")
@@ -28,7 +29,9 @@ class RealTimeExecutor:
         out_dir: str = "realtime_reports",
         scheduler: Any = None,
         client: Any = None,
-        atr_col: str = "atr_14" # Colonne ATR pour stop dynamique
+        atr_col: str = "atr_14", # Colonne ATR pour stop dynamique
+        max_latency_ms: int = 200, # Max latency in milliseconds
+        kill_switch_threshold: int = 5 # Number of consecutive stale quotes to trigger kill switch
     ):
         """
         :param model: modèle ML (doit avoir predict)
@@ -44,6 +47,8 @@ class RealTimeExecutor:
         :param scheduler: scheduler adaptatif
         :param client: client broker (pour live)
         :param atr_col: Nom de la colonne ATR pour les stops dynamiques
+        :param max_latency_ms: Latence maximale autorisée en ms (défaut 200ms)
+        :param kill_switch_threshold: Nombre d'erreurs consécutives avant kill switch (défaut 5)
         """
         self.model = model
         self.data_source = data_source
@@ -63,13 +68,56 @@ class RealTimeExecutor:
         self.scheduler = scheduler
         self.client = client
         self.atr_col = atr_col
+        self.max_latency_ms = max_latency_ms
+        self.kill_switch_threshold = kill_switch_threshold
+        self.consecutive_latency_errors = 0
         self._setup_reporting()
 
     def _setup_reporting(self):
         import os
         os.makedirs(self.out_dir, exist_ok=True)
 
+    def check_latency(self, tick_timestamp: pd.Timestamp) -> bool:
+        """
+        Vérifie la latence entre l'heure du tick et l'heure actuelle.
+        Retourne False si la latence est trop élevée (Abort Trade).
+        Lève une Exception si le compteur d'erreurs dépasse le seuil (Kill Switch).
+        """
+        if self.mode == "simulation":
+            return True
+
+        # Timestamp en UTC
+        now = datetime.now(timezone.utc)
+
+        # Ensure tick_timestamp is timezone-aware and UTC
+        if tick_timestamp.tzinfo is None:
+             # Assume UTC if naive, but log warning if critical
+             tick_timestamp = tick_timestamp.replace(tzinfo=timezone.utc)
+        else:
+             tick_timestamp = tick_timestamp.astimezone(timezone.utc)
+
+        delta_ms = (now - tick_timestamp).total_seconds() * 1000
+
+        if delta_ms > self.max_latency_ms:
+            self.consecutive_latency_errors += 1
+            logger.warning(f"⚠️ Stale Quote detected! Latency: {delta_ms:.2f}ms > {self.max_latency_ms}ms. (Error count: {self.consecutive_latency_errors}/{self.kill_switch_threshold})")
+
+            if self.consecutive_latency_errors >= self.kill_switch_threshold:
+                logger.critical("🚨 KILL SWITCH TRIGGERED: Too many consecutive stale quotes. Stopping bot.")
+                raise RuntimeError("Kill Switch Triggered: System Latency Too High")
+
+            return False # Abort trade
+        else:
+            if self.consecutive_latency_errors > 0:
+                logger.info("Latency back to normal.")
+            self.consecutive_latency_errors = 0
+            return True
+
     def step(self, row: pd.Series):
+        # 1. Check Latency
+        if not self.check_latency(row.name):
+             return # Abort processing for this tick
+
         price = row[self.price_col]
 
         # Préparation des features (exclusion des colonnes cibles/prix)
@@ -78,6 +126,8 @@ class RealTimeExecutor:
         # On garde les features numériques seulement
         features_row = features_row.select_dtypes(include=[np.number])
         features = features_row.values.reshape(1, -1)
+
+        # Scaling if model expects it (handled inside model pipeline usually)
 
         # Prédiction
         signal = self.model.predict(features)[0]
@@ -181,22 +231,33 @@ class RealTimeExecutor:
         logger.info(f"Démarrage RealTimeExecutor mode={self.mode}")
         steps = 0
         while True:
-            df = self.data_source()
-            if df is None or df.empty:
-                if self.mode == "simulation":
-                    break
-                else:
-                    time.sleep(self.sleep_time)
-                    continue
-            for _, row in df.iterrows():
-                self.step(row)
-                steps += 1
-                if max_steps and steps >= max_steps:
-                    logger.info("Arrêt après max_steps")
-                    self._finalize()
-                    return
-                if self.mode == "simulation":
-                    time.sleep(self.sleep_time)
+            try:
+                df = self.data_source()
+                if df is None or df.empty:
+                    if self.mode == "simulation":
+                        break
+                    else:
+                        time.sleep(self.sleep_time)
+                        continue
+                for _, row in df.iterrows():
+                    self.step(row)
+                    steps += 1
+                    if max_steps and steps >= max_steps:
+                        logger.info("Arrêt après max_steps")
+                        self._finalize()
+                        return
+                    if self.mode == "simulation":
+                        time.sleep(self.sleep_time)
+            except RuntimeError as e:
+                # Catch Kill Switch
+                logger.critical(f"Bot arrêté : {e}")
+                self._finalize()
+                break
+            except Exception as e:
+                logger.error(f"Erreur inattendue : {e}", exc_info=True)
+                # Should we stop? Safe mode?
+                time.sleep(5)
+
         self._finalize()
 
     def _finalize(self):

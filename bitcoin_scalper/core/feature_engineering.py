@@ -104,6 +104,16 @@ class FeatureEngineering:
 
         return df
 
+    def add_lags(self, df: pd.DataFrame, features: List[str], lags: List[int] = [1, 2], prefix: str = "") -> pd.DataFrame:
+        """
+        Ajoute des features retardées (lags) pour la contextualisation temporelle.
+        """
+        for feature in features:
+            if feature in df.columns:
+                for lag in lags:
+                    df[f"{prefix}{feature}_lag_{lag}"] = df[feature].shift(lag)
+        return df
+
     def add_indicators(self, df: pd.DataFrame, price_col: str = "close", high_col: str = "high", low_col: str = "low", volume_col: str = "volume", prefix: str = "") -> pd.DataFrame:
         """
         Ajoute les indicateurs techniques principaux et avancés au DataFrame OHLCV.
@@ -169,15 +179,6 @@ class FeatureEngineering:
         df = df.infer_objects(copy=False)
 
         # Nettoyage des NaN (Warm-up period)
-        # Instruction utilisateur : dropna après génération.
-        # ATTENTION: Si on drop maintenant, on perd les premières lignes mais on garantit la qualité.
-        # Mais le shift arrive après.
-        # On va drop les NaN *avant* le shift pour s'assurer que les rollings sont complets ?
-        # Non, le warm-up crée des NaNs au début. Si on drop, on a un index start décalé.
-        # Puis on shift, créant 1 NaN au début du nouveau dataset.
-        # C'est la méthode sûre.
-        # Je vais commenter pour ne pas détruire les tests unitaires qui utilisent des datasets courts,
-        # OU je le fais mais uniquement si le dataset est assez long.
         if len(df) > 300: # Heuristic to apply dropna only on decent datasets
              df.dropna(inplace=True)
 
@@ -199,6 +200,27 @@ class FeatureEngineering:
                 df[col] = df[col].shift(1)
 
         # 3. Features dérivées (déjà décalées)
+        # Stationary features: distances and relative measures
+        if f"{prefix}sma_20" in df.columns:
+            df[f"{prefix}dist_sma_20"] = (df[price_col].shift(1) - df[f"{prefix}sma_20"]) / (df[f"{prefix}sma_20"] + 1e-9)
+        if f"{prefix}sma_50" in df.columns:
+            df[f"{prefix}dist_sma_50"] = (df[price_col].shift(1) - df[f"{prefix}sma_50"]) / (df[f"{prefix}sma_50"] + 1e-9)
+        if f"{prefix}sma_200" in df.columns:
+            df[f"{prefix}dist_sma_200"] = (df[price_col].shift(1) - df[f"{prefix}sma_200"]) / (df[f"{prefix}sma_200"] + 1e-9)
+
+        # Relative Volume
+        # Calculate volume MA on original (unshifted) data first, then shift result?
+        # Or use shifted volume?
+        # Better: use shifted volume / shifted volume MA.
+        # But we already shifted indicators.
+        # Let's compute SMA volume on original data then shift it.
+        vol_sma_20 = df[volume_col].rolling(window=20).mean()
+        df[f"{prefix}vol_sma_20"] = vol_sma_20.shift(1)
+        # Now relative volume
+        if f"{prefix}vol_sma_20" in df.columns:
+            df[f"{prefix}rel_volume"] = df[volume_col].shift(1) / (df[f"{prefix}vol_sma_20"] + 1e-9)
+
+
         if f"{prefix}close" in df.columns:
             df[f"{prefix}close_sma_3"] = df[f"{prefix}close"].rolling(window=3, min_periods=1).mean().shift(1)
         else:
@@ -306,6 +328,9 @@ class FeatureEngineering:
                  df['log_return_1m'] = np.log(df[price_col] / df[price_col].shift(1))
 
         df[f"{prefix}volatility_20"] = df[f"{prefix}return"].rolling(window=20, min_periods=1).std().shift(1)
+        # Note: vol_price_ratio contains raw price info implicitly but is a ratio.
+        # However, if price doubles, ratio halves (if vol constant).
+        # Better to keep it as it is a ratio, or normalize.
         df[f"{prefix}vol_price_ratio"] = df[volume_col] / (df[price_col] + 1e-9)
 
         # Z-score
@@ -318,14 +343,19 @@ class FeatureEngineering:
 
         # Distances
         if f"{prefix}bb_high" in df.columns and f"{prefix}bb_low" in df.columns:
-            df[f"{prefix}dist_bb_high"] = (df[price_col] - df[f"{prefix}bb_high"]).shift(1)
-            df[f"{prefix}dist_bb_low"] = (df[price_col] - df[f"{prefix}bb_low"]).shift(1)
-            df[f"{prefix}dist_bb_width"] = (df[f"{prefix}bb_high"] - df[f"{prefix}bb_low"]).shift(1)
+            # Normalize BB distances by price or width to make them stationary
+            bb_width = (df[f"{prefix}bb_high"] - df[f"{prefix}bb_low"]) + 1e-9
+            df[f"{prefix}dist_bb_high"] = ((df[price_col].shift(1) - df[f"{prefix}bb_high"]) / bb_width)
+            df[f"{prefix}dist_bb_low"] = ((df[price_col].shift(1) - df[f"{prefix}bb_low"]) / bb_width)
+            df[f"{prefix}dist_bb_width"] = bb_width.shift(1) / (df[price_col].shift(1) + 1e-9) # Normalize width by price
 
         for win in [5, 20, 50, 100]:
             if price_col in df.columns:
-                df[f"{prefix}dist_high_{win}"] = (df[price_col] - df[price_col].rolling(window=win, min_periods=1).max()).shift(1)
-                df[f"{prefix}dist_low_{win}"] = (df[price_col] - df[price_col].rolling(window=win, min_periods=1).min()).shift(1)
+                # Normalize dist to high/low by price
+                roll_max = df[price_col].rolling(window=win, min_periods=1).max().shift(1)
+                roll_min = df[price_col].rolling(window=win, min_periods=1).min().shift(1)
+                df[f"{prefix}dist_high_{win}"] = (df[price_col].shift(1) - roll_max) / (roll_max + 1e-9)
+                df[f"{prefix}dist_low_{win}"] = (df[price_col].shift(1) - roll_min) / (roll_min + 1e-9)
 
         # Encodage temporel
         if hasattr(df.index, 'hour'):
@@ -341,6 +371,16 @@ class FeatureEngineering:
             df[f"{prefix}hour_cos"] = np.cos(2 * np.pi * df.index.hour / 24)
             df[f"{prefix}weekday_sin"] = np.sin(2 * np.pi * df.index.weekday / 7)
             df[f"{prefix}weekday_cos"] = np.cos(2 * np.pi * df.index.weekday / 7)
+
+        # Add Lags for Key Features (Stationary ones)
+        key_stationary_features = [
+            f"{prefix}rsi",
+            f"{prefix}log_return",
+            f"{prefix}rel_volume",
+            f"{prefix}volatility_20",
+            f"{prefix}dist_sma_20"
+        ]
+        self.add_lags(df, key_stationary_features, lags=[1, 2], prefix="")
 
         return df
 
@@ -382,6 +422,10 @@ class FeatureEngineering:
 
         if base is None:
             return pd.DataFrame()
+
+        # The dropping of raw columns should be handled by the orchestrator or selector,
+        # but we can do some cleanup here if needed.
+        # For now, we keep everything in the dataframe, and let ML Orchestrator filter out raw prices.
 
         cols_to_drop_if_1min_exists = [price_col, high_col, low_col, volume_col, "tickvol"]
         final_drop = [c for c in cols_to_drop_if_1min_exists if f"1min_{c}" in base.columns and c in base.columns]

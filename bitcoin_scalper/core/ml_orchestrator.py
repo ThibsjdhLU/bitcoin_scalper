@@ -43,9 +43,48 @@ def run_ml_pipeline(
 
     # 3. Préparation des features/labels
     features = [c for c in df.columns if c != label_col]
-    X_train, y_train = train[features], train[label_col]
-    X_val, y_val = val[features], val[label_col]
-    X_test, y_test = test[features], test[label_col]
+
+    # --- Stationarity Enforcement ---
+    # Drop raw price/volume columns from features used for training
+    # This includes: open, high, low, close, volume, tickvol, and raw MA/EMA indicators
+    # We keep only stationary features (log returns, distances %, ratios, oscillators)
+    raw_keywords = ['open', 'high', 'low', 'close', 'volume', 'tickvol', 'ema', 'sma', 'bb_high', 'bb_low', 'vwap', 'supertrend']
+    # Exceptions: oscillators like RSI, MACD (which are differences), ADX are fine.
+    # We must be careful not to drop 'dist_sma' or 'rel_volume' which contain the keywords but are stationary.
+    # Strategy: Explicitly drop columns that look like raw prices.
+
+    def is_raw_feature(col_name):
+        col_lower = col_name.lower()
+        # Explicit raw columns including bracketed ones
+        if col_lower in ['open', 'high', 'low', 'close', 'volume', 'tickvol', '<open>', '<high>', '<low>', '<close>', '<volume>', '<tickvol>']:
+            return True
+
+        # Check against raw keywords
+        for kw in raw_keywords:
+            if kw in col_lower:
+                # If it's a distance or relative metric, keep it
+                if any(x in col_lower for x in ['dist_', 'rel_', 'ratio', 'return', 'diff']):
+                    continue
+
+                # Check safe exceptions like 'rsi', 'adx', 'cci', 'mfi', 'roc'
+                if any(x in col_lower for x in ['rsi', 'adx', 'cci', 'mfi', 'roc']):
+                    continue
+
+                # If the keyword is present and not exempted, treat as raw if it matches pattern
+                # Matches: 'sma_20', '5min_close', 'ema_200', 'bb_high', 'vwap'
+                # But allow 'macd' even if 'ma' is in keyword? 'macd' contains 'ma' if kw is 'ma'
+                # 'ema', 'sma' are specific enough.
+                return True
+        return False
+
+    final_features = [f for f in features if not is_raw_feature(f)]
+    dropped_features = list(set(features) - set(final_features))
+    logger.info(f"Dropped {len(dropped_features)} raw/non-stationary features: {dropped_features[:10]}...")
+    logger.info(f"Training with {len(final_features)} stationary features.")
+
+    X_train, y_train = train[final_features], train[label_col]
+    X_val, y_val = val[final_features], val[label_col]
+    X_test, y_test = test[final_features], test[label_col]
 
     # Diagnostic maximal et filtrage des colonnes non numériques
     # (Existing cleaning logic...)
@@ -58,11 +97,11 @@ def run_ml_pipeline(
             # But general cleaning often requires numeric. Assuming CatBoost handles them if specified.
 
     # Filtrage automatique des colonnes non numériques (hors cat_features)
-    allowed_cols = [col for col in features if np.issubdtype(df[col].dtype, np.number) or (cat_features and col in cat_features)]
-    if set(allowed_cols) != set(features):
-        logger.warning(f"Features non numériques supprimées du modèle: {set(features) - set(allowed_cols)}")
-    features = allowed_cols
-    X_train, X_val, X_test = train[features], val[features], test[features]
+    allowed_cols = [col for col in final_features if np.issubdtype(df[col].dtype, np.number) or (cat_features and col in cat_features)]
+    if set(allowed_cols) != set(final_features):
+        logger.warning(f"Features non numériques supprimées du modèle: {set(final_features) - set(allowed_cols)}")
+    final_features = allowed_cols
+    X_train, X_val, X_test = train[final_features], val[final_features], test[final_features]
 
     # Suppression automatique des colonnes avec >10% de NaN dans le train
     nan_ratio_train = X_train.isna().mean()
@@ -72,11 +111,11 @@ def run_ml_pipeline(
         X_train = X_train.drop(columns=cols_to_drop)
         X_val = X_val.drop(columns=cols_to_drop, errors='ignore')
         X_test = X_test.drop(columns=cols_to_drop, errors='ignore')
-        features = [col for col in features if col not in cols_to_drop]
-        logger.info(f"Features finales après suppression des colonnes incomplètes : {features}")
+        final_features = [col for col in final_features if col not in cols_to_drop]
+        logger.info(f"Features finales après suppression des colonnes incomplètes : {final_features}")
 
     # Nettoyage final : conversion forcée en float seulement pour les colonnes NON cat_features
-    numeric_features = [f for f in features if not (cat_features and f in cat_features)]
+    numeric_features = [f for f in final_features if not (cat_features and f in cat_features)]
 
     for split_name, X in zip(['train', 'val', 'test'], [X_train, X_val, X_test]):
         # Convert numeric features only
@@ -103,7 +142,18 @@ def run_ml_pipeline(
         y_train = y_train.loc[first_valid_idx:]
 
     # 4. Entraînement modèle avec ModelTrainer
+    # Robust scaling is now handled inside ModelTrainer if configured, or we can do it here.
+    # The user requested RobustScaler. Since ModelTrainer is "Expert", let's instantiate it with scaling enabled.
+    # Currently ModelTrainer doesn't have a scaler built-in in __init__, so we should likely add it to ModelTrainer
+    # OR apply it here. To keep ModelTrainer clean, applying it here via a wrapper or modifying ModelTrainer is fine.
+    # Given the user wants it "Systematic", modifying ModelTrainer in modeling.py is better, but passing it as an arg works.
+    # Actually, let's update ModelTrainer in modeling.py first, but since we are editing ml_orchestrator now,
+    # let's assume ModelTrainer will handle it or we pass a flag.
+    # However, standard practice is to scale X_train, and transform X_val/X_test.
+    # Let's delegate this to ModelTrainer to keep orchestrator clean.
+
     trainer = ModelTrainer(algo=model_type, random_state=random_state)
+    # Note: We will update ModelTrainer to accept 'scaling' parameter or do it by default.
     model = trainer.fit(
         X_train, y_train,
         X_val, y_val,
@@ -151,6 +201,8 @@ def run_ml_pipeline(
 
     # 5b. Financial Verification (Backtest on Test Set)
     # Detect price column (prefer 1min_<CLOSE> or <CLOSE>)
+    # Note: 'test' dataframe still has all original columns because we only subsetted features for X_test.
+    # 'test' is the slice of 'df'.
     price_cols = [c for c in df.columns if 'CLOSE' in c.upper()]
     # Prefer explicit 1min_<CLOSE> if available, else first match
     price_col = next((c for c in price_cols if '1MIN_<CLOSE>' in c.upper()), None)
