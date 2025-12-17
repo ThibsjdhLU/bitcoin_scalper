@@ -178,9 +178,28 @@ class FeatureEngineering:
 
         df = df.infer_objects(copy=False)
 
-        # Nettoyage des NaN (Warm-up period)
-        if len(df) > 300: # Heuristic to apply dropna only on decent datasets
-             df.dropna(inplace=True)
+        # ✅ PHASE 1: Gestion des NaN (Trous) - Règle stricte
+        # Colonnes avec >10% de valeurs manquantes sont supprimées
+        # Les lignes restantes avec des NaN sont supprimées (pas d'interpolation hasardeuse)
+        total_rows = len(df)
+        if total_rows > 0:
+            nan_threshold = 0.10  # 10% seuil
+            cols_to_drop = []
+            for col in df.columns:
+                nan_pct = df[col].isna().sum() / total_rows
+                if nan_pct > nan_threshold:
+                    cols_to_drop.append(col)
+                    logger.warning(f"🚫 Dropping column '{col}' ({nan_pct*100:.1f}% NaN > {nan_threshold*100}%)")
+            
+            if cols_to_drop:
+                df = df.drop(columns=cols_to_drop)
+            
+            # Drop remaining rows with ANY NaN
+            rows_before = len(df)
+            df = df.dropna()
+            rows_dropped = rows_before - len(df)
+            if rows_dropped > 0:
+                logger.info(f"✅ Dropped {rows_dropped} rows with remaining NaN values")
 
         # 2. Décalage immédiat (Shift)
         indicators_to_shift = [

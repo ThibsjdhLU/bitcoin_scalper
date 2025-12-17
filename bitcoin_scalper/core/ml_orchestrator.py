@@ -136,6 +136,36 @@ def run_ml_pipeline(
          X_val = X_val.fillna(0)
          X_test = X_test.fillna(0)
 
+    # ✅ PHASE 3: Gestion du Déséquilibre (SMOTE)
+    # Si le marché a 90% de "Hold" et 10% de "Trade", SMOTE est activé pour forcer le modèle à apprendre les signaux rares
+    class_distribution = y_train.value_counts(normalize=True)
+    logger.info(f"📊 Class distribution before SMOTE: {class_distribution.to_dict()}")
+    
+    # Check for severe imbalance (any class < 15% and not all classes are very balanced)
+    min_class_ratio = class_distribution.min()
+    max_class_ratio = class_distribution.max()
+    imbalance_ratio = max_class_ratio / min_class_ratio if min_class_ratio > 0 else float('inf')
+    
+    if imbalance_ratio > 3.0:  # Severe imbalance threshold
+        logger.warning(f"⚠️ Severe class imbalance detected (ratio: {imbalance_ratio:.2f}). Applying SMOTE...")
+        try:
+            from bitcoin_scalper.core.balancing import balance_with_smote
+            smote_result = balance_with_smote(X_train, y_train, random_state=random_state)
+            if smote_result is not None:
+                X_train, y_train = smote_result
+                # Convert back to DataFrame/Series with proper indexing
+                if not isinstance(X_train, pd.DataFrame):
+                    X_train = pd.DataFrame(X_train, columns=final_features)
+                if not isinstance(y_train, pd.Series):
+                    y_train = pd.Series(y_train, name=label_col)
+                logger.info(f"✅ SMOTE applied: New distribution: {y_train.value_counts(normalize=True).to_dict()}")
+            else:
+                logger.warning("⚠️ SMOTE not available (imblearn not installed). Proceeding without balancing.")
+        except Exception as e:
+            logger.warning(f"⚠️ SMOTE failed: {e}. Proceeding without balancing.")
+    else:
+        logger.info(f"✅ Class balance acceptable (ratio: {imbalance_ratio:.2f}). No SMOTE needed.")
+
     # 3. Train with ModelTrainer (Pipeline + Optuna)
     trainer = ModelTrainer(algo=model_type, random_state=random_state, use_scaler=True)
     pipeline = trainer.fit(
@@ -154,6 +184,12 @@ def run_ml_pipeline(
     # 2. Production
     joblib.dump(pipeline, os.path.join(PROD_DIR, "latest_model.pkl"))
     logger.info(f"💾 Model Pipeline saved to {os.path.join(PROD_DIR, 'latest_model.pkl')}")
+    
+    # ✅ PHASE 5: Save training reference data for Drift Monitor
+    # Save a sample of training data for KS-Test comparison in production
+    train_reference = train[final_features].sample(n=min(1000, len(train)), random_state=random_state)
+    joblib.dump(train_reference, os.path.join(PROD_DIR, "train_reference.pkl"))
+    logger.info(f"💾 Training reference saved for drift monitoring ({len(train_reference)} samples)")
 
     # 5. Evaluation
     y_val_pred = pipeline.predict(X_val)
