@@ -1,9 +1,10 @@
 import logging
-from typing import Any, Dict
+from typing import Any, Dict, Optional, List, Union
 from bitcoin_scalper.connectors.mt5_rest_client import MT5RestClient, MT5RestClientError
 import time
 import random
 import os
+import numpy as np
 from logging.handlers import RotatingFileHandler
 from bitcoin_scalper.core.adaptive_scheduler import AdaptiveStrategyScheduler
 
@@ -161,6 +162,7 @@ def execute_adaptive_trade(
     reward_risk: float = None,
     pnl_history: list = None,
     stop_loss: float = None,
+    probs: Optional[Union[np.ndarray, List[float]]] = None,
     **kwargs
 ) -> dict:
     """
@@ -175,6 +177,7 @@ def execute_adaptive_trade(
         reward_risk (float): Ratio gain/risque (pour Kelly)
         pnl_history (list): Historique PnL (pour VaR)
         stop_loss (float): Distance stop loss (pour sizing)
+        probs (list/array): Distribution complète des probabilités (pour Entropie)
     Returns:
         dict: Résultat de l'exécution (succès, raison, data)
     """
@@ -182,6 +185,7 @@ def execute_adaptive_trade(
         symbol=symbol,
         signal=signal,
         proba=proba,
+        probs=probs,
         win_rate=win_rate,
         reward_risk=reward_risk,
         pnl_history=pnl_history,
@@ -191,6 +195,10 @@ def execute_adaptive_trade(
         return {"success": False, "reason": "Aucun trade exécuté (filtre/scheduler)", "data": None}
     action = decision["action"]
     volume = decision["volume"]
+
+    # On passe le stop_loss et take_profit potentiels s'ils sont dans kwargs
+    # La logique Dynamic SL a peut-être déjà calculé les prix exacts
+    # Mais ici on s'occupe de l'exécution
     res = send_order(symbol, volume, action, client, **kwargs)
     res["reason"] = decision["reason"]
-    return res 
+    return res
