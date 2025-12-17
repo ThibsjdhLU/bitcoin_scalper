@@ -1,10 +1,12 @@
 """
 Gestionnaire de risques REST multiplateforme pour trading BTC/USD.
 Utilise exclusivement MT5RestClient (aucune dépendance native MT5, compatible macOS).
+Intègre le calcul dynamique de SL/TP et des simulations Monte Carlo.
 """
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from bitcoin_scalper.connectors.mt5_rest_client import MT5RestClient, MT5RestClientError
 import logging
+import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -108,12 +110,49 @@ class RiskManager:
             # Récupère la valeur du point (tick_value) via REST
             symbol_info = self.client._request("GET", f"/symbol/{symbol}")
             tick_value = symbol_info.get("tick_value", 1.0)
+            if stop_loss <= 0 or tick_value <= 0:
+                 return 0.0
             position_size = risk_amount / (stop_loss * tick_value)
             position_size = min(position_size, self.max_position_size)
             return max(0.0, position_size)
         except Exception as e:
             logger.error(f"Erreur calcul taille position: {e}")
             return 0.0
+
+    def calculate_dynamic_stops(self, entry_price: float, atr: float, side: str, confidence: float, high_conf_threshold: float = 0.8) -> Dict[str, float]:
+        """
+        Calcule SL et TP dynamiques basés sur l'ATR et la confiance du modèle (Approche Hybride).
+
+        Logique:
+        - Si confiance haute (> high_conf_threshold) : On laisse respirer (SL plus large, k=2).
+        - Si confiance moyenne : On resserre le SL (k=1.5 ou 1).
+
+        Args:
+            entry_price: Prix d'entrée
+            atr: Valeur de l'ATR (volatilité)
+            side: 'buy' ou 'sell'
+            confidence: Probabilité du modèle (0.0 à 1.0)
+            high_conf_threshold: Seuil de haute confiance
+
+        Returns:
+            Dict avec 'sl' et 'tp'
+        """
+        # Ajustement du facteur k selon la confiance
+        if confidence > high_conf_threshold:
+            k_sl = 2.0
+            k_tp = 3.0 # R:R meilleur si haute confiance
+        else:
+            k_sl = 1.5
+            k_tp = 2.0
+
+        if side == 'buy':
+            sl = entry_price - (atr * k_sl)
+            tp = entry_price + (atr * k_tp)
+        else: # sell
+            sl = entry_price + (atr * k_sl)
+            tp = entry_price - (atr * k_tp)
+
+        return {"sl": sl, "tp": tp, "k_sl": k_sl}
 
     def update_after_trade(self, profit: float):
         """
@@ -149,4 +188,56 @@ class RiskManager:
             }
         except Exception as e:
             logger.error(f"Erreur get_risk_metrics: {e}")
-            return {} 
+            return {}
+
+class MonteCarloSimulator:
+    """
+    Simulateur Monte Carlo pour estimer la robustesse de la stratégie.
+    À utiliser hors ligne ou périodiquement, PAS en temps réel critique.
+    """
+    def __init__(self, pnl_history: List[float], initial_capital: float = 10000.0):
+        self.pnl_history = np.array(pnl_history)
+        self.initial_capital = initial_capital
+
+    def run_simulation(self, n_simulations: int = 1000, n_trades: int = 100) -> Dict[str, float]:
+        """
+        Exécute n_simulations de n_trades en échantillonnant l'historique PnL.
+
+        Returns:
+            Dict contenant :
+            - risk_of_ruin: % de simulations finissant ruinées (capital <= 0)
+            - max_drawdown_95: Drawdown max au 95ème percentile (pire cas réaliste)
+            - median_final_capital: Capital final médian
+        """
+        if len(self.pnl_history) < 10:
+            logger.warning("Historique PnL insuffisant pour Monte Carlo.")
+            return {"risk_of_ruin": 0.0, "max_drawdown_95": 0.0, "median_final_capital": self.initial_capital}
+
+        final_capitals = []
+        max_drawdowns = []
+        ruined_count = 0
+
+        for _ in range(n_simulations):
+            # Echantillonnage avec remise
+            trades = np.random.choice(self.pnl_history, size=n_trades, replace=True)
+            equity_curve = np.cumsum(trades) + self.initial_capital
+
+            # Check Ruin
+            if np.any(equity_curve <= 0):
+                ruined_count += 1
+                final_capitals.append(0)
+                max_drawdowns.append(1.0) # 100% DD
+                continue
+
+            final_capitals.append(equity_curve[-1])
+
+            # Calculate Max Drawdown for this sim
+            peak = np.maximum.accumulate(equity_curve)
+            dd = (peak - equity_curve) / peak
+            max_drawdowns.append(np.max(dd))
+
+        return {
+            "risk_of_ruin": ruined_count / n_simulations,
+            "max_drawdown_95": np.percentile(max_drawdowns, 95),
+            "median_final_capital": np.median(final_capitals)
+        }
