@@ -1,9 +1,63 @@
 import logging
-from typing import Optional
+from typing import Optional, List, Dict, Any
 import threading
+import numpy as np
+import pandas as pd
+from scipy.stats import ks_2samp
 
 logger = logging.getLogger("bitcoin_scalper.monitoring")
 logger.setLevel(logging.INFO)
+
+class DriftMonitor:
+    """
+    Moniteur de dérive de données (Data Drift) utilisant le test de Kolmogorov-Smirnov (KS-Test).
+    Compare la distribution des features en production avec celle de l'entraînement.
+    """
+    def __init__(self, reference_data: pd.DataFrame, key_features: Optional[List[str]] = None, p_value_threshold: float = 0.05):
+        """
+        :param reference_data: DataFrame d'entraînement (référence).
+        :param key_features: Liste des features les plus importantes à surveiller (ex: top 3).
+        :param p_value_threshold: Seuil p-value pour déclencher une alerte (défaut 0.05).
+        """
+        self.reference_data = reference_data
+        # Si key_features non fourni, on prend tout (attention performance) ou top N si possible
+        self.key_features = key_features or list(reference_data.select_dtypes(include=[np.number]).columns)
+        self.p_value_threshold = p_value_threshold
+        self.drift_status = {feat: False for feat in self.key_features}
+
+    def check_drift(self, new_data: pd.DataFrame) -> Dict[str, Any]:
+        """
+        Effectue le test KS sur les nouvelles données.
+        :param new_data: DataFrame récent (ex: 4h de données).
+        :return: Rapport de drift.
+        """
+        report = {}
+        drift_detected = False
+
+        for feature in self.key_features:
+            if feature not in new_data.columns:
+                logger.warning(f"Feature {feature} absente des nouvelles données.")
+                continue
+
+            # KS Test
+            # Null hypothesis: distributions are the same.
+            # If p_value < threshold, we reject null hypothesis -> Drift Detected.
+            stat, p_value = ks_2samp(self.reference_data[feature].dropna(), new_data[feature].dropna())
+
+            is_drifting = p_value < self.p_value_threshold
+            self.drift_status[feature] = is_drifting
+
+            report[feature] = {
+                "ks_stat": stat,
+                "p_value": p_value,
+                "drift": is_drifting
+            }
+
+            if is_drifting:
+                drift_detected = True
+                logger.warning(f"🚨 DRIFT DETECTED on {feature} (p={p_value:.4f} < {self.p_value_threshold})")
+
+        return {"drift_detected": drift_detected, "details": report}
 
 def start_prometheus_server(port: int = 8000):
     """
@@ -55,4 +109,4 @@ def healthcheck() -> bool:
     """
     # TODO : ajouter des checks réels (latence, capital, erreurs, etc.)
     logger.info("Healthcheck : OK")
-    return True 
+    return True

@@ -152,6 +152,7 @@ class RiskManager:
             sl = entry_price + (atr * k_sl)
             tp = entry_price - (atr * k_tp)
 
+        logger.info(f"Risk: Confiance {confidence:.2f} -> SL Factor k={k_sl} -> SL: {sl:.2f}, TP: {tp:.2f}")
         return {"sl": sl, "tp": tp, "k_sl": k_sl}
 
     def update_after_trade(self, profit: float):

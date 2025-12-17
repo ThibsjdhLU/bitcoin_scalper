@@ -18,7 +18,7 @@ from sklearn.model_selection import GridSearchCV, TimeSeriesSplit
 from sklearn.metrics import f1_score, accuracy_score, classification_report
 from sklearn.base import BaseEstimator, TransformerMixin, ClassifierMixin
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import StandardScaler, LabelEncoder
+from sklearn.preprocessing import StandardScaler, LabelEncoder, RobustScaler
 from sklearn.ensemble import VotingClassifier
 
 try:
@@ -50,16 +50,19 @@ except ImportError:
 class ModelTrainer:
     """
     Expert-level ML Model Trainer handling:
+    - Robust Preprocessing (RobustScaler) for Crypto volatility
     - Advanced Hyperparameter Tuning (Optuna)
     - Feature Selection (RFE/SHAP)
     - Ensemble Methods
     - Comprehensive Logging
     """
-    def __init__(self, algo: str = 'catboost', random_state: int = 42, n_jobs: int = -1):
+    def __init__(self, algo: str = 'catboost', random_state: int = 42, n_jobs: int = -1, use_scaler: bool = True):
         self.algo = algo
         self.random_state = random_state
         self.n_jobs = n_jobs
+        self.use_scaler = use_scaler
         self.model = None
+        self.scaler = None
         self.best_params = None
         self.label_encoder = None
 
@@ -69,13 +72,34 @@ class ModelTrainer:
 
         logger.info(f"Starting EXPERT training with {self.algo.upper()} using {tuning_method}...")
 
-        # Consistent label encoding for all algorithms (helpful for XGBoost, and ensures standardized handling)
-        # If y_train is not numeric or not 0-indexed integers, we should encode it.
-        # CatBoost handles strings labels but only for MultiClass. For consistency we can encode.
-        # However, CatBoost usually auto-detects. XGBoost REQUIRES 0..n-1 integers.
-        # Let's use LabelEncoder universally if classification.
+        # 0. Preprocessing (RobustScaler)
+        # Even for Tree models, RobustScaler helps with extreme crypto outliers.
+        # It also makes the pipeline future-proof for Neural Networks.
+        X_train_processed = X_train
+        X_val_processed = X_val
 
-        # Check if classification or regression. Assuming classification based on existing code logic.
+        if self.use_scaler:
+            logger.info("Applying RobustScaler to features...")
+            self.scaler = RobustScaler()
+            # If cat_features are present, we should only scale numerical features.
+            # Assuming here X_train contains mostly numerical features as per previous cleaning steps.
+            # If cat_features are passed, we must exclude them from scaling or handle them.
+            # For simplicity, we assume robust scaler can handle all columns if they are numeric.
+            # If cat features are categorical strings/objects, scaler will fail.
+            # We need to only scale numeric columns.
+            numeric_cols = X_train.select_dtypes(include=[np.number]).columns
+            if cat_features:
+                numeric_cols = [c for c in numeric_cols if c not in cat_features]
+
+            if len(numeric_cols) > 0:
+                self.scaler.fit(X_train[numeric_cols])
+                X_train_processed = X_train.copy()
+                X_val_processed = X_val.copy()
+                X_train_processed[numeric_cols] = self.scaler.transform(X_train[numeric_cols])
+                X_val_processed[numeric_cols] = self.scaler.transform(X_val[numeric_cols])
+
+        # 1. Label Encoding
+        # Consistent label encoding for all algorithms (helpful for XGBoost, and ensures standardized handling)
         if y_train.dtype == 'object' or self.algo == 'xgboost':
             self.label_encoder = LabelEncoder()
             y_train_encoded = pd.Series(self.label_encoder.fit_transform(y_train), index=y_train.index)
@@ -84,10 +108,11 @@ class ModelTrainer:
             y_train_encoded = y_train
             y_val_encoded = y_val
 
+        # 2. Training
         if self.algo == 'catboost':
-            self.model = self._train_catboost(X_train, y_train_encoded, X_val, y_val_encoded, tuning_method, n_trials, timeout, early_stopping_rounds, cat_features)
+            self.model = self._train_catboost(X_train_processed, y_train_encoded, X_val_processed, y_val_encoded, tuning_method, n_trials, timeout, early_stopping_rounds, cat_features)
         elif self.algo == 'xgboost':
-            self.model = self._train_xgboost(X_train, y_train_encoded, X_val, y_val_encoded, tuning_method, n_trials, timeout, early_stopping_rounds)
+            self.model = self._train_xgboost(X_train_processed, y_train_encoded, X_val_processed, y_val_encoded, tuning_method, n_trials, timeout, early_stopping_rounds)
         else:
             raise ValueError(f"Unsupported algorithm: {self.algo}")
 
@@ -255,7 +280,22 @@ class ModelTrainer:
         if self.model is None:
              raise ValueError("Model not trained yet.")
 
-        preds = self.model.predict(X_test)
+        # Scaling if present
+        if self.scaler:
+             X_test_processed = X_test.copy()
+             # We assume X_test structure matches training
+             numeric_cols = X_test.select_dtypes(include=[np.number]).columns
+             # We must match columns scaler was trained on.
+             # Ideally we save feature names but RobustScaler doesn't easily without manual check.
+             # We assume pipeline consistency.
+             # Intersection of cols
+             cols_to_scale = [c for c in numeric_cols if c in getattr(self.scaler, 'feature_names_in_', numeric_cols)]
+             if cols_to_scale:
+                X_test_processed[cols_to_scale] = self.scaler.transform(X_test[cols_to_scale])
+        else:
+             X_test_processed = X_test
+
+        preds = self.model.predict(X_test_processed)
 
         # Ensure 1D array
         if isinstance(preds, np.ndarray) and preds.ndim > 1:
@@ -272,7 +312,18 @@ class ModelTrainer:
     def predict_proba(self, X_test):
         if self.model is None:
              raise ValueError("Model not trained yet.")
-        return self.model.predict_proba(X_test)
+
+        # Scaling if present
+        if self.scaler:
+             X_test_processed = X_test.copy()
+             numeric_cols = X_test.select_dtypes(include=[np.number]).columns
+             cols_to_scale = [c for c in numeric_cols if c in getattr(self.scaler, 'feature_names_in_', numeric_cols)]
+             if cols_to_scale:
+                X_test_processed[cols_to_scale] = self.scaler.transform(X_test[cols_to_scale])
+        else:
+             X_test_processed = X_test
+
+        return self.model.predict_proba(X_test_processed)
 
     def evaluate(self, X_test, y_test):
         if self.model is None:
