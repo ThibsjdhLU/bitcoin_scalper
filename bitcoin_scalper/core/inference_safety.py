@@ -127,7 +127,7 @@ class InferenceSafetyGuard:
         entropy = self.calculate_entropy(probabilities)
         
         if entropy > self.max_entropy:
-            self.entropy_rejects += 0
+            self.entropy_rejects += 1
             reason = f"⛔ ENTROPY FILTER: {entropy:.3f} > {self.max_entropy} - NO TRADE (Modèle confus)"
             logger.warning(reason)
             return False, reason, entropy
