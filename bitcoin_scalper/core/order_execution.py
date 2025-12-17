@@ -191,6 +191,10 @@ def execute_adaptive_trade(
         return {"success": False, "reason": "Aucun trade exécuté (filtre/scheduler)", "data": None}
     action = decision["action"]
     volume = decision["volume"]
+
+    # Intégration SL/TP dynamique si présent dans kwargs ou logique future
+    # Pour l'instant on passe tout à send_order
+    # Note: si MT5RestClient supporte sl/tp dans kwargs, ça passera.
     res = send_order(symbol, volume, action, client, **kwargs)
     res["reason"] = decision["reason"]
-    return res 
+    return res
