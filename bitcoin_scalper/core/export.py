@@ -2,8 +2,9 @@ import os
 import pickle
 import joblib
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Union
 from catboost import CatBoostClassifier
+from sklearn.pipeline import Pipeline
 
 logger = logging.getLogger("bitcoin_scalper.export")
 logger.setLevel(logging.DEBUG)
@@ -14,7 +15,7 @@ if not logger.hasHandlers():
     logger.addHandler(handler)
 
 def save_objects(
-    model: CatBoostClassifier,
+    model: Union[CatBoostClassifier, Pipeline],
     pipeline: Optional[Any],
     encoders: Optional[Dict[str, Any]],
     scaler: Optional[Any],
@@ -23,19 +24,41 @@ def save_objects(
     """
     Sauvegarde tous les objets nécessaires à l'inférence (modèle CatBoost, pipeline, encodages, scaler) avec validation post-sauvegarde.
 
-    :param model: Modèle CatBoost entraîné
+    :param model: Modèle CatBoost entraîné ou Pipeline sklearn contenant le modèle
     :param pipeline: Pipeline de transformation (feature engineering, scaling, etc.)
     :param encoders: Dictionnaire d'encodages (labels, features)
     :param scaler: Scaler ou normalisateur (optionnel)
     :param path_prefix: Préfixe de chemin pour les fichiers sauvegardés
     """
     try:
+        # Extract the actual model if we received a Pipeline
+        actual_model = model
+        actual_pipeline = pipeline
+        
+        if isinstance(model, Pipeline):
+            logger.info("Pipeline détecté, extraction du modèle CatBoost...")
+            # The model is inside the pipeline, extract it
+            if 'model' in model.named_steps:
+                actual_model = model.named_steps['model']
+                logger.info(f"Modèle extrait du pipeline: {type(actual_model)}")
+            else:
+                # If no 'model' step, use the last step
+                actual_model = model.steps[-1][1]
+                logger.info(f"Modèle extrait (dernière étape): {type(actual_model)}")
+            
+            # Save the entire pipeline separately
+            actual_pipeline = model
+        
+        # Validate that the model has a save_model method
+        if not hasattr(actual_model, 'save_model'):
+            raise AttributeError(f"Le modèle extrait ({type(actual_model)}) n'a pas de méthode 'save_model'. Seuls les modèles CatBoost sont supportés.")
+        
         # Modèle CatBoost natif
         model_path = f"{path_prefix}_model.cbm"
-        model.save_model(model_path)
+        actual_model.save_model(model_path)
         logger.info(f"Modèle CatBoost sauvegardé : {model_path}")
         # Pipeline, encoders, scaler (pickle/joblib)
-        for obj, name in zip([pipeline, encoders, scaler], ["pipeline", "encoders", "scaler"]):
+        for obj, name in zip([actual_pipeline, encoders, scaler], ["pipeline", "encoders", "scaler"]):
             if obj is not None:
                 obj_path = f"{path_prefix}_{name}.pkl"
                 with open(obj_path, 'wb') as f:

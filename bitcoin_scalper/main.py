@@ -302,7 +302,7 @@ def run_live_trading(max_cycles=None):
             # 8. Reporting backtesting (si activé)
             if config.get("ENABLE_BACKTEST", False) and backtester is not None:
                 try:
-                    df_bt, trades, kpis = backtester.run()
+                    df_bt, trades, kpis, benchmarks_results = backtester.run()
                     logger.info(f"Backtesting exécuté. KPIs: {kpis}")
                 except Exception as e:
                     logger.error(f"Erreur backtesting : {e}")
@@ -352,7 +352,7 @@ def run_backtest():
         logger.error("Colonne 'signal' manquante dans les features. Impossible de backtester.")
         return
     backtester = Backtester(df, signal_col='signal', price_col='close')
-    df_bt, trades, kpis = backtester.run()
+    df_bt, trades, kpis, benchmarks_results = backtester.run()
     logger.info(f"KPIs backtest : {kpis}")
     # Export reporting (exemple CSV)
     report_path = 'data/reports/backtest_report.csv'
@@ -412,9 +412,9 @@ def run_data():
 def run_backtest_offline(df: pd.DataFrame, signal_col: str = "signal", price_col: str = "close"):
     """Exécute un backtest offline et log les KPIs principaux."""
     backtester = Backtester(df, signal_col=signal_col, price_col=price_col)
-    df_bt, trades, kpis = backtester.run()
+    df_bt, trades, kpis, benchmarks_results = backtester.run()
     logger.info(f"Backtest terminé. KPIs: {kpis}")
-    return df_bt, trades, kpis
+    return df_bt, trades, kpis, benchmarks_results
 
 def send_order_fn(qty, price, **kwargs):
     """Exemple de fonction d'envoi d'ordre (à adapter à l'API broker réelle)."""

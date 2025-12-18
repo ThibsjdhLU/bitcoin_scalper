@@ -5,6 +5,8 @@ import tempfile
 import numpy as np
 import pandas as pd
 from catboost import CatBoostClassifier
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import RobustScaler
 from bitcoin_scalper.core.export import save_objects, load_objects
 
 def make_model():
@@ -32,6 +34,31 @@ def test_save_and_load_objects(tmp_path):
     y_pred2 = loaded['model'].predict(X)
     assert np.allclose(y_pred1, y_pred2)
 
+def test_save_and_load_pipeline(tmp_path):
+    """Test saving a sklearn Pipeline containing a CatBoost model"""
+    model, X = make_model()
+    # Create a pipeline with scaler and model
+    pipeline = Pipeline([
+        ('scaler', RobustScaler()),
+        ('model', model)
+    ])
+    # Fit the scaler
+    pipeline.named_steps['scaler'].fit(X)
+    
+    prefix = str(tmp_path / "test_pipeline_export")
+    # Pass the pipeline as the model parameter
+    save_objects(pipeline, None, None, None, prefix)
+    loaded = load_objects(prefix)
+    
+    # Vérifie que le modèle est chargé
+    assert loaded['model'] is not None
+    # Vérifie que le pipeline est sauvegardé
+    assert loaded['pipeline'] is not None
+    # Vérifie que les prédictions sont identiques via le modèle extrait
+    y_pred1 = model.predict(X)
+    y_pred2 = loaded['model'].predict(X)
+    assert np.allclose(y_pred1, y_pred2)
+
 def test_save_load_missing_file(tmp_path):
     prefix = str(tmp_path / "missing_export")
     # Aucun fichier sauvegardé
@@ -48,3 +75,22 @@ def test_save_load_permission_error(monkeypatch, tmp_path):
     with pytest.raises(PermissionError):
         # We must provide at least one artifact to trigger `open()`
         save_objects(model, {'pipeline': True}, None, None, prefix)
+
+def test_save_pipeline_with_invalid_model(tmp_path):
+    """Test that saving a pipeline with a non-CatBoost model raises an error"""
+    from sklearn.linear_model import LogisticRegression
+    X = pd.DataFrame({'a': np.random.randn(30), 'b': np.random.randn(30)})
+    y = np.random.choice([0, 1], 30)
+    
+    # Create a pipeline with a model that doesn't have save_model method
+    invalid_model = LogisticRegression()
+    invalid_model.fit(X, y)
+    pipeline = Pipeline([
+        ('scaler', RobustScaler()),
+        ('model', invalid_model)
+    ])
+    pipeline.named_steps['scaler'].fit(X)
+    
+    prefix = str(tmp_path / "invalid_pipeline")
+    with pytest.raises(AttributeError, match="n'a pas de méthode 'save_model'"):
+        save_objects(pipeline, None, None, None, prefix)

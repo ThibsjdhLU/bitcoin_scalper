@@ -287,7 +287,4 @@ class Backtester:
             plt.savefig(os.path.join(self.out_dir, "confusion_backtest.png"))
             plt.close()
         logger.info(f"Rapport backtest exporté : {os.path.join(self.out_dir, 'backtest_report.json')}")
-        if self.benchmarks:
-            return out_df, trades, kpis, benchmarks_results
-        else:
-            return out_df, trades, kpis 
+        return out_df, trades, kpis, benchmarks_results 

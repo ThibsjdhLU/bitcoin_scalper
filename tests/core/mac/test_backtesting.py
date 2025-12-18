@@ -13,7 +13,7 @@ def make_df():
 def test_backtester_run():
     df = make_df()
     bt = Backtester(df)
-    out_df, trades, kpis = bt.run()
+    out_df, trades, kpis, benchmarks_results = bt.run()
     assert "equity_curve" in out_df.columns
     assert len(trades) > 0
     assert "sharpe" in kpis
@@ -21,23 +21,26 @@ def test_backtester_run():
     assert "profit_factor" in kpis
     assert "win_rate" in kpis
     assert kpis["nb_trades"] == len(trades)
+    assert isinstance(benchmarks_results, dict)
 
 def test_backtester_no_trades():
     df = make_df()
     df["signal"] = 0
     bt = Backtester(df)
-    out_df, trades, kpis = bt.run()
+    out_df, trades, kpis, benchmarks_results = bt.run()
     assert len(trades) == 0
     assert kpis["win_rate"] == 0
     assert kpis["final_return"] == 0
+    assert isinstance(benchmarks_results, dict)
 
 def test_backtester_flat():
     df = make_df()
     df["signal"] = [0]*10
     bt = Backtester(df)
-    out_df, trades, kpis = bt.run()
+    out_df, trades, kpis, benchmarks_results = bt.run()
     assert np.all(out_df["returns"] == 0)
     assert np.all(out_df["equity_curve"] == 1)
+    assert isinstance(benchmarks_results, dict)
 
 def test_backtester_with_adaptive_scheduler(tmp_path):
     import pandas as pd
