@@ -49,6 +49,10 @@ def save_objects(
             # Save the entire pipeline separately
             actual_pipeline = model
         
+        # Validate that the model has a save_model method
+        if not hasattr(actual_model, 'save_model'):
+            raise AttributeError(f"Le modèle extrait ({type(actual_model)}) n'a pas de méthode 'save_model'. Seuls les modèles CatBoost sont supportés.")
+        
         # Modèle CatBoost natif
         model_path = f"{path_prefix}_model.cbm"
         actual_model.save_model(model_path)
