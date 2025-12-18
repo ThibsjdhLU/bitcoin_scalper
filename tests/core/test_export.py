@@ -5,6 +5,8 @@ import tempfile
 import numpy as np
 import pandas as pd
 from catboost import CatBoostClassifier
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import RobustScaler
 from bitcoin_scalper.core.export import save_objects, load_objects
 
 def make_model():
@@ -28,6 +30,31 @@ def test_save_and_load_objects(tmp_path):
     assert loaded['encoders'] == encoders
     assert loaded['scaler'] == scaler
     # Prédictions identiques
+    y_pred1 = model.predict(X)
+    y_pred2 = loaded['model'].predict(X)
+    assert np.allclose(y_pred1, y_pred2)
+
+def test_save_and_load_pipeline(tmp_path):
+    """Test saving a sklearn Pipeline containing a CatBoost model"""
+    model, X = make_model()
+    # Create a pipeline with scaler and model
+    pipeline = Pipeline([
+        ('scaler', RobustScaler()),
+        ('model', model)
+    ])
+    # Fit the scaler
+    pipeline.named_steps['scaler'].fit(X)
+    
+    prefix = str(tmp_path / "test_pipeline_export")
+    # Pass the pipeline as the model parameter
+    save_objects(pipeline, None, None, None, prefix)
+    loaded = load_objects(prefix)
+    
+    # Vérifie que le modèle est chargé
+    assert loaded['model'] is not None
+    # Vérifie que le pipeline est sauvegardé
+    assert loaded['pipeline'] is not None
+    # Vérifie que les prédictions sont identiques via le modèle extrait
     y_pred1 = model.predict(X)
     y_pred2 = loaded['model'].predict(X)
     assert np.allclose(y_pred1, y_pred2)

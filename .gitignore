@@ -29,3 +29,4 @@ models/
 data/features/
 config.enc
 *.enc
+catboost_info/
