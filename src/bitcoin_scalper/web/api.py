@@ -8,7 +8,7 @@ from starlette.responses import JSONResponse
 from starlette.status import HTTP_401_UNAUTHORIZED
 from bitcoin_scalper.core.config import SecureConfig
 from bitcoin_scalper.core.risk_management import RiskManager
-from bot.connectors.mt5_rest_client import MT5RestClient
+from bitcoin_scalper.connectors.mt5_rest_client import MT5RestClient
 import threading
 
 # Simuler stockage utilisateurs et secrets (à remplacer par DB/HashiCorp Vault en prod)

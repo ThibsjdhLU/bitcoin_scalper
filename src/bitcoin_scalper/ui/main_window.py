@@ -128,7 +128,9 @@ class MainWindow(QMainWindow):
     def apply_dark_theme(self):
         """Charge la feuille de style sombre personnalisée."""
         try:
-            with open("ui/styles/dark_theme.qss", "r") as f:
+            from pathlib import Path
+            style_path = Path(__file__).parent / "styles" / "dark_theme.qss"
+            with open(style_path, "r") as f:
                 self.setStyleSheet(f.read())
         except Exception as e:
             self.logger.error(f"Erreur chargement thème sombre : {e}")

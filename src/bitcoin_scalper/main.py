@@ -481,10 +481,11 @@ def main():
                 logger.append_log("[INFO] Port 8000 déjà utilisé, lancement automatique du serveur MT5 REST ignoré.")
             else:
                 # Lancer le serveur MT5 REST automatiquement sous Windows (console visible)
-                mt5_server_script = os.path.join(os.path.dirname(__file__), '..', 'scripts', 'mt5_rest_server.py')
+                # Le serveur est dans src/bitcoin_scalper/scripts/mt5_rest_server.py
+                mt5_server_script = Path(__file__).parent / 'scripts' / 'mt5_rest_server.py'
                 try:
                     subprocess.Popen([
-                        sys.executable, mt5_server_script
+                        sys.executable, str(mt5_server_script)
                     ])  # Console visible pour debug
                     logger.append_log("[INFO] Serveur MT5 REST lancé automatiquement (Windows, console visible).")
                 except Exception as e:

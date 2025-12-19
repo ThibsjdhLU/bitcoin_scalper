@@ -3,7 +3,7 @@ PositionDelegate : QStyledItemDelegate custom pour enrichir l'affichage de la ta
 Affiche une icône achat/vente, colore la ligne selon le PnL, et affiche un tooltip détaillé.
 """
 
-from PyQt6.QtWidgets import QStyledItemDelegate, QStyleOptionViewItem, QWidget
+from PyQt6.QtWidgets import QStyledItemDelegate, QStyleOptionViewItem, QWidget, QToolTip
 from PyQt6.QtGui import QIcon, QPixmap, QPainter, QBrush, QColor
 from PyQt6.QtCore import QModelIndex, Qt, QRect
 from pathlib import Path
