@@ -1,32 +1,57 @@
 # Environnements virtuels
 .venv/
+venv/
+
 # Caches Python
 __pycache__/
-app/core/__pycache__/
-app/web/__pycache__/
-bot/connectors/__pycache__/
-tests/core/__pycache__/
-tests/connectors/__pycache__/
-tests/security/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
 # Caches de tests
 .pytest_cache/
+.coverage
+htmlcov/
+
 # DVC
 .dvc/
+
 # Logs
 logs/
+*.log
+
 # Fichiers temporaires
 *.tmp
 *.bak
 *~
-# Fichiers d’indexation Cursor
-.cursor/ 
-# Fichiers volumineux à ignorer
+.DS_Store
+
+# Fichiers d'indexation Cursor
+.cursor/
+
+# IDE
+.vscode/
+.idea/
+
+# Fichiers volumineux à ignorer (exception pour data CSV historique)
 *.pkl
-*.csv
-.venv/
+data/*.csv
+!data/BTCUSD_M1_*.csv
+
 # Dossiers de données et modèles
 models/
 data/features/
+
+# Configuration chiffrée
 config.enc
 *.enc
-catboost_info/
+
+# Artefacts de build
+dist/
+build/
+*.egg-info/
+
+# Rapports de tests et training (gardés pour ML)
+# catboost_info/ - gardé pour le ML
+# ml_reports/ - gardé pour le ML
+# backtest_reports/ - gardé pour le ML

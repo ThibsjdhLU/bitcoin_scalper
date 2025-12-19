@@ -1,147 +1,103 @@
 # Bitcoin Scalper
 
-Bot de trading algorithmique BTC/USD intégrant pipeline Machine Learning, gestion avancée du risque, supervision sécurisée (API FastAPI, dashboard PyQt), monitoring Prometheus, et versioning des données avec DVC.
+Bot de trading algorithmique BTC/USD avec Machine Learning, gestion du risque, et interface PyQt.
 
-## Fonctionnalités principales
+## Fonctionnalités
 
-- **Sécurité avancée** :
-  - Authentification forte (MFA TOTP) sur l'API et l'interface de supervision
-  - Chiffrement des secrets (AES-256, dérivation PBKDF2)
-  - Vérification automatique du chiffrement disque (FileVault) et du pare-feu (scripts shell)
-  - Bonnes pratiques : aucun secret en clair, endpoints critiques protégés
-- **Monitoring & alertes** :
-  - Export Prometheus (bot & API) : uptime, erreurs, cycles, PnL, drawdown, latence
-  - Intégration Grafana (panels recommandés : uptime, erreurs, PnL, drawdown)
-  - Alertes Prometheus Alertmanager (email, Telegram, webhook)
-- **Supervision** :
-  - API FastAPI sécurisée (endpoints : `/pnl`, `/positions`, `/alerts`, `/kpis`, `/token`, `/verify`)
-  - Dashboard PyQt (statut, PnL, capital, positions, alertes, graphique capital)
-- **Pipeline ML & DVC** :
-  - Ingestion, nettoyage, feature engineering, modélisation, backtesting, exécution
-  - Versioning datasets, features, modèles et artefacts ML avec DVC
+- **Trading algorithmique** :
+  - Stratégie de scalping BTC/USD avec signaux ML
+  - Gestion automatique des positions (Stop Loss / Take Profit)
+  - Exécution d'ordres avancée (Iceberg, VWAP, TWAP)
+  
+- **Machine Learning** :
+  - Pipeline ML complet : feature engineering, entraînement, backtesting
+  - Modèles CatBoost/LightGBM/XGBoost avec calibration des probabilités
+  - Prédiction temps réel et évaluation continue
+  
+- **Gestion du risque** :
+  - Risk management avec calcul ATR pour SL/TP dynamiques
+  - Validation des positions avant exécution
+  - Monitoring du drawdown et PnL
+  
+- **Interface utilisateur** :
+  - Dashboard PyQt avec graphiques en temps réel
+  - Visualisation des positions et métriques
+  - API FastAPI pour supervision à distance
 
 ## Structure du projet
 
 ```
 bitcoin_scalper/
-├── README.md
-├── pyproject.toml / requirements.txt
-├── Makefile
-├── .gitignore / .coveragerc
-│
-├── docs/                # Documentation Sphinx
-├── docker/              # Dockerfile, docker-compose.yml
-├── k8s/                 # Manifestes Kubernetes
-│
 ├── bitcoin_scalper/     # Code source principal
-│   ├── core/            # Ingestion, ML, risk, DVC, etc.
+│   ├── core/            # ML, risk, ingestion, backtesting
+│   ├── connectors/      # MT5 REST client
+│   ├── threads/         # Trading worker
+│   ├── ui/              # Dashboard PyQt
 │   ├── web/             # API FastAPI
-│   └── main.py          # Orchestration du bot
-├── bot/                 # Connecteurs externes (MT5, etc.)
-├── data/                # Données (non versionnées)
-├── scripts/             # Scripts d'admin, migration, audit
-├── tests/               # Tests unitaires et d'intégration
-├── ui/                  # Dashboard PyQt
-└── .github/             # CI/CD
+│   ├── scripts/         # Utilitaires
+│   └── main.py          # Point d'entrée
+├── data/                # Données historiques CSV
+├── config.json          # Configuration (ou config.enc chiffrée)
+├── model_model.cbm      # Modèle ML entraîné
+└── requirements.txt     # Dépendances Python
 ```
 
-## Installation & Prérequis
+## Installation
 
-- Python 3.11.x recommandé
-- Cloner le repo puis :
+Python 3.11.x recommandé
 
 ```sh
 python3 -m venv .venv
 source .venv/bin/activate
-make init
-```
-
-- Pour la doc :
-
-```sh
-make docs
+pip install -r requirements.txt
 ```
 
 ## Utilisation
 
-- **Entraîner le modèle ML** :
-  ```sh
-  python train.py
-  ```
-  ou
-  ```sh
-  make train
-  ```
-  Le modèle utilise automatiquement le fichier CSV dans `/data/BTCUSD_M1_202301010000_202512011647.csv`.
-  
-  Pour plus de détails, consultez [README_TRAINING.md](README_TRAINING.md).
+### Entraîner le modèle ML
 
-- **Lancer le bot principal** :
-  ```sh
-  python -m bitcoin_scalper.main
-  ```
-- **Lancer l'API FastAPI** :
-  ```sh
-  uvicorn bitcoin_scalper.web.api:app --reload
-  ```
-- **Dashboard PyQt** :
-  Lancement automatique avec le bot, ou via les modules `ui/`.
+```sh
+python train.py
+```
 
-- **Exemple de requête API protégée** :
-  ```sh
-  curl -X GET "http://localhost:8000/pnl?username=admin&code=123456" -H "Authorization: Bearer <token>"
-  ```
+Le script utilise automatiquement les données dans `/data/BTCUSD_M1_202301010000_202512011647.csv`.
 
-## Tests & Qualité
+Pour plus de détails : [README_TRAINING.md](README_TRAINING.md)
 
-- **Lancer les tests** :
-  ```sh
-  make test
-  ```
-- **Vérifier la couverture** :
-  Couverture >95% exigée (voir rapport pytest-cov)
-- **Lint** :
-  ```sh
-  make lint
-  ```
-- **Générer la documentation** :
-  ```sh
-  make docs
-  ```
+### Lancer le bot de trading
 
-## Contribution
+```sh
+python -m bitcoin_scalper.main
+```
 
-- Respecter les standards Cursor :
-  - PEP8, docstrings, typage, sécurité (jamais de secrets en clair)
-  - Ajouter des tests unitaires pour toute nouvelle fonctionnalité (>95% coverage)
-  - Documenter chaque action significative dans `user_rules_history.md`
-  - Nettoyer les fichiers/dossiers inutiles avant chaque PR
+Le bot lance automatiquement :
+- Le dashboard PyQt
+- L'ingestion de données temps réel
+- L'exécution des stratégies de trading
+- L'API FastAPI (optionnel)
 
-## Nettoyage & bonnes pratiques
+### Configuration
 
-- Les fichiers/dossiers suivants sont exclus du dépôt :
-  - `__pycache__/`, `.pytest_cache/`, `.DS_Store`, `.coverage`, logs, fichiers temporaires, artefacts de build, données brutes
-- Les dossiers vides ou non utilisés sont supprimés régulièrement
-- Scripts d'audit sécurité :
-  - `bash scripts/check_filevault.sh`
-  - `bash scripts/check_firewall.sh`
+Éditez `config.json` ou utilisez `config.enc` (chiffré avec AES-256) :
 
-## Références & contacts
+```json
+{
+  "MT5_REST_URL": "http://localhost:8000",
+  "MT5_REST_API_KEY": "your_api_key",
+  "DEFAULT_SL_PCT": 0.01,
+  "DEFAULT_TP_PCT": 0.02,
+  "SL_ATR_MULT": 2.0,
+  "TP_ATR_MULT": 3.0
+}
+```
 
-- Documentation : dossier `docs/`
-- CI/CD : `.github/workflows/`
-- Pour toute question, ouvrir une issue ou contacter l'auteur.
+Pour chiffrer la configuration :
+```sh
+python encrypt_config.py
+```
 
-## Sécurité opérationnelle : gestion et rotation des secrets
+## Sécurité
 
-- **Ne jamais versionner config.enc ou tout fichier *.enc** (voir .gitignore)
-- Pour changer la clé de chiffrement ou le mot de passe :
-  1. Utiliser le script `scripts/migrate_config_to_password.py` pour rechiffrer la config avec un nouveau mot de passe.
-  2. Mettre à jour la variable d'environnement `CONFIG_AES_KEY` (ou le mot de passe utilisé pour la dérivation) sur tous les environnements.
-  3. Supprimer toute ancienne clé ou mot de passe stocké en local ou dans des scripts.
-- **Rotation des tokens API** :
-  - Modifier régulièrement les variables d'environnement `API_ADMIN_PASSWORD`, `API_ADMIN_TOTP`, `API_ADMIN_TOKEN`.
-  - Redémarrer les services après chaque rotation.
-- **Audit sécurité** :
-  - Exécuter régulièrement `bash scripts/check_filevault.sh` et `bash scripts/check_firewall.sh`.
-  - Documenter toute action de sécurité dans `user_rules_history.md`. 
+- Configuration chiffrée avec AES-256 et dérivation PBKDF2
+- Pas de secrets en clair dans le code
+- Mot de passe demandé au démarrage pour déchiffrer la config 
