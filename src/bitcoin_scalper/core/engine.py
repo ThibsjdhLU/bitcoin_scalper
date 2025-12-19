@@ -28,7 +28,7 @@ import time
 import pandas as pd
 import numpy as np
 from pathlib import Path
-from typing import Optional, Dict, Any, Union, List
+from typing import Optional, Dict, Any, Union, List, Tuple
 from enum import Enum
 import logging
 
@@ -230,12 +230,24 @@ class TradingEngine:
             
             # Try to load using the export module
             try:
-                self.ml_pipeline, self.ml_model, _, self.features_list, _ = load_objects(model_path)
+                objects = load_objects(model_path)
+                self.ml_pipeline = objects.get('pipeline')
+                self.ml_model = objects.get('model')
+                self.features_list = None  # load_objects doesn't return features_list
                 self.logger.info("ML model loaded successfully via load_objects")
             except Exception as e:
-                # Fallback to direct joblib load
+                # Fallback to direct load
                 self.logger.warning(f"load_objects failed: {e}, trying direct load")
-                self.ml_model = joblib.load(f"{model_path}_model.cbm")
+                
+                # Load CatBoost model properly
+                try:
+                    from catboost import CatBoostClassifier
+                    self.ml_model = CatBoostClassifier()
+                    self.ml_model.load_model(f"{model_path}_model.cbm")
+                except Exception as e2:
+                    self.logger.warning(f"CatBoost load failed: {e2}, trying joblib")
+                    # Try joblib as last resort (for XGBoost or other models)
+                    self.ml_model = joblib.load(f"{model_path}_model.pkl")
                 
                 if features_list:
                     self.features_list = features_list
@@ -444,7 +456,7 @@ class TradingEngine:
                 tick_number=self.tick_count
             )
     
-    def _get_signal(self, df: pd.DataFrame) -> tuple[Optional[str], Optional[float]]:
+    def _get_signal(self, df: pd.DataFrame) -> Tuple[Optional[str], Optional[float]]:
         """
         Get trading signal from model (ML or RL).
         
@@ -469,7 +481,7 @@ class TradingEngine:
             self.logger.error(f"Error getting signal: {e}")
             return None, None
     
-    def _get_ml_signal(self, df: pd.DataFrame) -> tuple[Optional[str], Optional[float]]:
+    def _get_ml_signal(self, df: pd.DataFrame) -> Tuple[Optional[str], Optional[float]]:
         """Get signal from ML model."""
         if self.ml_model is None:
             self.logger.warning("ML model not loaded")
@@ -522,7 +534,7 @@ class TradingEngine:
             self.logger.error(f"ML prediction failed: {e}")
             return None, None
     
-    def _get_rl_signal(self, df: pd.DataFrame) -> tuple[Optional[str], Optional[float]]:
+    def _get_rl_signal(self, df: pd.DataFrame) -> Tuple[Optional[str], Optional[float]]:
         """Get signal from RL agent."""
         if self.rl_agent is None:
             self.logger.warning("RL agent not loaded")

@@ -26,6 +26,7 @@ import argparse
 import sys
 import time
 import signal
+import pandas as pd
 from pathlib import Path
 from typing import Optional
 import logging
@@ -160,7 +161,6 @@ def run_live_mode(config: TradingConfig, logger: TradingLogger):
                 # Calculate SL/TP if enabled
                 sl, tp = None, None
                 if config.use_sl_tp:
-                    import pandas as pd
                     df = pd.DataFrame(ohlcv)
                     close_price = df['close'].iloc[-1]
                     
