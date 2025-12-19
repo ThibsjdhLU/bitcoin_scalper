@@ -8,6 +8,7 @@ import time
 import logging
 import os
 import pandas as pd
+from pathlib import Path
 from bitcoin_scalper.core.config import SecureConfig
 from bitcoin_scalper.core.data_ingestor import DataIngestor
 from bitcoin_scalper.core.data_cleaner import DataCleaner
@@ -18,6 +19,14 @@ from bitcoin_scalper.core.dvc_manager import DVCManager
 from bitcoin_scalper.core.export import load_objects
 from bitcoin_scalper.core.modeling import predict
 from bitcoin_scalper.core.backtesting import Backtester
+
+# Déterminer le chemin racine du projet (2 niveaux au-dessus de src/bitcoin_scalper)
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+CONFIG_DIR = PROJECT_ROOT / "config"
+DATA_DIR = PROJECT_ROOT / "data"
+MODELS_DIR = PROJECT_ROOT / "models"
+REPORTS_DIR = PROJECT_ROOT / "reports"
+RESOURCES_DIR = PROJECT_ROOT / "resources"
 from bitcoin_scalper.core.order_algos import execute_iceberg, execute_vwap, execute_twap
 from bitcoin_scalper.connectors.mt5_rest_client import MT5RestClient
 from prometheus_client import start_http_server, Counter, Gauge
@@ -38,7 +47,7 @@ from bitcoin_scalper.ui.password_dialog import PasswordDialog
 from bitcoin_scalper.threads.trading_worker import TradingWorker
 from bitcoin_scalper.utils.logger import QtLogger
 from bitcoin_scalper.utils.settings import SettingsManager
-from bitcoin_scalper.models.positions_model import PositionsModel
+from bitcoin_scalper.ui.positions_model import PositionsModel
 import pyqtgraph as pg
 import platform
 import subprocess
@@ -118,7 +127,7 @@ def run_live_trading(max_cycles=None):
     # --- Sécurité simplifiée : demande du mot de passe utilisateur et dérivation de la clé ---
     password = getpass.getpass("Mot de passe pour déverrouiller la config sécurisée : ")
     aes_key = derive_key_from_password(password)
-    config = SecureConfig("config.enc", aes_key)
+    config = SecureConfig(str(CONFIG_DIR / "config.enc"), aes_key)
     logger.info("Configuration chargée en mode sécurisé (clé dérivée du mot de passe utilisateur, PBKDF2, AES-256). Fallback interdit.")
     mt5_url = config.get("MT5_REST_URL")
     mt5_api_key = config.get("MT5_REST_API_KEY")
@@ -156,10 +165,10 @@ def run_live_trading(max_cycles=None):
 
     # --- Chargement du pipeline ML (si modèle existant) ---
     ml_pipe = None
-    ml_model_path = config.get("ML_MODEL_PATH", "model_rf.pkl")
+    ml_model_path = config.get("ML_MODEL_PATH", str(MODELS_DIR / "model"))
     ml_loaded = False
     try:
-        if os.path.exists(ml_model_path):
+        if os.path.exists(f"{ml_model_path}_model.cbm"):
             # On charge le modèle ML via load_objects (cf. orchestrator.py)
             ml_pipe, _, _, _, _ = load_objects(ml_model_path)
             logger.info(f"Modèle ML chargé depuis {ml_model_path}")
@@ -290,7 +299,8 @@ def run_live_trading(max_cycles=None):
                         else:
                             mt5_client.send_order(SYMBOL, signal, ORDER_VOLUME, sl=sl, tp=tp)
                         logger.info(f"Ordre {signal} exécuté via {exec_algo} avec SL={sl:.2f}, TP={tp:.2f}.")
-                        dvc.add("data/features/BTCUSD_M1.csv")
+                        features_csv = str(DATA_DIR / f"features/{SYMBOL}_{TIMEFRAME}.csv")
+                        dvc.add(features_csv)
                         dvc.commit()
                     except Exception as e:
                         logger.error(f"Erreur exécution ordre : {e}")
@@ -315,7 +325,7 @@ def run_live_trading(max_cycles=None):
                 logger.error(f"Erreur stockage TimescaleDB : {e}")
             # 11. Versioning DVC du fichier features (exemple : export CSV puis add/commit)
             try:
-                features_path = f"data/features/{SYMBOL}_{TIMEFRAME}.csv"
+                features_path = str(DATA_DIR / f"features/{SYMBOL}_{TIMEFRAME}.csv")
                 df.to_csv(features_path, index=False)
                 dvc.add(features_path)
                 dvc.commit(features_path)
@@ -343,7 +353,7 @@ def run_backtest():
     """
     logger.info("Mode backtest : simulation historique vectorisée.")
     # Chargement des features et signaux
-    features_path = 'data/features/BTCUSD_M1.csv'
+    features_path = str(DATA_DIR / 'features/BTCUSD_M1.csv')
     if not os.path.exists(features_path):
         logger.error(f"Fichier de features introuvable : {features_path}")
         return
@@ -355,7 +365,8 @@ def run_backtest():
     df_bt, trades, kpis, benchmarks_results = backtester.run()
     logger.info(f"KPIs backtest : {kpis}")
     # Export reporting (exemple CSV)
-    report_path = 'data/reports/backtest_report.csv'
+    report_path = str(REPORTS_DIR / 'backtest/backtest_report.csv')
+    os.makedirs(os.path.dirname(report_path), exist_ok=True)
     df_bt.to_csv(report_path, index=False)
     logger.info(f"Reporting backtest exporté : {report_path}")
 
@@ -376,7 +387,7 @@ def run_audit():
         "firewall": os.system('bash scripts/check_firewall.sh'),
         "filevault": os.system('bash scripts/check_filevault.sh')
     }
-    metrics_path = 'data/reports/security_metrics.json'
+    metrics_path = str(REPORTS_DIR / 'security_metrics.json')
     os.makedirs(os.path.dirname(metrics_path), exist_ok=True)
     import json
     with open(metrics_path, 'w') as f:
@@ -394,9 +405,9 @@ def run_data():
     dvc = DVCManager()
     # Synchronisation complète des datasets
     datasets = [
-        'data/raw/BTCUSD_M1.csv',
-        'data/clean/BTCUSD_M1.csv',
-        'data/features/BTCUSD_M1.csv'
+        str(DATA_DIR / 'raw/BTCUSD_M1.csv'),
+        str(DATA_DIR / 'clean/BTCUSD_M1.csv'),
+        str(DATA_DIR / 'features/BTCUSD_M1.csv')
     ]
     for ds in datasets:
         if os.path.exists(ds):

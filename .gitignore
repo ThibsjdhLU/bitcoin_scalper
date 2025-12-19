@@ -33,25 +33,29 @@ logs/
 .vscode/
 .idea/
 
-# Fichiers volumineux à ignorer (exception pour data CSV historique)
+# Fichiers volumineux à ignorer
 *.pkl
-data/*.csv
-!data/BTCUSD_M1_*.csv
 
 # Dossiers de données et modèles
-models/
+models/*.cbm
+models/*.pkl
+data/raw/*.csv
+!data/raw/BTCUSD_M1_*.csv
 data/features/
 
-# Configuration chiffrée
-config.enc
-*.enc
+# Configuration locale (ne pas commiter)
+config/config.json
+config/*.enc
+
+# Rapports temporaires
+reports/logs/
+reports/logs/catboost_info/
 
 # Artefacts de build
 dist/
 build/
 *.egg-info/
 
-# Rapports de tests et training (gardés pour ML)
-# catboost_info/ - gardé pour le ML
-# ml_reports/ - gardé pour le ML
-# backtest_reports/ - gardé pour le ML
+# Rapports de tests et training (à commiter seulement si important)
+# reports/backtest/ - à commiter pour référence
+# reports/ml/ - à commiter pour référence

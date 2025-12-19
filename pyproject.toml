@@ -5,6 +5,7 @@ description = "Bot de trading algorithmique BTC/USD avec pipeline ML, gestion du
 authors = ["Auteur <email@example.com>"]
 license = "MIT"
 readme = "README.md"
+packages = [{include = "bitcoin_scalper", from = "src"}]
 
 [tool.poetry.dependencies]
 python = ">=3.11,<3.12"

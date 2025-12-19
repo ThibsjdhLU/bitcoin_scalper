@@ -6,6 +6,7 @@ Affiche une icône achat/vente, colore la ligne selon le PnL, et affiche un tool
 from PyQt6.QtWidgets import QStyledItemDelegate, QStyleOptionViewItem, QWidget
 from PyQt6.QtGui import QIcon, QPixmap, QPainter, QBrush, QColor
 from PyQt6.QtCore import QModelIndex, Qt, QRect
+from pathlib import Path
 
 class PositionDelegate(QStyledItemDelegate):
     """
@@ -13,8 +14,8 @@ class PositionDelegate(QStyledItemDelegate):
     """
     def __init__(self, parent: QWidget = None) -> None:
         super().__init__(parent)
-        self.icon_buy = QIcon("resources/status_running.svg")  # À remplacer par une icône dédiée achat
-        self.icon_sell = QIcon("resources/status_stopped.svg")  # À remplacer par une icône dédiée vente
+        self.icon_buy = QIcon(str(Path(__file__).resolve().parent.parent.parent.parent / "resources" / "icons" / "status_running.svg"))  # À remplacer par une icône dédiée achat
+        self.icon_sell = QIcon(str(Path(__file__).resolve().parent.parent.parent.parent / "resources" / "icons" / "status_stopped.svg"))  # À remplacer par une icône dédiée vente
 
     def paint(self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex) -> None:
         # Affichage icône dans la colonne Sens

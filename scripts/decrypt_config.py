@@ -33,7 +33,8 @@ def decrypt_config(encrypted_config_path: str, aes_key: bytes) -> dict:
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:
-        print("Usage: python decrypt_config.py <config.enc> <clé_AES_256_hex>")
+        print("Usage: python scripts/decrypt_config.py <config.enc> <clé_AES_256_hex>")
+        print("Example: python scripts/decrypt_config.py config/config.enc <key>")
         sys.exit(1)
 
     input_enc = sys.argv[1]

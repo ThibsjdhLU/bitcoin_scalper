@@ -16,7 +16,7 @@ def derive_key_from_password(password: str, salt: bytes = SALT, iterations: int 
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
-        print("Usage: python check_password_key.py <password>")
+        print("Usage: python scripts/check_password_key.py <password>")
         sys.exit(1)
     password = sys.argv[1]
     derived_key = derive_key_from_password(password)

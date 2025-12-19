@@ -6,7 +6,12 @@ Affiche le solde, le PnL, le statut du bot et le dernier prix.
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel, QHBoxLayout, QFrame
 from PyQt6.QtGui import QPixmap, QIcon
 from PyQt6.QtCore import Qt
+from pathlib import Path
 import os
+
+# Déterminer le chemin racine du projet
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
+RESOURCES_DIR = PROJECT_ROOT / "resources" / "icons"
 
 class AccountInfoPanel(QWidget):
     """
@@ -63,9 +68,9 @@ class AccountInfoPanel(QWidget):
 
     def set_status(self, status: str) -> None:
         """Met à jour l'icône et le texte du statut du bot."""
-        icon_path = os.path.join("resources", f"status_{status}.svg")
-        if os.path.exists(icon_path):
-            self.status_icon.setPixmap(QPixmap(icon_path).scaled(24, 24, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+        icon_path = RESOURCES_DIR / f"status_{status}.svg"
+        if icon_path.exists():
+            self.status_icon.setPixmap(QPixmap(str(icon_path)).scaled(24, 24, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
         else:
             self.status_icon.clear()
         if status == "running":
