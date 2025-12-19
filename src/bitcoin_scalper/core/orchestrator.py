@@ -4,6 +4,7 @@ import sys
 import os
 import pandas as pd
 import numpy as np
+from pathlib import Path
 from bitcoin_scalper.core.data_loading import load_minute_csv
 from bitcoin_scalper.core.feature_engineering import FeatureEngineering
 from bitcoin_scalper.core.labeling import generate_labels, generate_q_values
@@ -14,6 +15,10 @@ from bitcoin_scalper.core.evaluation import evaluate_classification, evaluate_fi
 from bitcoin_scalper.core.export import save_objects, load_objects
 from bitcoin_scalper.core.inference import inference
 import bitcoin_scalper.core.ml_orchestrator as ml_orch
+
+# Déterminer le chemin racine du projet
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
+REPORTS_DIR = PROJECT_ROOT / "reports"
 
 # Logging global
 logger = logging.getLogger("bitcoin_scalper.orchestrator")
@@ -167,7 +172,7 @@ def main():
             report = ml_orch.run_ml_pipeline(
                 df_bal,
                 label_col='label',
-                out_dir='ml_reports',
+                out_dir=str(REPORTS_DIR / 'ml'),
                 tuning_method=args.tuning,
                 early_stopping_rounds=args.early_stopping_rounds
             )
@@ -175,12 +180,12 @@ def main():
 
         elif args.pipeline == 'tuning':
             logger.info('Exécution du pipeline tuning...')
-            ml_orch.run_tuning_pipeline(df_bal, label_col='label', out_dir='tuning_reports')
+            ml_orch.run_tuning_pipeline(df_bal, label_col='label', out_dir=str(REPORTS_DIR / 'tuning'))
             # Tuning returns a report, usually no model object ready for export unless specified
 
         elif args.pipeline == 'backtest':
             logger.info('Exécution du pipeline backtest...')
-            ml_orch.run_backtest_pipeline(df_bal, signal_col='label', price_col='<CLOSE>', out_dir='backtest_reports')
+            ml_orch.run_backtest_pipeline(df_bal, signal_col='label', price_col='<CLOSE>', out_dir=str(REPORTS_DIR / 'backtest'))
 
         elif args.pipeline == 'rl':
             logger.info('Exécution du pipeline RL...')

@@ -7,6 +7,7 @@ import os
 import joblib
 import numpy as np
 from datetime import datetime
+from pathlib import Path
 from bitcoin_scalper.core.config import SecureConfig
 from bitcoin_scalper.core.data_cleaner import DataCleaner
 from bitcoin_scalper.core.feature_engineering import FeatureEngineering
@@ -21,6 +22,13 @@ from bitcoin_scalper.scripts.prepare_features import generate_signal
 # ✅ PHASE 5: INFERENCE & SAFETY modules
 from bitcoin_scalper.core.inference_safety import InferenceSafetyGuard, DynamicRiskManager
 from bitcoin_scalper.core.monitoring import DriftMonitor
+
+# Déterminer le chemin racine du projet
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
+CONFIG_DIR = PROJECT_ROOT / "config"
+DATA_DIR = PROJECT_ROOT / "data"
+MODELS_DIR = PROJECT_ROOT / "models"
+REPORTS_DIR = PROJECT_ROOT / "reports"
 
 class TradingWorker(QThread):
     new_ohlcv = pyqtSignal(object)
@@ -106,7 +114,7 @@ class TradingWorker(QThread):
             )
             self.db_client.create_schema()
             self.dvc = DVCManager()
-            ml_model_path = self.config.get("ML_MODEL_PATH", "model_rf")
+            ml_model_path = self.config.get("ML_MODEL_PATH", str(MODELS_DIR / "model"))
             try:
                 objects = load_objects(ml_model_path)
                 self.ml_pipe = objects.get("model")
@@ -117,7 +125,7 @@ class TradingWorker(QThread):
                     # ✅ PHASE 5: Initialize Drift Monitor with training data reference
                     try:
                         # Try to load reference training data for drift monitoring
-                        train_data_path = "models/train_reference.pkl"
+                        train_data_path = str(MODELS_DIR / "train_reference.pkl")
                         if os.path.exists(train_data_path):
                             train_ref = joblib.load(train_data_path)
                             # Select key features for drift monitoring (top 5 most important)
@@ -321,8 +329,9 @@ class TradingWorker(QThread):
                                     res = [self.mt5_client.send_order(self.symbol, signal, self.order_volume, price=close_price, sl=sl, tp=tp)]
                                 self.order_executed.emit(res)
                                 self.log_message.emit(f"[INFO] Ordre {signal} exécuté via {exec_algo} | SL={sl:.2f}, TP={tp:.2f}, prix={close_price:.2f}")
-                                self.dvc.add(f"data/features/{self.symbol}_{self.timeframe}.csv")
-                                self.dvc.commit(f"data/features/{self.symbol}_{self.timeframe}.csv")
+                                features_csv = str(DATA_DIR / f"features/{self.symbol}_{self.timeframe}.csv")
+                                self.dvc.add(features_csv)
+                                self.dvc.commit(features_csv)
                             except Exception as e:
                                 self.log_message.emit(f"[ERROR] Erreur exécution ordre : {e}")
                         else:
@@ -334,7 +343,7 @@ class TradingWorker(QThread):
                         self.log_message.emit(f"[Worker] Erreur stockage TimescaleDB : {e}")
                     # Versioning DVC
                     try:
-                        features_path = f"data/features/{self.symbol}_{self.timeframe}.csv"
+                        features_path = str(DATA_DIR / f"features/{self.symbol}_{self.timeframe}.csv")
                         df.to_csv(features_path, index=False)
                         self.dvc.add(features_path)
                         self.dvc.commit(features_path)
