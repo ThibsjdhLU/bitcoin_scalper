@@ -16,4 +16,6 @@ pandas-ta
 ta
 cryptography
 shap
-imbalanced-learn 
+imbalanced-learn
+scipy
+statsmodels 
