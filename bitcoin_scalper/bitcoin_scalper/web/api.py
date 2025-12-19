@@ -1,1 +1,0 @@
-self.mt5_client = MT5RestClient("http://192.168.1.157:8000", api_key=mt5_api_key) 
