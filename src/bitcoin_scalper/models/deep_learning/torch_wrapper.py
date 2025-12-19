@@ -181,7 +181,8 @@ class TorchModelWrapper(BaseModel):
             X: Training features
             y: Training labels
             sample_weights: Optional sample weights (Note: Not yet implemented for PyTorch
-                          models. Will be ignored if provided.)
+                          models. Will be ignored if provided. For weighted training, consider
+                          using WeightedRandomSampler or rebalancing the dataset.)
             eval_set: Optional (X_val, y_val) for early stopping
             epochs: Number of training epochs
             batch_size: Batch size for training
@@ -194,9 +195,16 @@ class TorchModelWrapper(BaseModel):
             
         Note:
             Sample weights support for PyTorch models is planned for a future release.
+            As a workaround, you can:
+            - Use torch.utils.data.WeightedRandomSampler for sampling-based weighting
+            - Rebalance the training dataset based on weights
+            - Use class_weight in the loss function for classification
         """
         if sample_weights is not None:
-            logger.warning("Sample weights are not yet supported for PyTorch models and will be ignored")
+            logger.warning(
+                "Sample weights are not yet supported for PyTorch models and will be ignored. "
+                "Consider using WeightedRandomSampler or class_weight in loss function."
+            )
         if self.model is None:
             raise ValueError("Model must be set before training")
         

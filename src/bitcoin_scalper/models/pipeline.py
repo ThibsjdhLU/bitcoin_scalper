@@ -29,6 +29,13 @@ from src.bitcoin_scalper.models.base import BaseModel
 logger = logging.getLogger(__name__)
 
 
+# Default values for data preprocessing
+DEFAULT_FILL_VALUE = 0.0  # Value to fill NaN with
+DEFAULT_CLIP_VALUE = 1e10  # Clip infinite values to +/- this value
+                            # 1e10 chosen as large enough for most financial data
+                            # but small enough to avoid numerical issues
+
+
 class Trainer:
     """
     Generic trainer for ML models with robust preprocessing.
@@ -71,8 +78,8 @@ class Trainer:
         model: BaseModel,
         handle_nans: str = 'error',
         handle_infs: str = 'error',
-        fill_value: float = 0.0,
-        clip_value: float = 1e10
+        fill_value: float = DEFAULT_FILL_VALUE,
+        clip_value: float = DEFAULT_CLIP_VALUE
     ):
         """
         Initialize trainer.

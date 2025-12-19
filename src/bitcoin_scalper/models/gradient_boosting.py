@@ -148,13 +148,23 @@ class XGBoostClassifier(BaseModel):
         logger.info(f"Initialized XGBoostClassifier (GPU: {self.use_gpu})")
     
     def _check_gpu_available(self) -> bool:
-        """Check if GPU is available for XGBoost."""
+        """
+        Check if GPU is available for XGBoost.
+        
+        Uses nvidia-smi to check for GPU availability, which is much faster
+        than attempting to train a model. The 2-second timeout ensures we
+        don't block if nvidia-smi is slow or unavailable.
+        
+        Returns:
+            True if GPU is available, False otherwise.
+        """
         try:
-            # Check for CUDA availability via xgboost
+            # Check for CUDA availability via nvidia-smi
             import subprocess
             result = subprocess.run(
                 ['nvidia-smi', '--query-gpu=name', '--format=csv'],
-                capture_output=True, timeout=2
+                capture_output=True, 
+                timeout=2  # 2 seconds is enough for nvidia-smi to respond
             )
             if result.returncode == 0:
                 logger.info("GPU acceleration available and enabled")
