@@ -98,19 +98,16 @@ class TransformerModel(nn.Module):
         if not _HAS_TORCH:
             raise ImportError("PyTorch is required but not installed")
         
-        self.input_size = input_size
-        self.d_model = d_model
-        self.nhead = nhead
-        self.num_layers = num_layers
-        self.output_size = output_size
-        self.dropout = dropout
-        self.max_seq_length = max_seq_length
-        
-        # PLACEHOLDER: Will implement these components
-        # - Input projection: Linear(input_size, d_model)
-        # - Positional encoding: PE(pos, 2i) = sin(pos / 10000^(2i/d_model))
-        # - Transformer encoder layers
-        # - Output projection: Linear(d_model, output_size)
+        # Store parameters for future implementation
+        self._config = {
+            'input_size': input_size,
+            'd_model': d_model,
+            'nhead': nhead,
+            'num_layers': num_layers,
+            'output_size': output_size,
+            'dropout': dropout,
+            'max_seq_length': max_seq_length
+        }
         
         logger.warning(
             "TransformerModel is a PLACEHOLDER. "

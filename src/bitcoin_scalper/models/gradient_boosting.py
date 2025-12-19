@@ -150,15 +150,20 @@ class XGBoostClassifier(BaseModel):
     def _check_gpu_available(self) -> bool:
         """Check if GPU is available for XGBoost."""
         try:
-            # Try to create a small DMatrix with GPU
-            dtrain = xgb.DMatrix(np.array([[1, 2], [3, 4]]), label=[0, 1])
-            params = {'tree_method': 'gpu_hist', 'predictor': 'gpu_predictor'}
-            xgb.train(params, dtrain, num_boost_round=1)
-            logger.info("GPU acceleration available and enabled")
-            return True
-        except Exception as e:
-            logger.info(f"GPU not available, using CPU: {e}")
-            return False
+            # Check for CUDA availability via xgboost
+            import subprocess
+            result = subprocess.run(
+                ['nvidia-smi', '--query-gpu=name', '--format=csv'],
+                capture_output=True, timeout=2
+            )
+            if result.returncode == 0:
+                logger.info("GPU acceleration available and enabled")
+                return True
+        except (FileNotFoundError, subprocess.TimeoutExpired):
+            pass
+        
+        logger.info("GPU not available, using CPU")
+        return False
     
     def train(
         self,
@@ -673,12 +678,12 @@ class CatBoostClassifierWrapper(BaseModel):
         return pd.Series(importance, index=self.feature_names)
 
 
-class CatBoostRegressorWrapper(CatBoostClassifierWrapper):
+class CatBoostRegressorWrapper(BaseModel):
     """CatBoost regressor wrapper."""
     
     def __init__(self, **kwargs):
         """Initialize CatBoost regressor."""
-        BaseModel.__init__(self)
+        super().__init__()
         
         if not _HAS_CATBOOST:
             raise ImportError("CatBoost is required but not installed")
@@ -686,6 +691,83 @@ class CatBoostRegressorWrapper(CatBoostClassifierWrapper):
         self.params = kwargs
         self.model = CatBoostRegressor(**kwargs, verbose=False)
         logger.info("Initialized CatBoostRegressor")
+    
+    def train(
+        self,
+        X: Union[pd.DataFrame, np.ndarray],
+        y: Union[pd.Series, np.ndarray],
+        sample_weights: Optional[Union[pd.Series, np.ndarray]] = None,
+        eval_set: Optional[Tuple[Union[pd.DataFrame, np.ndarray],
+                                 Union[pd.Series, np.ndarray]]] = None,
+        early_stopping_rounds: Optional[int] = 20,
+        **kwargs
+    ) -> 'CatBoostRegressorWrapper':
+        """Train CatBoost regressor."""
+        self.validate_inputs(X, y)
+        
+        self.feature_names = self._extract_feature_names(X)
+        self.n_features = len(self.feature_names)
+        
+        # Prepare eval set
+        eval_set_cb = None
+        if eval_set is not None:
+            X_val, y_val = eval_set
+            self.validate_inputs(X_val, y_val)
+            eval_set_cb = (X_val, y_val)
+        
+        # Train
+        self.model.fit(
+            X, y,
+            sample_weight=sample_weights,
+            eval_set=eval_set_cb,
+            early_stopping_rounds=early_stopping_rounds,
+            verbose=False
+        )
+        
+        self.is_fitted = True
+        logger.info("CatBoost regressor training completed")
+        return self
+    
+    def predict(self, X: Union[pd.DataFrame, np.ndarray]) -> np.ndarray:
+        """Predict continuous values."""
+        if not self.is_fitted:
+            raise ValueError("Model must be trained before prediction")
+        
+        self.validate_inputs(X)
+        return self.model.predict(X)
+    
+    def save(self, path: Union[str, Path]) -> None:
+        """Save model to disk."""
+        if not self.is_fitted:
+            raise ValueError("Cannot save unfitted model")
+        
+        path = Path(path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        
+        self.model.save_model(str(path))
+        logger.info(f"CatBoost regressor saved to {path}")
+    
+    def load(self, path: Union[str, Path]) -> 'CatBoostRegressorWrapper':
+        """Load model from disk."""
+        path = Path(path)
+        
+        if not path.exists():
+            raise FileNotFoundError(f"Model file not found: {path}")
+        
+        self.model = CatBoostRegressor()
+        self.model.load_model(str(path))
+        self.is_fitted = True
+        
+        logger.info(f"CatBoost regressor loaded from {path}")
+        return self
+    
+    def get_feature_importance(self) -> pd.Series:
+        """Get feature importance scores."""
+        if not self.is_fitted:
+            raise ValueError("Model must be trained before getting importance")
+        
+        importance = self.model.get_feature_importance()
+        return pd.Series(importance, index=self.feature_names)
     
     def predict_proba(self, X: Union[pd.DataFrame, np.ndarray]) -> np.ndarray:
         """Not applicable for regression."""

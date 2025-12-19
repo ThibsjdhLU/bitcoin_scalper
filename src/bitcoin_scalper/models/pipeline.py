@@ -133,15 +133,9 @@ class Trainer:
             mask = ~X.isna().any(axis=1)
             X = X[mask]
             if y is not None:
-                if isinstance(y, pd.Series):
-                    y = y[mask]
-                else:
-                    y = y[mask.values]
+                y = y[mask] if isinstance(y, pd.Series) else y[mask.values]
             if sample_weights is not None:
-                if isinstance(sample_weights, pd.Series):
-                    sample_weights = sample_weights[mask]
-                else:
-                    sample_weights = sample_weights[mask.values]
+                sample_weights = sample_weights[mask] if isinstance(sample_weights, pd.Series) else sample_weights[mask.values]
             logger.info(f"Dropped {original_size - len(X)} rows with NaN values")
         elif self.handle_nans == 'fill':
             n_filled = X.isna().sum().sum()
@@ -170,15 +164,9 @@ class Trainer:
             mask = ~np.isinf(X_array).any(axis=1)
             X = X[mask] if isinstance(X, pd.DataFrame) else X_array[mask]
             if y is not None:
-                if isinstance(y, pd.Series):
-                    y = y[mask]
-                else:
-                    y = y[mask]
+                y = y[mask] if isinstance(y, pd.Series) else y[mask]
             if sample_weights is not None:
-                if isinstance(sample_weights, pd.Series):
-                    sample_weights = sample_weights[mask]
-                else:
-                    sample_weights = sample_weights[mask]
+                sample_weights = sample_weights[mask] if isinstance(sample_weights, pd.Series) else sample_weights[mask]
             logger.info(f"Dropped {original_size - len(X)} rows with infinite values")
         
         return X, y, sample_weights

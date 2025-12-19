@@ -180,7 +180,8 @@ class TorchModelWrapper(BaseModel):
         Args:
             X: Training features
             y: Training labels
-            sample_weights: Optional sample weights (not fully implemented yet)
+            sample_weights: Optional sample weights (Note: Not yet implemented for PyTorch
+                          models. Will be ignored if provided.)
             eval_set: Optional (X_val, y_val) for early stopping
             epochs: Number of training epochs
             batch_size: Batch size for training
@@ -190,7 +191,12 @@ class TorchModelWrapper(BaseModel):
             
         Returns:
             Self for method chaining
+            
+        Note:
+            Sample weights support for PyTorch models is planned for a future release.
         """
+        if sample_weights is not None:
+            logger.warning("Sample weights are not yet supported for PyTorch models and will be ignored")
         if self.model is None:
             raise ValueError("Model must be set before training")
         
