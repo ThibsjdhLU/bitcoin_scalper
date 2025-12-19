@@ -191,14 +191,22 @@ class PurgedKFold(BaseCrossValidator):
             # Purging: Remove training samples whose t1 >= test_start_time
             # This prevents label leakage from samples whose labeling period
             # overlaps with the test set
-            train_t1 = t1.iloc[train_indices]
-            purge_mask = train_t1 < test_start_time
+            # Only purge samples that come BEFORE the test set (not after)
+            train_before_test = train_indices[train_indices < test_start]
+            train_after_test = train_indices[train_indices >= test_end]
             
-            n_purged = (~purge_mask).sum()
-            if n_purged > 0:
-                logger.debug(f"Fold {i+1}: Purged {n_purged} samples before test set")
+            # For samples before test, check if their t1 overlaps with test period
+            if len(train_before_test) > 0:
+                train_t1_before = t1.iloc[train_before_test]
+                purge_mask_before = train_t1_before < test_start_time
+                train_before_test = train_before_test[purge_mask_before]
+                
+                n_purged = (~purge_mask_before).sum()
+                if n_purged > 0:
+                    logger.debug(f"Fold {i+1}: Purged {n_purged} samples before test set")
             
-            train_indices = train_indices[purge_mask]
+            # Combine: samples before test (purged) + samples after test
+            train_indices = np.concatenate([train_before_test, train_after_test])
             
             # Embargo: Remove samples immediately after test set
             # This eliminates serial correlation between test and subsequent training
@@ -391,10 +399,21 @@ class CombinatorialPurgedCV:
             # All other indices are potential training
             train_indices = np.setdiff1d(indices, test_indices)
             
-            # Purge: Remove training samples with t1 >= test_start_time
-            train_t1 = t1.iloc[train_indices]
-            purge_mask = train_t1 < test_start_time
-            train_indices = train_indices[purge_mask]
+            # Separate training samples before and after test groups
+            test_min = test_indices.min()
+            test_max = test_indices.max()
+            
+            train_before = train_indices[train_indices < test_min]
+            train_after = train_indices[train_indices > test_max]
+            
+            # Purge: Remove training samples before test with t1 >= test_start_time
+            if len(train_before) > 0:
+                train_t1_before = t1.iloc[train_before]
+                purge_mask = train_t1_before < test_start_time
+                train_before = train_before[purge_mask]
+            
+            # Combine purged training samples
+            train_indices = np.concatenate([train_before, train_after]) if len(train_after) > 0 else train_before
             
             # Embargo: Remove samples after test groups
             if embargo_size > 0:

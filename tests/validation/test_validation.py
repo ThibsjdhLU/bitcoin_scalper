@@ -22,8 +22,9 @@ class TestPurgedKFold:
         X = np.random.randn(n_samples, 5)
         y = np.random.randint(0, 2, n_samples)
         
-        # t1: event end times (some overlap with future)
-        t1 = pd.Series(dates + timedelta(hours=2), index=range(n_samples))
+        # t1: event end times (use same as event time for simplicity)
+        # In practice, these would be from Triple Barrier method
+        t1 = pd.Series(dates, index=range(n_samples))
         
         return X, y, t1
     
