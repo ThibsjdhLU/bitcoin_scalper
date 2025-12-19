@@ -259,6 +259,8 @@ class Backtester:
         commission_pct: float = 0.001,
         slippage_pct: float = 0.0005,
         position_sizer: Optional[Any] = None,
+        signal_threshold_long: float = 0.6,
+        signal_threshold_short: float = 0.4,
     ):
         """
         Initialize backtester.
@@ -269,6 +271,8 @@ class Backtester:
             slippage_pct: Slippage rate (e.g., 0.0005 = 0.05%).
             position_sizer: Position sizing strategy instance.
                           If None, uses full capital for each trade.
+            signal_threshold_long: Threshold for converting continuous signals to LONG (default 0.6).
+            signal_threshold_short: Threshold for converting continuous signals to SHORT (default 0.4).
         """
         if initial_capital <= 0:
             raise ValueError(f"initial_capital must be > 0, got {initial_capital}")
@@ -281,6 +285,8 @@ class Backtester:
         self.commission_pct = commission_pct
         self.slippage_pct = slippage_pct
         self.position_sizer = position_sizer
+        self.signal_threshold_long = signal_threshold_long
+        self.signal_threshold_short = signal_threshold_short
         
         # State
         self.capital = initial_capital
@@ -354,9 +360,9 @@ class Backtester:
             
             # Handle continuous signals (convert to discrete)
             if not isinstance(signal, (int, np.integer)):
-                if signal > 0.6:  # Strong buy signal
+                if signal > self.signal_threshold_long:  # Strong buy signal
                     signal = SignalType.LONG
-                elif signal < 0.4:  # Strong sell signal
+                elif signal < self.signal_threshold_short:  # Strong sell signal
                     signal = SignalType.SHORT
                 else:
                     signal = SignalType.NEUTRAL

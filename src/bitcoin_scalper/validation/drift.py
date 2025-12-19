@@ -342,8 +342,13 @@ class DriftScanner:
         
         Args:
             delta: ADWIN confidence parameter (0 < delta < 1).
-            max_window: Maximum window size.
+            max_window: Maximum window size (only used with built-in ADWIN).
             use_river: Try to use river library if available (more efficient).
+                      Note: river.drift.ADWIN and built-in ADWINDetector have
+                      slightly different implementations. Both are valid, but
+                      may detect drift at slightly different times. Use river
+                      for production (more optimized), use built-in for development
+                      or when river is not available.
         """
         self.delta = delta
         self.max_window = max_window
@@ -355,9 +360,9 @@ class DriftScanner:
                 from river.drift import ADWIN as RiverADWIN
                 self.detector = RiverADWIN(delta=delta)
                 self._use_river = True
-                logger.info("Using river.drift.ADWIN for drift detection")
+                logger.info("Using river.drift.ADWIN for drift detection (optimized)")
             except ImportError:
-                logger.info("river not available, using built-in ADWIN")
+                logger.info("river not available, using built-in ADWIN (compatible)")
                 self.detector = ADWINDetector(delta=delta, max_window=max_window)
         else:
             self.detector = ADWINDetector(delta=delta, max_window=max_window)
