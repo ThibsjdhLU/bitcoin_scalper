@@ -108,7 +108,7 @@ def frac_diff_with_adf_test(
     d_min: float = 0.0,
     d_max: float = 1.0,
     d_step: float = 0.1,
-    threshold: float = 1e-5,
+    threshold: float = 1e-4,
     significance_level: float = 0.05
 ) -> Tuple[pd.Series, float, Dict[str, Any]]:
     """

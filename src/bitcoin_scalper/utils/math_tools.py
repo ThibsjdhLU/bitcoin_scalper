@@ -13,7 +13,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def get_weights_ffd(d: float, threshold: float = 1e-5) -> np.ndarray:
+def get_weights_ffd(d: float, threshold: float = 1e-4) -> np.ndarray:
     """
     Calculate weights for Fixed-Window Fractional Differentiation (FFD).
     
@@ -28,13 +28,13 @@ def get_weights_ffd(d: float, threshold: float = 1e-5) -> np.ndarray:
            d=0 returns original series, d=1 is standard differentiation.
            Optimal values around 0.4 preserve memory while achieving stationarity.
         threshold: Minimum absolute weight value to include. Weights below this
-                  are truncated to create a fixed window. Default 1e-5.
+                  are truncated to create a fixed window. Default 1e-4.
     
     Returns:
         Array of weights for the fractional differentiation operator.
         
     Example:
-        >>> weights = get_weights_ffd(d=0.4, threshold=1e-5)
+        >>> weights = get_weights_ffd(d=0.4, threshold=1e-4)
         >>> len(weights)  # Number of lags in the fixed window
         23
     """
@@ -58,7 +58,7 @@ def get_weights_ffd(d: float, threshold: float = 1e-5) -> np.ndarray:
 def frac_diff_ffd(
     series: Union[pd.Series, pd.DataFrame],
     d: float,
-    threshold: float = 1e-5
+    threshold: float = 1e-4
 ) -> Union[pd.Series, pd.DataFrame]:
     """
     Apply Fixed-Window Fractional Differentiation (FFD) to time series data.
@@ -80,7 +80,7 @@ def frac_diff_ffd(
            - d=0.4-0.5: Good balance between stationarity and memory preservation
            - d=1.0: Standard first-order differentiation (maximum stationarity)
         threshold: Weight threshold for determining window size. Lower values
-                  create larger windows but better approximations. Default 1e-5.
+                  create larger windows but better approximations. Default 1e-4.
     
     Returns:
         Fractionally differentiated series with same index as input.
@@ -128,7 +128,7 @@ def frac_diff_ffd(
         raise TypeError(f"Input must be pandas Series or DataFrame, got {type(series)}")
 
 
-def get_ffd_window_size(d: float, threshold: float = 1e-5) -> int:
+def get_ffd_window_size(d: float, threshold: float = 1e-4) -> int:
     """
     Calculate the window size for Fixed-Window Fractional Differentiation.
     
