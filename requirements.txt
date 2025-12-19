@@ -20,4 +20,5 @@ imbalanced-learn
 scipy
 statsmodels
 gymnasium
-stable-baselines3 
+stable-baselines3
+river 

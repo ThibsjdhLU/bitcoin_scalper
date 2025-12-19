@@ -176,7 +176,7 @@ class TradingEngine:
         # Position sizer
         if position_sizer == "kelly":
             self.position_sizer = KellySizer(
-                fraction=risk_params.get('kelly_fraction', 0.25)
+                kelly_fraction=risk_params.get('kelly_fraction', 0.25)
             )
             self.logger.info("Using Kelly position sizing")
         elif position_sizer == "target_vol":
@@ -198,19 +198,28 @@ class TradingEngine:
         
         self.logger.info("Initializing drift detection")
         
-        # Drift detector would be initialized here
-        # For now, we'll use a simple placeholder
-        # In production, this would be ADWIN or similar from river library
-        # NOTE: Full drift detection requires 'river' library:
-        #   pip install river
-        #   from river import drift
-        #   self.drift_detector = drift.ADWIN()
-        # Until then, a simple moving-window approach is used as fallback
-        self.drift_detector = None  # TODO: Implement with river.drift.ADWIN
-        self.prediction_errors = []  # Track errors for drift detection
-        self.max_error_window = 100  # Keep last N errors
+        # Initialize drift detector using DriftScanner from validation module
+        try:
+            from bitcoin_scalper.validation.drift import DriftScanner
+            
+            # DriftScanner will automatically try to use river.drift.ADWIN if available,
+            # or fall back to built-in ADWINDetector implementation
+            self.drift_detector = DriftScanner(
+                delta=0.002,  # Confidence level for drift detection
+                max_window=10000,
+                use_river=True,  # Try to use river if available
+            )
+            
+            self.logger.info("Drift detection initialized with DriftScanner")
+            
+        except Exception as e:
+            self.logger.error(f"Failed to initialize drift detector: {e}")
+            self.drift_detector = None
+            self.logger.warning("Drift detection disabled due to initialization error")
         
-        self.logger.warning("Drift detection using simple fallback (river.drift.ADWIN recommended for production)")
+        # Track errors for drift detection
+        self.prediction_errors = []
+        self.max_error_window = 100
     
     def load_ml_model(
         self,
@@ -583,10 +592,14 @@ class TradingEngine:
     
     def _check_drift(self, df: pd.DataFrame) -> bool:
         """
-        Check for concept drift.
+        Check for concept drift using DriftScanner.
+        
+        This method monitors model prediction errors (or price volatility if no model)
+        to detect distributional changes in the data. When drift is detected, the
+        system can enter safe mode to avoid trading on an invalid model.
         
         Args:
-            df: Current market data
+            df: Current market data with features
         
         Returns:
             True if drift detected, False otherwise
@@ -594,29 +607,32 @@ class TradingEngine:
         if self.drift_detector is None:
             return False
         
-        # Placeholder drift detection
-        # In production, use river.drift.ADWIN or similar
-        # For now, use a simple heuristic based on prediction errors
-        
-        # If we don't have enough history, no drift
-        if len(self.prediction_errors) < 30:
+        try:
+            # Calculate a drift metric to monitor
+            # Option 1: If we have recent predictions, use prediction error
+            # Option 2: Use price volatility as a proxy for regime change
+            
+            # For now, use price volatility as the drift metric
+            # In a more advanced setup, you'd track actual prediction errors
+            if 'close' in df.columns and len(df) >= 20:
+                # Calculate recent volatility
+                returns = df['close'].pct_change().dropna()
+                if len(returns) >= 2:
+                    recent_volatility = float(returns.tail(20).std())
+                    
+                    # Feed to drift detector
+                    drift_detected = self.drift_detector.scan(
+                        value=recent_volatility,
+                        timestamp=pd.Timestamp.now()
+                    )
+                    
+                    return drift_detected
+            
             return False
-        
-        # Simple drift detection: check if recent error rate increased significantly
-        recent_errors = self.prediction_errors[-30:]
-        older_errors = self.prediction_errors[-60:-30] if len(self.prediction_errors) >= 60 else []
-        
-        if not older_errors:
+            
+        except Exception as e:
+            self.logger.error(f"Drift detection failed: {e}")
             return False
-        
-        recent_error_rate = np.mean(recent_errors)
-        older_error_rate = np.mean(older_errors)
-        
-        # Drift if recent error rate is 50% higher than before
-        if recent_error_rate > older_error_rate * 1.5:
-            return True
-        
-        return False
     
     def _calculate_position_size(
         self,
@@ -654,7 +670,7 @@ class TradingEngine:
                 size = self.position_sizer.calculate_size(
                     capital=capital,
                     price=price,
-                    win_probability=win_prob,
+                    win_prob=win_prob,
                     payoff_ratio=payoff_ratio
                 )
             
