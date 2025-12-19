@@ -211,12 +211,21 @@ def run_paper_mode(config: TradingConfig, logger: TradingLogger):
     
     This mode simulates trades without executing real orders.
     """
-    logger.info("Starting engine in PAPER mode (simulation)")
+    logger.info("Starting engine in PAPER mode (simulation - NO REAL TRADES)")
     
-    # Similar to live mode but without real order execution
-    # For now, redirect to live mode (actual implementation would override execute_order)
-    logger.warning("Paper mode not fully implemented. Running in live mode without execution.")
-    run_live_mode(config, logger)
+    # TODO: Implement proper paper trading mode
+    # This requires:
+    # 1. Creating a PaperMT5Client that simulates order execution
+    # 2. Tracking simulated positions and P&L
+    # 3. Ensuring no real broker API calls are made
+    
+    logger.error("Paper mode not yet implemented")
+    logger.info("To implement paper mode:")
+    logger.info("1. Create PaperMT5Client wrapper around MT5RestClient")
+    logger.info("2. Override execute_order to simulate fills")
+    logger.info("3. Track simulated portfolio state")
+    logger.info("For now, use --mode live at your own risk, or use backtest mode")
+    sys.exit(1)
 
 
 def run_backtest_mode(

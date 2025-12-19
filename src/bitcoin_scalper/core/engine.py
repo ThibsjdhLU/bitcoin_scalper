@@ -201,11 +201,16 @@ class TradingEngine:
         # Drift detector would be initialized here
         # For now, we'll use a simple placeholder
         # In production, this would be ADWIN or similar from river library
+        # NOTE: Full drift detection requires 'river' library:
+        #   pip install river
+        #   from river import drift
+        #   self.drift_detector = drift.ADWIN()
+        # Until then, a simple moving-window approach is used as fallback
         self.drift_detector = None  # TODO: Implement with river.drift.ADWIN
         self.prediction_errors = []  # Track errors for drift detection
         self.max_error_window = 100  # Keep last N errors
         
-        self.logger.info("Drift detection initialized (placeholder)")
+        self.logger.warning("Drift detection using simple fallback (river.drift.ADWIN recommended for production)")
     
     def load_ml_model(
         self,
@@ -242,8 +247,8 @@ class TradingEngine:
                 # Load CatBoost model properly
                 try:
                     from catboost import CatBoostClassifier
-                    self.ml_model = CatBoostClassifier()
-                    self.ml_model.load_model(f"{model_path}_model.cbm")
+                    # Load model as class method
+                    self.ml_model = CatBoostClassifier().load_model(f"{model_path}_model.cbm")
                 except Exception as e2:
                     self.logger.warning(f"CatBoost load failed: {e2}, trying joblib")
                     # Try joblib as last resort (for XGBoost or other models)
