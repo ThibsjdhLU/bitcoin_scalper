@@ -1,0 +1,46 @@
+# Trading Engine Configuration
+# This is a sample configuration file for the Bitcoin scalper trading engine
+
+trading:
+  mode: ml  # Options: ml (Machine Learning) or rl (Reinforcement Learning)
+  model_type: xgboost  # Options: xgboost, catboost (for ML mode) or ppo, dqn (for RL mode)
+  model_path: models/model  # Path to trained model (without extension)
+  symbol: BTCUSD
+  timeframe: M1  # 1-minute candles
+
+risk:
+  max_drawdown: 0.05  # Maximum 5% drawdown allowed
+  max_daily_loss: 0.05  # Maximum 5% daily loss allowed
+  risk_per_trade: 0.01  # Risk 1% of capital per trade
+  max_position_size: 1.0  # Maximum position size in lots
+  position_sizer: kelly  # Options: kelly (Kelly Criterion) or target_vol (Target Volatility)
+  kelly_fraction: 0.25  # Fractional Kelly (25% of full Kelly)
+  target_volatility: 0.15  # Target portfolio volatility (15% annualized)
+
+execution:
+  order_type: market  # Order type: market, limit, etc.
+  use_sl_tp: true  # Use stop loss and take profit
+  sl_atr_mult: 2.0  # Stop loss = 2x ATR
+  tp_atr_mult: 3.0  # Take profit = 3x ATR
+  default_sl_pct: 0.01  # Default stop loss 1% (if ATR not available)
+  default_tp_pct: 0.02  # Default take profit 2% (if ATR not available)
+  exec_algo: market  # Execution algorithm: market, iceberg, vwap, twap
+
+drift:
+  enabled: true  # Enable concept drift detection
+  safe_mode_on_drift: true  # Enter safe mode when drift is detected
+
+# Note: API credentials and database config are loaded from environment variables
+# Set these in your environment:
+# - MT5_REST_URL: URL of MT5 REST API server
+# - MT5_REST_API_KEY: API key for authentication
+# - TSDB_HOST: TimescaleDB host
+# - TSDB_PORT: TimescaleDB port
+# - TSDB_NAME: Database name
+# - TSDB_USER: Database user
+# - TSDB_PASSWORD: Database password
+# - TSDB_SSLMODE: SSL mode (prefer, require, disable)
+
+logging:
+  log_dir: logs  # Directory for log files
+  log_level: INFO  # Logging level: DEBUG, INFO, WARNING, ERROR, CRITICAL
