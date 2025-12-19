@@ -361,6 +361,10 @@ class OrderBookDepthAnalyzer:
             - 'cumulative_volume': Cumulative volume from best price
             - 'distance_from_mid': Distance from mid price in basis points
         """
+        def _calculate_distance_bps(price: float, mid_price: float) -> float:
+            """Helper to calculate distance from mid price in basis points."""
+            return ((price - mid_price) / mid_price * 10000) if mid_price else 0
+        
         bids = orderbook.get(bids_key, [])[:self.levels]
         asks = orderbook.get(asks_key, [])[:self.levels]
         
@@ -375,7 +379,7 @@ class OrderBookDepthAnalyzer:
             price = bid['price']
             volume = bid['volume']
             cumulative += volume
-            distance_bps = ((price - mid_price) / mid_price * 10000) if mid_price else 0
+            distance_bps = _calculate_distance_bps(price, mid_price)
             bid_data.append({
                 'price': price,
                 'volume': volume,
@@ -390,7 +394,7 @@ class OrderBookDepthAnalyzer:
             price = ask['price']
             volume = ask['volume']
             cumulative += volume
-            distance_bps = ((price - mid_price) / mid_price * 10000) if mid_price else 0
+            distance_bps = _calculate_distance_bps(price, mid_price)
             ask_data.append({
                 'price': price,
                 'volume': volume,

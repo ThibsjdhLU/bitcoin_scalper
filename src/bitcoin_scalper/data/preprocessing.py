@@ -123,7 +123,7 @@ def frac_diff_with_adf_test(
         d_min: Minimum differentiation order to test (default 0.0).
         d_max: Maximum differentiation order to test (default 1.0).
         d_step: Step size for testing d values (default 0.1).
-        threshold: Weight threshold for FFD (default 1e-5).
+        threshold: Weight threshold for FFD (default 1e-4).
         significance_level: P-value threshold for ADF test (default 0.05).
     
     Returns:
