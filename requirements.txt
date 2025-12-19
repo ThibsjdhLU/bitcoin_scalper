@@ -18,4 +18,6 @@ cryptography
 shap
 imbalanced-learn
 scipy
-statsmodels 
+statsmodels
+gymnasium
+stable-baselines3 
