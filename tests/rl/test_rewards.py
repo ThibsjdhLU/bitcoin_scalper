@@ -199,7 +199,9 @@ class TestStepPenalty:
         penalty2 = calculate_step_penalty(50)
         penalty3 = calculate_step_penalty(100)
         
+        # Penalties are negative, so more negative (smaller value) = larger penalty
         assert penalty1 > penalty2 > penalty3, "Penalty should be more negative for longer duration"
+        assert penalty3 < penalty2 < penalty1, "Verify ordering: longer duration = more negative"
     
     def test_penalty_caps_at_max_duration(self):
         """Test that penalty caps at max duration."""

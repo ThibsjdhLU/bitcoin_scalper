@@ -399,10 +399,23 @@ class ValidationWrapper:
         return float(bh_return), float(bh_sharpe)
     
     def _calculate_random_strategy(self) -> tuple:
-        """Calculate random action baseline performance."""
-        # This would require re-running the environment with random actions
-        # For simplicity, return approximate values
-        logger.warning("Random strategy comparison not fully implemented, returning estimates")
+        """
+        Calculate random action baseline performance.
+        
+        Note: This is not fully implemented. A proper implementation would require
+        re-running the environment with random actions for each step, which is
+        computationally expensive. This method returns estimates as placeholders.
+        
+        For accurate random strategy comparison, manually run validation with a
+        random agent using ValidationWrapper.
+        
+        Returns:
+            Tuple of (return, sharpe) - currently returns (0.0, 0.0) as placeholder
+        """
+        logger.warning(
+            "Random strategy comparison not fully implemented. "
+            "For accurate results, run validation with a random agent manually."
+        )
         return 0.0, 0.0
 
 
