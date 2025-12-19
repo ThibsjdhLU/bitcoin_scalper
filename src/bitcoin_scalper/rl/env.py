@@ -229,7 +229,9 @@ class TradingEnv(gym.Env):
         market_window = self.data[start_idx:end_idx, :].copy()
         
         # Get current price for unrealized P&L calculation
-        current_price = self.data[self.current_step, self.price_col_idx]
+        # Clip to valid range to handle edge case when current_step == len(data)
+        current_step_idx = min(self.current_step, len(self.data) - 1)
+        current_price = self.data[current_step_idx, self.price_col_idx]
         
         # Calculate unrealized P&L
         if self.position != 0 and self.position_size > 0:
@@ -258,7 +260,9 @@ class TradingEnv(gym.Env):
     
     def _get_info(self) -> Dict[str, Any]:
         """Get additional info dict."""
-        current_price = self.data[self.current_step, self.price_col_idx]
+        # Clip to valid range to handle edge case
+        current_step_idx = min(self.current_step, len(self.data) - 1)
+        current_price = self.data[current_step_idx, self.price_col_idx]
         total_equity = self._calculate_total_equity()
         
         return {
@@ -273,7 +277,9 @@ class TradingEnv(gym.Env):
     
     def _calculate_total_equity(self) -> float:
         """Calculate total account equity (balance + position value)."""
-        current_price = self.data[self.current_step, self.price_col_idx]
+        # Clip to valid range to handle edge case
+        current_step_idx = min(self.current_step, len(self.data) - 1)
+        current_price = self.data[current_step_idx, self.price_col_idx]
         
         if self.position != 0 and self.position_size > 0:
             if self.position == 1:  # Long

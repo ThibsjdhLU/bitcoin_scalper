@@ -50,10 +50,15 @@ class TensorboardCallback(BaseCallback):
         for info in self.locals.get('infos', []):
             if 'episode' in info:
                 ep_info = info['episode']
-                self.logger.record('episode/return', ep_info['total_return'])
-                self.logger.record('episode/sharpe_ratio', ep_info['sharpe_ratio'])
-                self.logger.record('episode/sortino_ratio', ep_info['sortino_ratio'])
-                self.logger.record('episode/max_drawdown', ep_info['max_drawdown'])
+                # Check if keys exist before logging
+                if 'total_return' in ep_info:
+                    self.logger.record('episode/return', ep_info['total_return'])
+                if 'sharpe_ratio' in ep_info:
+                    self.logger.record('episode/sharpe_ratio', ep_info['sharpe_ratio'])
+                if 'sortino_ratio' in ep_info:
+                    self.logger.record('episode/sortino_ratio', ep_info['sortino_ratio'])
+                if 'max_drawdown' in ep_info:
+                    self.logger.record('episode/max_drawdown', ep_info['max_drawdown'])
         
         return True
 
@@ -201,7 +206,7 @@ class RLAgentFactory:
                 'vf_coef': kwargs.pop('vf_coef', 0.5),
                 'max_grad_norm': kwargs.pop('max_grad_norm', 0.5),
                 'policy_kwargs': kwargs.pop('policy_kwargs', {
-                    'net_arch': [dict(pi=[256, 256], vf=[256, 256])]  # 2-layer MLP
+                    'net_arch': dict(pi=[256, 256], vf=[256, 256])  # Proper dict format
                 }),
             }
             ppo_defaults.update(kwargs)
@@ -441,6 +446,8 @@ class RLAgentFactory:
 def create_ppo_agent(
     env: Any,
     learning_rate: float = 3e-4,
+    verbose: int = 1,
+    tensorboard_log: Optional[str] = None,
     **kwargs
 ) -> tuple:
     """
@@ -449,7 +456,9 @@ def create_ppo_agent(
     Args:
         env: Trading environment.
         learning_rate: Learning rate.
-        **kwargs: Additional PPO hyperparameters.
+        verbose: Verbosity level.
+        tensorboard_log: Path for TensorBoard logs.
+        **kwargs: Additional PPO hyperparameters for create_agent().
     
     Returns:
         Tuple of (factory, model).
@@ -459,7 +468,12 @@ def create_ppo_agent(
         >>> factory, ppo = create_ppo_agent(env, learning_rate=1e-4)
         >>> factory.train(total_timesteps=100000)
     """
-    factory = RLAgentFactory(env, agent_type='ppo', **kwargs)
+    factory = RLAgentFactory(
+        env, 
+        agent_type='ppo',
+        verbose=verbose,
+        tensorboard_log=tensorboard_log
+    )
     model = factory.create_agent(learning_rate=learning_rate, **kwargs)
     return factory, model
 
@@ -467,6 +481,8 @@ def create_ppo_agent(
 def create_dqn_agent(
     env: Any,
     learning_rate: float = 1e-4,
+    verbose: int = 1,
+    tensorboard_log: Optional[str] = None,
     **kwargs
 ) -> tuple:
     """
@@ -475,7 +491,9 @@ def create_dqn_agent(
     Args:
         env: Trading environment.
         learning_rate: Learning rate.
-        **kwargs: Additional DQN hyperparameters.
+        verbose: Verbosity level.
+        tensorboard_log: Path for TensorBoard logs.
+        **kwargs: Additional DQN hyperparameters for create_agent().
     
     Returns:
         Tuple of (factory, model).
@@ -485,6 +503,11 @@ def create_dqn_agent(
         >>> factory, dqn = create_dqn_agent(env, learning_rate=1e-4)
         >>> factory.train(total_timesteps=100000)
     """
-    factory = RLAgentFactory(env, agent_type='dqn', **kwargs)
+    factory = RLAgentFactory(
+        env,
+        agent_type='dqn',
+        verbose=verbose,
+        tensorboard_log=tensorboard_log
+    )
     model = factory.create_agent(learning_rate=learning_rate, **kwargs)
     return factory, model
