@@ -621,7 +621,6 @@ class TradingEngine:
                     recent_volatility = float(returns.tail(20).std())
                     
                     # Feed to drift detector
-                    import pandas as pd
                     drift_detected = self.drift_detector.scan(
                         value=recent_volatility,
                         timestamp=pd.Timestamp.now()

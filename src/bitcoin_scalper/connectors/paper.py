@@ -32,10 +32,12 @@ Usage:
 
 import time
 import logging
+import random
+import pandas as pd
+import numpy as np
 from typing import List, Dict, Any, Optional
 from dataclasses import dataclass, field
 from datetime import datetime
-import random
 
 logger = logging.getLogger(__name__)
 
@@ -455,9 +457,6 @@ class PaperMT5Client:
         Returns:
             List of OHLCV dictionaries
         """
-        import pandas as pd
-        import numpy as np
-        
         # Get base price
         current_price = self._get_current_price(symbol)
         
