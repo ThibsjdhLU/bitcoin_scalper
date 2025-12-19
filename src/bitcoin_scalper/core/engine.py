@@ -176,7 +176,7 @@ class TradingEngine:
         # Position sizer
         if position_sizer == "kelly":
             self.position_sizer = KellySizer(
-                fraction=risk_params.get('kelly_fraction', 0.25)
+                kelly_fraction=risk_params.get('kelly_fraction', 0.25)
             )
             self.logger.info("Using Kelly position sizing")
         elif position_sizer == "target_vol":
@@ -671,7 +671,7 @@ class TradingEngine:
                 size = self.position_sizer.calculate_size(
                     capital=capital,
                     price=price,
-                    win_probability=win_prob,
+                    win_prob=win_prob,
                     payoff_ratio=payoff_ratio
                 )
             
