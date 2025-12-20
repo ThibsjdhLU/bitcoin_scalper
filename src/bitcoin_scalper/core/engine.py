@@ -258,6 +258,14 @@ class TradingEngine:
                     from catboost import CatBoostClassifier
                     # Load model as class method
                     self.ml_model = CatBoostClassifier().load_model(f"{model_path}_model.cbm")
+                except ImportError:
+                    self.logger.warning("CatBoost not installed, trying joblib for XGBoost or other models")
+                    # Try joblib as fallback (for XGBoost or other models)
+                    try:
+                        self.ml_model = joblib.load(f"{model_path}_model.pkl")
+                    except Exception as e3:
+                        self.logger.error(f"Failed to load model with joblib: {e3}")
+                        raise
                 except Exception as e2:
                     self.logger.warning(f"CatBoost load failed: {e2}, trying joblib")
                     # Try joblib as last resort (for XGBoost or other models)
@@ -369,6 +377,9 @@ class TradingEngine:
                     result['reason'] = 'Invalid market data'
                     return result
                 df = pd.DataFrame(cleaned_data)
+            elif isinstance(market_data, list):
+                # Handle list of dictionaries (from paper trading or other sources)
+                df = pd.DataFrame(market_data)
             else:
                 df = market_data.copy()
             
@@ -499,6 +510,16 @@ class TradingEngine:
         """Get signal from ML model."""
         if self.ml_model is None:
             self.logger.warning("ML model not loaded")
+            
+            # TASK 3: Temporary "coin flip" logic for debugging paper trading
+            # Generate random signal with 10% probability
+            import random
+            if random.random() < 0.10:  # 10% chance
+                signal = random.choice(['buy', 'sell'])
+                confidence = random.uniform(0.6, 0.8)  # Simulated confidence
+                self.logger.info(f"[DEBUG] Random Coin Flip Signal: {signal} (confidence: {confidence:.2f})")
+                return signal, confidence
+            
             return None, None
         
         try:
@@ -552,6 +573,16 @@ class TradingEngine:
         """Get signal from RL agent."""
         if self.rl_agent is None:
             self.logger.warning("RL agent not loaded")
+            
+            # TASK 3: Temporary "coin flip" logic for debugging paper trading
+            # Generate random signal with 10% probability
+            import random
+            if random.random() < 0.10:  # 10% chance
+                signal = random.choice(['buy', 'sell'])
+                confidence = random.uniform(0.6, 0.8)  # Simulated confidence
+                self.logger.info(f"[DEBUG] Random Coin Flip Signal: {signal} (confidence: {confidence:.2f})")
+                return signal, confidence
+            
             return None, None
         
         try:
