@@ -8,6 +8,10 @@ trading:
   symbol: BTCUSD
   timeframe: M1  # 1-minute candles
 
+features:
+  use_onchain: false  # Disable on-chain data features (not wired)
+  use_sentiment: false  # Disable sentiment features (not wired)
+
 risk:
   max_drawdown: 0.05  # Maximum 5% drawdown allowed
   max_daily_loss: 0.05  # Maximum 5% daily loss allowed

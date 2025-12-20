@@ -8,6 +8,8 @@ from ta.volume import MFIIndicator, OnBalanceVolumeIndicator, AccDistIndexIndica
 from typing import List, Dict, Any, Optional
 import logging
 
+from bitcoin_scalper.utils.math_tools import frac_diff_ffd
+
 logger = logging.getLogger("bitcoin_scalper.feature_engineering")
 logger.setLevel(logging.DEBUG)
 handler = logging.StreamHandler()
@@ -133,6 +135,16 @@ class FeatureEngineering:
             if 'tickvol' in df.columns:
                 df[f"{prefix}tickvol"] = df['tickvol']
 
+        # 0. Apply Fractional Differentiation (FracDiff) to close price
+        # This is done BEFORE technical indicators to enable stationary price features
+        # Uses d=0.4 as per López de Prado's recommendations for memory-preserving stationarity
+        try:
+            df[f"{prefix}close_frac"] = frac_diff_ffd(df[price_col], d=0.4)
+            logger.info(f"✅ Applied FracDiff (d=0.4) to {price_col} → {prefix}close_frac")
+        except Exception as e:
+            logger.warning(f"⚠️ FracDiff calculation failed: {e}")
+            df[f"{prefix}close_frac"] = np.nan
+
         # 1. Calcul des indicateurs de base (sans shift)
 
         for p in [7, 14, 21]:
@@ -181,11 +193,16 @@ class FeatureEngineering:
         # ✅ PHASE 1: Gestion des NaN (Trous) - Règle stricte
         # Colonnes avec >10% de valeurs manquantes sont supprimées
         # Les lignes restantes avec des NaN sont supprimées (pas d'interpolation hasardeuse)
+        # Note: close_frac is excluded as FracDiff naturally produces NaN for warm-up period
         total_rows = len(df)
         if total_rows > 0:
             nan_threshold = 0.10  # 10% seuil
             cols_to_drop = []
+            # Exclude FracDiff column from aggressive NaN check (it has natural warm-up NaN)
+            protected_cols = [f"{prefix}close_frac"]
             for col in df.columns:
+                if col in protected_cols:
+                    continue  # Skip FracDiff - it has expected NaN from warm-up
                 nan_pct = df[col].isna().sum() / total_rows
                 if nan_pct > nan_threshold:
                     cols_to_drop.append(col)
@@ -203,6 +220,7 @@ class FeatureEngineering:
 
         # 2. Décalage immédiat (Shift)
         indicators_to_shift = [
+            f"{prefix}close_frac",  # FracDiff feature
             f"{prefix}rsi_7", f"{prefix}rsi_14", f"{prefix}rsi_21", f"{prefix}rsi",
             f"{prefix}macd", f"{prefix}macd_signal", f"{prefix}macd_diff",
             f"{prefix}ema_21", f"{prefix}ema_50", f"{prefix}ema_200",
