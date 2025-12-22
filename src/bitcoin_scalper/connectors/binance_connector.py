@@ -57,10 +57,18 @@ class BinanceConnector:
     All data is returned in a standardized format compatible with the
     feature engineering pipeline.
     
+    **Compatibility Methods:**
+    This connector implements both native methods and compatibility methods
+    to work with the MT5RestClient interface:
+    - fetch_ohlcv() / get_ohlcv() - Market data
+    - execute_order() / send_order() - Order execution
+    - get_account_info() / _request() - Account info
+    
     Attributes:
         api_key: Binance API key
         api_secret: Binance API secret
         testnet: Whether to use testnet (default: True for safety)
+        market_type: Market type - "spot" or "future" (default: "spot")
         exchange: CCXT Binance exchange instance
         
     Example:
@@ -74,7 +82,8 @@ class BinanceConnector:
         self,
         api_key: str,
         api_secret: str,
-        testnet: bool = True
+        testnet: bool = True,
+        market_type: str = "spot"  # "spot" or "future"
     ):
         """
         Initialize Binance connector.
@@ -83,12 +92,14 @@ class BinanceConnector:
             api_key: Binance API key
             api_secret: Binance API secret
             testnet: Use testnet if True (default: True for safety)
+            market_type: Market type - "spot" or "future" (default: "spot")
         """
         self.api_key = api_key
         self.api_secret = api_secret
         self.testnet = testnet
+        self.market_type = market_type
         
-        logger.info(f"Initializing BinanceConnector (testnet={testnet})")
+        logger.info(f"Initializing BinanceConnector (testnet={testnet}, market_type={market_type})")
         
         try:
             # Initialize CCXT Binance exchange
@@ -97,7 +108,7 @@ class BinanceConnector:
                 'secret': api_secret,
                 'enableRateLimit': True,  # Enable rate limiting
                 'options': {
-                    'defaultType': 'future' if testnet else 'spot',  # Default to futures for testnet
+                    'defaultType': market_type,
                 }
             })
             
@@ -261,8 +272,8 @@ class BinanceConnector:
                 raise ValueError(f"Unsupported order type: {order_type}")
             
             logger.info(
-                f"Order executed successfully: ID={order['id']}, "
-                f"Status={order['status']}, Filled={order['filled']}"
+                f"Order executed successfully: ID={order.get('id')}, "
+                f"Status={order.get('status')}, Filled={order.get('filled', 'N/A')}"
             )
             
             return order
@@ -322,6 +333,83 @@ class BinanceConnector:
         except Exception as e:
             logger.error(f"Failed to fetch account info: {e}")
             raise
+    
+    # Compatibility methods to match MT5RestClient interface
+    
+    def _request(self, method: str, endpoint: str, **kwargs) -> Dict[str, Any]:
+        """
+        Generic request method for compatibility with MT5RestClient interface.
+        
+        This method provides a unified interface for internal requests.
+        
+        Args:
+            method: HTTP method (GET, POST, etc.)
+            endpoint: API endpoint
+            **kwargs: Additional parameters
+            
+        Returns:
+            Dict with response data
+        """
+        if endpoint == "/account":
+            # Return account info in expected format
+            balance_info = self.exchange.fetch_balance()
+            total = balance_info.get('total', {})
+            free = balance_info.get('free', {})
+            
+            # Get USDT balance or first available currency
+            usdt_balance = total.get('USDT', 0.0)
+            usdt_free = free.get('USDT', 0.0)
+            
+            return {
+                'balance': float(usdt_balance),
+                'equity': float(usdt_balance),  # For crypto, equity = balance
+                'free_margin': float(usdt_free),
+                'margin_level': 100.0,  # Spot trading doesn't use margin
+            }
+        else:
+            raise NotImplementedError(f"Endpoint {endpoint} not implemented")
+    
+    def get_ohlcv(self, symbol: str, timeframe: str = "1m", limit: int = 100) -> List[Dict[str, Any]]:
+        """
+        Fetch OHLCV data and return as list of dicts for compatibility with MT5RestClient.
+        
+        This is a compatibility wrapper around fetch_ohlcv for the MT5RestClient interface.
+        
+        Args:
+            symbol: Trading pair symbol (e.g., "BTC/USDT")
+            timeframe: Candle timeframe (e.g., "1m", "5m", "1h")
+            limit: Number of candles to fetch
+            
+        Returns:
+            List of dicts with OHLCV data
+        """
+        df = self.fetch_ohlcv(symbol, timeframe, limit)
+        if df.empty:
+            return []
+        
+        # Convert DataFrame to list of dicts
+        df_reset = df.reset_index()
+        return df_reset.to_dict('records')
+    
+    def send_order(self, symbol: str, action: str, volume: float, 
+                   price: Optional[float] = None, order_type: str = "market", **kwargs) -> Dict[str, Any]:
+        """
+        Send order for compatibility with MT5RestClient interface.
+        
+        This is a compatibility wrapper around execute_order.
+        
+        Args:
+            symbol: Trading pair symbol
+            action: Order action ("buy" or "sell")
+            volume: Order size
+            price: Limit price (optional)
+            order_type: Order type
+            **kwargs: Additional parameters
+            
+        Returns:
+            Dict with order result
+        """
+        return self.execute_order(symbol, action, volume, order_type, price, **kwargs)
     
     def close(self):
         """Close the exchange connection."""
