@@ -468,7 +468,9 @@ class TradingEngine:
             
             # Step 6: Calculate position size
             try:
-                price = df['close'].iloc[-1]
+                # Get price from either renamed or original column
+                price_col = '<CLOSE>' if '<CLOSE>' in df.columns else 'close'
+                price = df[price_col].iloc[-1]
                 volume = self._calculate_position_size(
                     signal=signal,
                     price=price,
@@ -490,7 +492,7 @@ class TradingEngine:
                 signal=signal,
                 confidence=confidence,
                 features={
-                    'price': float(df['close'].iloc[-1]),
+                    'price': float(df['<CLOSE>' if '<CLOSE>' in df.columns else 'close'].iloc[-1]),
                     'volume_suggested': volume,
                 }
             )
@@ -718,9 +720,10 @@ class TradingEngine:
             
             # For now, use price volatility as the drift metric
             # In a more advanced setup, you'd track actual prediction errors
-            if 'close' in df.columns and len(df) >= 20:
+            price_col = '<CLOSE>' if '<CLOSE>' in df.columns else 'close'
+            if price_col in df.columns and len(df) >= 20:
                 # Calculate recent volatility
-                returns = df['close'].pct_change().dropna()
+                returns = df[price_col].pct_change().dropna()
                 if len(returns) >= 2:
                     recent_volatility = float(returns.tail(20).std())
                     
@@ -784,7 +787,8 @@ class TradingEngine:
                     volatility = float(df['atr'].iloc[-1]) / price
                 else:
                     # Estimate from recent price changes
-                    returns = df['close'].pct_change().dropna()
+                    price_col = '<CLOSE>' if '<CLOSE>' in df.columns else 'close'
+                    returns = df[price_col].pct_change().dropna()
                     volatility = float(returns.std()) if len(returns) > 0 else 0.02
                 
                 size = self.position_sizer.calculate_size(
