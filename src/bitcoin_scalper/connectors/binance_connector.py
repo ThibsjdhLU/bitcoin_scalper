@@ -36,9 +36,7 @@ Usage:
 
 import ccxt
 import pandas as pd
-import numpy as np
 from typing import Dict, Any, Optional, List
-from datetime import datetime
 import logging
 
 logger = logging.getLogger(__name__)

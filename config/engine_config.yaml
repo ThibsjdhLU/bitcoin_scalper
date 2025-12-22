@@ -3,9 +3,10 @@
 
 # Exchange Configuration
 exchange: binance  # Options: binance, mt5, paper
-api_key: "YOUR_BINANCE_API_KEY"  # Binance API key (set via env var BINANCE_API_KEY)
-api_secret: "YOUR_BINANCE_API_SECRET"  # Binance API secret (set via env var BINANCE_API_SECRET)
-testnet: true  # Use testnet/sandbox mode (STRONGLY RECOMMENDED for initial testing)
+# API credentials are loaded from environment variables for security:
+# - BINANCE_API_KEY: Your Binance API key
+# - BINANCE_API_SECRET: Your Binance API secret
+testnet: true  # Use testnet for testing (STRONGLY RECOMMENDED initially)
 
 trading:
   mode: ml  # Options: ml (Machine Learning) or rl (Reinforcement Learning)
