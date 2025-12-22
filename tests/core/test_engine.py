@@ -49,11 +49,11 @@ class MockMT5Client:
             })
         return data
     
-    def send_order(self, symbol, side, volume, sl=None, tp=None):
+    def send_order(self, symbol, action, volume, sl=None, tp=None, **kwargs):
         """Mock order sending."""
         order = {
             'symbol': symbol,
-            'side': side,
+            'action': action,
             'volume': volume,
             'sl': sl,
             'tp': tp,
@@ -149,7 +149,7 @@ class TestTradingEngine:
         
         assert result['success'] is True
         assert len(mock_mt5_client.orders) == 1
-        assert mock_mt5_client.orders[0]['side'] == 'buy'
+        assert mock_mt5_client.orders[0]['action'] == 'buy'
         assert mock_mt5_client.orders[0]['volume'] == 0.1
     
     def test_execute_order_invalid_signal(self, mock_mt5_client, test_config, tmp_path):

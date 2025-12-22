@@ -444,7 +444,7 @@ class PaperMT5Client:
         self,
         symbol: str,
         timeframe: str = "M1",
-        limit: int = 100
+        limit: int = 1000
     ) -> List[Dict[str, Any]]:
         """
         Get simulated OHLCV data.
