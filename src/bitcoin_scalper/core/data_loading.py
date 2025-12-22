@@ -73,7 +73,7 @@ def load_minute_csv(
         is_binance_format = False
     else:
         logger.error(f"Format CSV non reconnu. Colonnes présentes : {list(df.columns)}")
-        raise ValueError(f"Format CSV non reconnu. Attendu : soit 'date'/'timestamp', soit '{date_col}'/{time_col}'")
+        raise ValueError(f"Format CSV non reconnu. Attendu : soit 'date'/'timestamp', soit '{date_col}'/'{time_col}'")
     
     # STEP 2: ADAPT FORMAT
     if is_binance_format:
