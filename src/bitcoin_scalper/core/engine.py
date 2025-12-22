@@ -764,7 +764,7 @@ class TradingEngine:
             # Execute order via MT5 client
             result = self.mt5_client.send_order(
                 symbol=self.symbol,
-                side=signal,
+                action=signal,
                 volume=volume,
                 sl=sl,
                 tp=tp
