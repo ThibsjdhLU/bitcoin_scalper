@@ -408,6 +408,27 @@ class TradingEngine:
                 result['reason'] = 'Cannot compute features'
                 return result
             
+            # --- PREFIXING LOGIC: Add timeframe prefix to raw columns ---
+            # The model was trained on features like "1min_<CLOSE>", "1min_<TICKVOL>", etc.
+            # We need to create these prefixed columns from the existing raw columns.
+            try:
+                # Determine the prefix based on timeframe
+                prefix = self._get_timeframe_prefix(self.timeframe)
+                
+                # Raw tags that may need prefixing
+                raw_tags = ['<OPEN>', '<HIGH>', '<LOW>', '<CLOSE>', '<TICKVOL>', '<VOL>']
+                
+                # Create prefixed columns if the raw column exists
+                for tag in raw_tags:
+                    if tag in df.columns:
+                        prefixed_col = prefix + tag
+                        df[prefixed_col] = df[tag]
+                
+            except Exception as e:
+                self.logger.warning(f"Prefixing logic failed: {e}")
+                # Don't fail the entire tick processing for this
+            # ----------------------------------------------------------------
+            
             # Step 3: Check for drift (if enabled and not in safe mode)
             if self.drift_detection_enabled and not self.in_safe_mode:
                 drift_detected = self._check_drift(df)
@@ -495,6 +516,43 @@ class TradingEngine:
                 unit='ms',
                 tick_number=self.tick_count
             )
+    
+    def _get_timeframe_prefix(self, timeframe: str) -> str:
+        """
+        Map timeframe string to prefix format used in feature columns.
+        
+        Args:
+            timeframe: Timeframe string (e.g., "M1", "1m", "M5", "5m")
+        
+        Returns:
+            Prefix string (e.g., "1min_", "5min_")
+        """
+        # Normalize timeframe to lowercase for consistent handling
+        tf_lower = timeframe.lower()
+        
+        # Map various timeframe formats to prefix
+        timeframe_map = {
+            'm1': '1min_',
+            '1m': '1min_',
+            '1min': '1min_',
+            'm5': '5min_',
+            '5m': '5min_',
+            '5min': '5min_',
+            'm15': '15min_',
+            '15m': '15min_',
+            '15min': '15min_',
+            'm30': '30min_',
+            '30m': '30min_',
+            '30min': '30min_',
+            'h1': '1h_',
+            '1h': '1h_',
+            'h4': '4h_',
+            '4h': '4h_',
+            'd1': '1d_',
+            '1d': '1d_',
+        }
+        
+        return timeframe_map.get(tf_lower, '1min_')  # Default to 1min_ if unknown
     
     def _get_signal(self, df: pd.DataFrame) -> Tuple[Optional[str], Optional[float]]:
         """
