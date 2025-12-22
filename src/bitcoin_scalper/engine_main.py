@@ -127,7 +127,7 @@ def run_live_mode(config: TradingConfig, logger: TradingLogger):
                 ohlcv = mt5_client.get_ohlcv(
                     config.symbol,
                     timeframe=config.timeframe,
-                    limit=100  # Get last 100 candles for indicators
+                    limit=1000  # Get last 1000 candles for indicators
                 )
                 
                 if not ohlcv or len(ohlcv) < 30:
@@ -289,7 +289,7 @@ def run_paper_mode(config: TradingConfig, logger: TradingLogger):
                 ohlcv = paper_client.get_ohlcv(
                     config.symbol,
                     timeframe=config.timeframe,
-                    limit=100  # Get last 100 candles for indicators
+                    limit=1000  # Get last 1000 candles for indicators
                 )
                 
                 if not ohlcv or len(ohlcv) < 30:
