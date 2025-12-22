@@ -1,11 +1,11 @@
 {
   "sharpe": 0,
-  "max_drawdown": 4481564.141981978,
-  "profit_factor": 0.054174659157819965,
-  "win_rate": 0.05367987647967061,
-  "nb_trades": 58290,
-  "final_return": -448.1564141981978,
-  "final_capital": -4471564.141981978,
-  "expectancy": -76.88392763736542,
-  "max_losing_streak": 506
+  "max_drawdown": 1203471.6691156242,
+  "profit_factor": 0.09045299018497328,
+  "win_rate": 0.09563857889913203,
+  "nb_trades": 18549,
+  "final_return": -120.29771804093741,
+  "final_capital": -1192977.1804093742,
+  "expectancy": -64.85401802843145,
+  "max_losing_streak": 291
 }
