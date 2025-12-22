@@ -36,7 +36,6 @@ from bitcoin_scalper.core.logger import TradingLogger
 from bitcoin_scalper.core.data_cleaner import DataCleaner
 from bitcoin_scalper.core.feature_engineering import FeatureEngineering
 from bitcoin_scalper.core.risk_management import RiskManager
-from bitcoin_scalper.connectors.mt5_rest_client import MT5RestClient
 from bitcoin_scalper.risk.sizing import KellySizer, TargetVolatilitySizer
 
 
@@ -83,7 +82,7 @@ class TradingEngine:
     
     def __init__(
         self,
-        mt5_client: MT5RestClient,
+        connector,  # Generic connector (MT5RestClient, BinanceConnector, PaperMT5Client, etc.)
         mode: TradingMode = TradingMode.ML,
         symbol: str = "BTCUSD",
         timeframe: str = "M1",
@@ -97,7 +96,8 @@ class TradingEngine:
         Initialize the trading engine.
         
         Args:
-            mt5_client: MT5 REST client for market data and execution
+            connector: Exchange/broker connector for market data and execution
+                      (e.g., MT5RestClient, BinanceConnector, PaperMT5Client)
             mode: Trading mode (ML or RL)
             symbol: Trading symbol
             timeframe: Data timeframe
@@ -110,7 +110,7 @@ class TradingEngine:
         self.symbol = symbol
         self.timeframe = timeframe
         self.mode = mode
-        self.mt5_client = mt5_client
+        self.connector = connector  # Generic connector
         self.drift_detection_enabled = drift_detection
         self.safe_mode_on_drift = safe_mode_on_drift
         self.in_safe_mode = False
@@ -166,7 +166,7 @@ class TradingEngine:
         
         # Risk manager
         self.risk_manager = RiskManager(
-            client=self.mt5_client,
+            client=self.connector,
             max_drawdown=risk_params.get('max_drawdown', 0.05),
             max_daily_loss=risk_params.get('max_daily_loss', 0.05),
             risk_per_trade=risk_params.get('risk_per_trade', 0.01),
@@ -686,7 +686,7 @@ class TradingEngine:
         """
         try:
             # Get account info
-            account = self.mt5_client._request("GET", "/account")
+            account = self.connector._request("GET", "/account")
             capital = account.get('balance', 10000.0)
             
             # Calculate size based on position sizer type
@@ -761,8 +761,8 @@ class TradingEngine:
             return {'success': False, 'error': 'Invalid signal'}
         
         try:
-            # Execute order via MT5 client
-            result = self.mt5_client.send_order(
+            # Execute order via connector
+            result = self.connector.send_order(
                 symbol=self.symbol,
                 action=signal,
                 volume=volume,

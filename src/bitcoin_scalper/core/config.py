@@ -163,7 +163,15 @@ class TradingConfig:
     drift_enabled: bool = True
     safe_mode_on_drift: bool = True
     
-    # API credentials (loaded from env vars)
+    # Exchange configuration
+    exchange: str = field(default_factory=lambda: os.getenv("EXCHANGE", "binance"))  # binance, mt5, paper
+    
+    # Binance API credentials (loaded from env vars)
+    binance_api_key: str = field(default_factory=lambda: os.getenv("BINANCE_API_KEY", ""))
+    binance_api_secret: str = field(default_factory=lambda: os.getenv("BINANCE_API_SECRET", ""))
+    binance_testnet: bool = field(default_factory=lambda: os.getenv("BINANCE_TESTNET", "true").lower() == "true")
+    
+    # MT5 API credentials (loaded from env vars - legacy)
     mt5_rest_url: str = field(default_factory=lambda: os.getenv("MT5_REST_URL", "http://localhost:8000"))
     mt5_api_key: str = field(default_factory=lambda: os.getenv("MT5_REST_API_KEY", ""))
     

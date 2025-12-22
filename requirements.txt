@@ -21,4 +21,5 @@ scipy
 statsmodels
 gymnasium
 stable-baselines3
-river 
+river
+ccxt 

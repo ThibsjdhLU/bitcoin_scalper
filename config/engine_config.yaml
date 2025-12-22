@@ -1,12 +1,19 @@
 # Trading Engine Configuration
 # This is a sample configuration file for the Bitcoin scalper trading engine
 
+# Exchange Configuration
+exchange: binance  # Options: binance, mt5, paper
+# API credentials are loaded from environment variables for security:
+# - BINANCE_API_KEY: Your Binance API key
+# - BINANCE_API_SECRET: Your Binance API secret
+testnet: true  # Use testnet for testing (STRONGLY RECOMMENDED initially)
+
 trading:
   mode: ml  # Options: ml (Machine Learning) or rl (Reinforcement Learning)
   model_type: xgboost  # Options: xgboost, catboost (for ML mode) or ppo, dqn (for RL mode)
   model_path: models/model  # Path to trained model (without extension)
-  symbol: BTCUSD
-  timeframe: M1  # 1-minute candles
+  symbol: BTC/USDT  # Trading symbol (Binance format with /)
+  timeframe: 1m  # Candle timeframe (Binance format: 1m, 5m, 1h, etc.)
 
 features:
   use_onchain: false  # Disable on-chain data features (not wired)
@@ -34,16 +41,16 @@ drift:
   enabled: true  # Enable concept drift detection
   safe_mode_on_drift: true  # Enter safe mode when drift is detected
 
-# Note: API credentials and database config are loaded from environment variables
-# Set these in your environment:
-# - MT5_REST_URL: URL of MT5 REST API server
-# - MT5_REST_API_KEY: API key for authentication
-# - TSDB_HOST: TimescaleDB host
-# - TSDB_PORT: TimescaleDB port
-# - TSDB_NAME: Database name
-# - TSDB_USER: Database user
-# - TSDB_PASSWORD: Database password
-# - TSDB_SSLMODE: SSL mode (prefer, require, disable)
+# Note: For Binance:
+# - Set BINANCE_API_KEY and BINANCE_API_SECRET environment variables
+# - Use testnet=true for initial testing (safer)
+# - Symbol format: BTC/USDT (with slash)
+# - Timeframe format: 1m, 5m, 1h, etc.
+#
+# For MT5 (legacy):
+# - Set MT5_REST_URL and MT5_REST_API_KEY environment variables
+# - Symbol format: BTCUSD (no slash)
+# - Timeframe format: M1, M5, H1, etc.
 
 logging:
   log_dir: logs  # Directory for log files

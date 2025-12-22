@@ -38,6 +38,7 @@ from bitcoin_scalper.core.engine import TradingEngine, TradingMode
 from bitcoin_scalper.core.config import TradingConfig
 from bitcoin_scalper.core.logger import TradingLogger
 from bitcoin_scalper.connectors.mt5_rest_client import MT5RestClient
+from bitcoin_scalper.connectors.binance_connector import BinanceConnector
 from bitcoin_scalper.connectors.paper import PaperMT5Client
 from bitcoin_scalper.core.data_cleaner import DataCleaner
 from bitcoin_scalper.core.backtesting import Backtester
@@ -57,22 +58,34 @@ def run_live_mode(config: TradingConfig, logger: TradingLogger):
     """
     Run the trading engine in live mode.
     
-    This mode connects to the broker and executes real trades.
+    This mode connects to the broker/exchange and executes real trades.
     """
     logger.info("Starting engine in LIVE mode")
     
-    # Initialize MT5 client
-    mt5_client = MT5RestClient(
-        base_url=config.mt5_rest_url,
-        api_key=config.mt5_api_key
-    )
+    # Initialize connector based on exchange configuration
+    if config.exchange == "binance":
+        logger.info("Initializing Binance connector")
+        connector = BinanceConnector(
+            api_key=config.binance_api_key,
+            api_secret=config.binance_api_secret,
+            testnet=config.binance_testnet
+        )
+    elif config.exchange == "mt5":
+        logger.info("Initializing MT5 connector")
+        connector = MT5RestClient(
+            base_url=config.mt5_rest_url,
+            api_key=config.mt5_api_key
+        )
+    else:
+        logger.error(f"Unsupported exchange: {config.exchange}")
+        raise ValueError(f"Unsupported exchange: {config.exchange}")
     
     # Determine trading mode
     mode = TradingMode.ML if config.mode.lower() == "ml" else TradingMode.RL
     
     # Initialize trading engine
     engine = TradingEngine(
-        mt5_client=mt5_client,
+        connector=connector,
         mode=mode,
         symbol=config.symbol,
         timeframe=config.timeframe,
@@ -124,15 +137,32 @@ def run_live_mode(config: TradingConfig, logger: TradingLogger):
             
             # Get latest market data
             try:
-                ohlcv = mt5_client.get_ohlcv(
-                    config.symbol,
-                    timeframe=config.timeframe,
-                    limit=1000  # Get last 1000 candles for indicators
-                )
-                
-                if not ohlcv or len(ohlcv) < 30:
-                    logger.warning("Insufficient market data")
-                    continue
+                # Fetch OHLCV data from connector
+                if config.exchange == "binance":
+                    # Binance returns DataFrame directly
+                    df = connector.fetch_ohlcv(
+                        config.symbol,
+                        timeframe=config.timeframe,
+                        limit=1000  # Get last 1000 candles for indicators
+                    )
+                    
+                    if df.empty or len(df) < 30:
+                        logger.warning("Insufficient market data")
+                        continue
+                    
+                    # Convert DataFrame to list of dicts for compatibility
+                    ohlcv = df.reset_index().to_dict('records')
+                else:
+                    # MT5 returns list of dicts
+                    ohlcv = connector.get_ohlcv(
+                        config.symbol,
+                        timeframe=config.timeframe,
+                        limit=1000  # Get last 1000 candles for indicators
+                    )
+                    
+                    if not ohlcv or len(ohlcv) < 30:
+                        logger.warning("Insufficient market data")
+                        continue
                 
             except Exception as e:
                 logger.error(f"Failed to fetch market data: {e}")
@@ -236,7 +266,7 @@ def run_paper_mode(config: TradingConfig, logger: TradingLogger):
     
     # Initialize trading engine with paper client
     engine = TradingEngine(
-        mt5_client=paper_client,
+        connector=paper_client,
         mode=mode,
         symbol=config.symbol,
         timeframe=config.timeframe,
