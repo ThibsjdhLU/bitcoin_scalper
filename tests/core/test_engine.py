@@ -243,7 +243,10 @@ class TestTradingEngine:
         
         # Should not error out - if it works, the renaming was successful
         assert result is not None
-        assert 'error' not in result or result['error'] is None or 'Feature names missing' not in str(result.get('error', ''))
+        # Check that no feature names missing error occurred
+        error = result.get('error')
+        if error:
+            assert 'Feature names missing' not in str(error), f"Column renaming failed: {error}"
         
     def test_process_tick_legacy_columns_unchanged(self, mock_mt5_client, test_config, tmp_path):
         """Test that process_tick doesn't break data that already has legacy MT5 column names."""
@@ -280,7 +283,10 @@ class TestTradingEngine:
         
         # Should not error out - legacy columns should work as-is
         assert result is not None
-        assert 'error' not in result or result['error'] is None or 'Feature names missing' not in str(result.get('error', ''))
+        # Check that no feature names missing error occurred
+        error = result.get('error')
+        if error:
+            assert 'Feature names missing' not in str(error), f"Legacy column handling failed: {error}"
 
 
 class TestTradingConfig:
