@@ -1,0 +1,342 @@
+"""
+Binance Connector using CCXT - Exchange Integration for Live Trading.
+
+This module implements a Binance exchange connector using the CCXT library.
+It provides a standardized interface for:
+- Fetching OHLCV market data
+- Executing market orders
+- Retrieving account balance
+
+The connector returns data in a standardized format with lowercase column names:
+['date', 'open', 'high', 'low', 'close', 'volume']
+
+This ensures compatibility with the feature engineering pipeline while
+migrating away from MT5 to a modern crypto exchange.
+
+Usage:
+    >>> from bitcoin_scalper.connectors.binance_connector import BinanceConnector
+    >>> 
+    >>> # Initialize connector
+    >>> connector = BinanceConnector(
+    ...     api_key="your_api_key",
+    ...     api_secret="your_api_secret",
+    ...     testnet=True  # Use testnet for testing
+    ... )
+    >>> 
+    >>> # Fetch market data
+    >>> df = connector.fetch_ohlcv("BTC/USDT", timeframe="1m", limit=100)
+    >>> print(df.head())
+    >>> 
+    >>> # Execute order
+    >>> result = connector.execute_order("BTC/USDT", "buy", 0.001)
+    >>> 
+    >>> # Get balance
+    >>> balance = connector.get_balance("USDT")
+"""
+
+import ccxt
+import pandas as pd
+import numpy as np
+from typing import Dict, Any, Optional, List
+from datetime import datetime
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+class BinanceConnector:
+    """
+    Binance exchange connector using CCXT library.
+    
+    Provides a clean interface for interacting with Binance exchange:
+    - Market data fetching with standardized DataFrame output
+    - Order execution with proper error handling
+    - Account balance retrieval
+    
+    The connector supports both live trading and testnet mode for safe testing.
+    All data is returned in a standardized format compatible with the
+    feature engineering pipeline.
+    
+    Attributes:
+        api_key: Binance API key
+        api_secret: Binance API secret
+        testnet: Whether to use testnet (default: True for safety)
+        exchange: CCXT Binance exchange instance
+        
+    Example:
+        >>> connector = BinanceConnector(api_key="key", api_secret="secret", testnet=True)
+        >>> df = connector.fetch_ohlcv("BTC/USDT", "1m", 100)
+        >>> print(df.columns)
+        Index(['date', 'open', 'high', 'low', 'close', 'volume'])
+    """
+    
+    def __init__(
+        self,
+        api_key: str,
+        api_secret: str,
+        testnet: bool = True
+    ):
+        """
+        Initialize Binance connector.
+        
+        Args:
+            api_key: Binance API key
+            api_secret: Binance API secret
+            testnet: Use testnet if True (default: True for safety)
+        """
+        self.api_key = api_key
+        self.api_secret = api_secret
+        self.testnet = testnet
+        
+        logger.info(f"Initializing BinanceConnector (testnet={testnet})")
+        
+        try:
+            # Initialize CCXT Binance exchange
+            self.exchange = ccxt.binance({
+                'apiKey': api_key,
+                'secret': api_secret,
+                'enableRateLimit': True,  # Enable rate limiting
+                'options': {
+                    'defaultType': 'future' if testnet else 'spot',  # Default to futures for testnet
+                }
+            })
+            
+            # Set testnet URLs if testnet mode
+            if testnet:
+                self.exchange.set_sandbox_mode(True)
+                logger.info("Binance testnet mode enabled")
+            
+            # Load markets
+            self.exchange.load_markets()
+            logger.info(f"Successfully connected to Binance ({'testnet' if testnet else 'mainnet'})")
+            
+        except Exception as e:
+            logger.error(f"Failed to initialize Binance connector: {e}")
+            raise
+    
+    def fetch_ohlcv(
+        self,
+        symbol: str,
+        timeframe: str = "1m",
+        limit: int = 100
+    ) -> pd.DataFrame:
+        """
+        Fetch OHLCV data from Binance.
+        
+        **CRITICAL**: Returns a DataFrame with standardized lowercase column names:
+        ['date', 'open', 'high', 'low', 'close', 'volume']
+        
+        The 'date' column is set as the index and contains datetime objects.
+        
+        Args:
+            symbol: Trading pair symbol (e.g., "BTC/USDT")
+            timeframe: Candle timeframe (e.g., "1m", "5m", "1h")
+            limit: Number of candles to fetch (default: 100)
+        
+        Returns:
+            DataFrame with columns: ['date', 'open', 'high', 'low', 'close', 'volume']
+            The 'date' column is set as index with datetime objects.
+            
+        Raises:
+            Exception: If fetching data fails
+            
+        Example:
+            >>> df = connector.fetch_ohlcv("BTC/USDT", "1m", 100)
+            >>> print(df.columns)
+            Index(['open', 'high', 'low', 'close', 'volume'])
+            >>> print(df.index.name)
+            date
+        """
+        try:
+            logger.debug(f"Fetching OHLCV: {symbol}, {timeframe}, limit={limit}")
+            
+            # Fetch OHLCV data from Binance
+            # CCXT returns: [[timestamp, open, high, low, close, volume], ...]
+            ohlcv = self.exchange.fetch_ohlcv(
+                symbol=symbol,
+                timeframe=timeframe,
+                limit=limit
+            )
+            
+            if not ohlcv:
+                logger.warning(f"No OHLCV data returned for {symbol}")
+                return pd.DataFrame()
+            
+            # Convert to DataFrame with standardized column names
+            df = pd.DataFrame(
+                ohlcv,
+                columns=['timestamp', 'open', 'high', 'low', 'close', 'volume']
+            )
+            
+            # Convert timestamp (milliseconds) to datetime
+            df['date'] = pd.to_datetime(df['timestamp'], unit='ms')
+            
+            # Drop the raw timestamp column
+            df = df.drop(columns=['timestamp'])
+            
+            # Set date as index
+            df = df.set_index('date')
+            
+            # Ensure all numeric columns are float
+            for col in ['open', 'high', 'low', 'close', 'volume']:
+                df[col] = df[col].astype(float)
+            
+            logger.info(f"Fetched {len(df)} candles for {symbol}")
+            
+            return df
+            
+        except Exception as e:
+            logger.error(f"Failed to fetch OHLCV data: {e}")
+            raise
+    
+    def execute_order(
+        self,
+        symbol: str,
+        side: str,
+        volume: float,
+        order_type: str = "market",
+        price: Optional[float] = None,
+        **kwargs
+    ) -> Dict[str, Any]:
+        """
+        Execute a trading order on Binance.
+        
+        Args:
+            symbol: Trading pair symbol (e.g., "BTC/USDT")
+            side: Order side ("buy" or "sell")
+            volume: Order size (amount in base currency)
+            order_type: Order type ("market" or "limit")
+            price: Limit price (required for limit orders)
+            **kwargs: Additional order parameters (e.g., stopPrice, timeInForce)
+        
+        Returns:
+            Dict with order result containing:
+            - id: Order ID
+            - symbol: Trading pair
+            - type: Order type
+            - side: Order side
+            - price: Execution price
+            - amount: Order amount
+            - filled: Filled amount
+            - remaining: Remaining amount
+            - status: Order status
+            - timestamp: Execution timestamp
+            
+        Raises:
+            Exception: If order execution fails
+            
+        Example:
+            >>> result = connector.execute_order("BTC/USDT", "buy", 0.001)
+            >>> print(f"Order ID: {result['id']}")
+        """
+        try:
+            logger.info(f"Executing order: {side} {volume} {symbol} ({order_type})")
+            
+            # Validate side
+            if side not in ['buy', 'sell']:
+                raise ValueError(f"Invalid order side: {side}. Must be 'buy' or 'sell'")
+            
+            # Create order parameters
+            params = kwargs.copy()
+            
+            # Execute order via CCXT
+            if order_type == "market":
+                order = self.exchange.create_market_order(
+                    symbol=symbol,
+                    side=side,
+                    amount=volume,
+                    params=params
+                )
+            elif order_type == "limit":
+                if price is None:
+                    raise ValueError("Limit orders require a price")
+                order = self.exchange.create_limit_order(
+                    symbol=symbol,
+                    side=side,
+                    amount=volume,
+                    price=price,
+                    params=params
+                )
+            else:
+                raise ValueError(f"Unsupported order type: {order_type}")
+            
+            logger.info(
+                f"Order executed successfully: ID={order['id']}, "
+                f"Status={order['status']}, Filled={order['filled']}"
+            )
+            
+            return order
+            
+        except Exception as e:
+            logger.error(f"Failed to execute order: {e}")
+            raise
+    
+    def get_balance(self, currency: str = "USDT") -> float:
+        """
+        Get free balance for a specific currency.
+        
+        Args:
+            currency: Currency code (default: "USDT")
+        
+        Returns:
+            Free balance amount
+            
+        Raises:
+            Exception: If fetching balance fails
+            
+        Example:
+            >>> balance = connector.get_balance("USDT")
+            >>> print(f"Free USDT: {balance}")
+        """
+        try:
+            logger.debug(f"Fetching balance for {currency}")
+            
+            # Fetch account balance
+            balance = self.exchange.fetch_balance()
+            
+            # Get free balance for the currency
+            free_balance = balance.get('free', {}).get(currency, 0.0)
+            
+            logger.info(f"Free {currency} balance: {free_balance}")
+            
+            return float(free_balance)
+            
+        except Exception as e:
+            logger.error(f"Failed to fetch balance: {e}")
+            raise
+    
+    def get_account_info(self) -> Dict[str, Any]:
+        """
+        Get account information.
+        
+        Returns:
+            Dict with account information including balances for all currencies
+            
+        Example:
+            >>> info = connector.get_account_info()
+            >>> print(info['free'])  # All free balances
+        """
+        try:
+            balance = self.exchange.fetch_balance()
+            return balance
+        except Exception as e:
+            logger.error(f"Failed to fetch account info: {e}")
+            raise
+    
+    def close(self):
+        """Close the exchange connection."""
+        try:
+            if hasattr(self.exchange, 'close'):
+                self.exchange.close()
+            logger.info("Binance connector closed")
+        except Exception as e:
+            logger.warning(f"Error closing connector: {e}")
+    
+    def __enter__(self):
+        """Context manager entry."""
+        return self
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Context manager exit."""
+        self.close()
+        return False
