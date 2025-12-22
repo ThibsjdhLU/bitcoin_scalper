@@ -59,3 +59,6 @@ build/
 # Rapports de tests et training (à commiter seulement si important)
 # reports/backtest/ - à commiter pour référence
 # reports/ml/ - à commiter pour référence
+.venv/
+.DS_Store
+__pycache__/
