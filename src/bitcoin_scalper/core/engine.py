@@ -383,6 +383,21 @@ class TradingEngine:
             else:
                 df = market_data.copy()
             
+            # --- COMPATIBILITY PATCH: Rename standard columns to Legacy MT5 format ---
+            # This ensures the features match the trained model's expectations (e.g., <TICKVOL>)
+            if 'close' in df.columns:
+                rename_map = {
+                    'open': '<OPEN>',
+                    'high': '<HIGH>',
+                    'low': '<LOW>',
+                    'close': '<CLOSE>',
+                    'tick_volume': '<TICKVOL>',
+                    'volume': '<TICKVOL>',  # Handle both naming conventions
+                    'real_volume': '<VOL>'
+                }
+                df = df.rename(columns=rename_map)
+            # -----------------------------------------------------------------------
+            
             # Step 2: Compute features
             try:
                 df = self.feature_eng.add_indicators(df)
