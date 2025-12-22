@@ -512,9 +512,9 @@ class TradingEngine:
             self.logger.warning("ML model not loaded")
             
             # TASK 3: Temporary "coin flip" logic for debugging paper trading
-            # Generate random signal with 10% probability
+            # Generate random signal with 50% probability
             import random
-            if random.random() < 0.10:  # 10% chance
+            if random.random() < 0.50:  # 50% chance
                 signal = random.choice(['buy', 'sell'])
                 confidence = random.uniform(0.6, 0.8)  # Simulated confidence
                 self.logger.info(f"[DEBUG] Random Coin Flip Signal: {signal} (confidence: {confidence:.2f})")
@@ -575,9 +575,9 @@ class TradingEngine:
             self.logger.warning("RL agent not loaded")
             
             # TASK 3: Temporary "coin flip" logic for debugging paper trading
-            # Generate random signal with 10% probability
+            # Generate random signal with 50% probability
             import random
-            if random.random() < 0.10:  # 10% chance
+            if random.random() < 0.50:  # 50% chance
                 signal = random.choice(['buy', 'sell'])
                 confidence = random.uniform(0.6, 0.8)  # Simulated confidence
                 self.logger.info(f"[DEBUG] Random Coin Flip Signal: {signal} (confidence: {confidence:.2f})")
