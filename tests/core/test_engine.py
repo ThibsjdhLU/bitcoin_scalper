@@ -207,6 +207,80 @@ class TestTradingEngine:
         # Reset
         engine.reset_safe_mode()
         assert engine.in_safe_mode is False
+    
+    def test_process_tick_column_renaming(self, mock_mt5_client, test_config, tmp_path):
+        """Test that process_tick correctly renames standard columns to legacy MT5 format."""
+        engine = TradingEngine(
+            mt5_client=mock_mt5_client,
+            mode=TradingMode.ML,
+            symbol=test_config.symbol,
+            log_dir=tmp_path,
+            drift_detection=False,
+        )
+        
+        # Create market data with standard lowercase column names (Binance format)
+        market_data = [
+            {
+                'timestamp': 1609459200,
+                'open': 50000.0,
+                'high': 50100.0,
+                'low': 49900.0,
+                'close': 50050.0,
+                'volume': 100.0,
+            },
+            {
+                'timestamp': 1609459260,
+                'open': 50050.0,
+                'high': 50150.0,
+                'low': 49950.0,
+                'close': 50100.0,
+                'volume': 120.0,
+            }
+        ]
+        
+        # Process tick with standard column names
+        result = engine.process_tick(market_data)
+        
+        # Should not error out - if it works, the renaming was successful
+        assert result is not None
+        assert 'error' not in result or result['error'] is None or 'Feature names missing' not in str(result.get('error', ''))
+        
+    def test_process_tick_legacy_columns_unchanged(self, mock_mt5_client, test_config, tmp_path):
+        """Test that process_tick doesn't break data that already has legacy MT5 column names."""
+        engine = TradingEngine(
+            mt5_client=mock_mt5_client,
+            mode=TradingMode.ML,
+            symbol=test_config.symbol,
+            log_dir=tmp_path,
+            drift_detection=False,
+        )
+        
+        # Create market data with legacy MT5 column names
+        market_data = [
+            {
+                'timestamp': 1609459200,
+                '<OPEN>': 50000.0,
+                '<HIGH>': 50100.0,
+                '<LOW>': 49900.0,
+                '<CLOSE>': 50050.0,
+                '<TICKVOL>': 100.0,
+            },
+            {
+                'timestamp': 1609459260,
+                '<OPEN>': 50050.0,
+                '<HIGH>': 50150.0,
+                '<LOW>': 49950.0,
+                '<CLOSE>': 50100.0,
+                '<TICKVOL>': 120.0,
+            }
+        ]
+        
+        # Process tick with legacy column names
+        result = engine.process_tick(market_data)
+        
+        # Should not error out - legacy columns should work as-is
+        assert result is not None
+        assert 'error' not in result or result['error'] is None or 'Feature names missing' not in str(result.get('error', ''))
 
 
 class TestTradingConfig:
