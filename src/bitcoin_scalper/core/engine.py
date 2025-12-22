@@ -468,9 +468,8 @@ class TradingEngine:
             
             # Step 6: Calculate position size
             try:
-                # Get price from either renamed or original column
-                price_col = '<CLOSE>' if '<CLOSE>' in df.columns else 'close'
-                price = df[price_col].iloc[-1]
+                # Get price from appropriate column
+                price = df[self._get_price_column(df)].iloc[-1]
                 volume = self._calculate_position_size(
                     signal=signal,
                     price=price,
@@ -492,7 +491,7 @@ class TradingEngine:
                 signal=signal,
                 confidence=confidence,
                 features={
-                    'price': float(df['<CLOSE>' if '<CLOSE>' in df.columns else 'close'].iloc[-1]),
+                    'price': float(df[self._get_price_column(df)].iloc[-1]),
                     'volume_suggested': volume,
                 }
             )
@@ -555,6 +554,19 @@ class TradingEngine:
         }
         
         return timeframe_map.get(tf_lower, '1min_')  # Default to 1min_ if unknown
+    
+    def _get_price_column(self, df: pd.DataFrame) -> str:
+        """
+        Get the appropriate price column name from the DataFrame.
+        Handles both renamed (<CLOSE>) and standard (close) column names.
+        
+        Args:
+            df: DataFrame to check
+        
+        Returns:
+            Column name to use for price data
+        """
+        return '<CLOSE>' if '<CLOSE>' in df.columns else 'close'
     
     def _get_signal(self, df: pd.DataFrame) -> Tuple[Optional[str], Optional[float]]:
         """
@@ -720,7 +732,7 @@ class TradingEngine:
             
             # For now, use price volatility as the drift metric
             # In a more advanced setup, you'd track actual prediction errors
-            price_col = '<CLOSE>' if '<CLOSE>' in df.columns else 'close'
+            price_col = self._get_price_column(df)
             if price_col in df.columns and len(df) >= 20:
                 # Calculate recent volatility
                 returns = df[price_col].pct_change().dropna()
@@ -787,8 +799,7 @@ class TradingEngine:
                     volatility = float(df['atr'].iloc[-1]) / price
                 else:
                     # Estimate from recent price changes
-                    price_col = '<CLOSE>' if '<CLOSE>' in df.columns else 'close'
-                    returns = df[price_col].pct_change().dropna()
+                    returns = df[self._get_price_column(df)].pct_change().dropna()
                     volatility = float(returns.std()) if len(returns) > 0 else 0.02
                 
                 size = self.position_sizer.calculate_size(
