@@ -85,6 +85,24 @@ def convert_to_float32(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def prepare_data_for_optimization(X):
+    """
+    Prepare data for Optuna optimization by converting to float32.
+    
+    Args:
+        X: Feature matrix (DataFrame or ndarray)
+        
+    Returns:
+        Feature matrix converted to float32
+    """
+    if isinstance(X, pd.DataFrame):
+        X_opt = X.copy()
+        X_opt = convert_to_float32(X_opt)
+    else:
+        X_opt = X.astype(np.float32)
+    return X_opt
+
+
 def load_and_prepare_data(csv_path: str):
     logger.info("=" * 70)
     logger.info("📊 STEP 1: DATA LOADING")
@@ -243,11 +261,7 @@ def optimize_primary_params(X, y, n_trials=50):
     logger.info("=" * 70)
     
     # Convert to float32 if needed
-    if isinstance(X, pd.DataFrame):
-        X_opt = X.copy()
-        X_opt = convert_to_float32(X_opt)
-    else:
-        X_opt = X.astype(np.float32)
+    X_opt = prepare_data_for_optimization(X)
     
     def objective(trial):
         # Suggest hyperparameters
@@ -272,7 +286,7 @@ def optimize_primary_params(X, y, n_trials=50):
         
         # Calculate cross-validated accuracy
         try:
-            scores = cross_val_score(model, X_opt, y, cv=tscv, scoring='accuracy', n_jobs=1)
+            scores = cross_val_score(model, X_opt, y, cv=tscv, scoring='accuracy', n_jobs=-1)
             return scores.mean()
         except Exception as e:
             logger.warning(f"Trial failed: {e}")
@@ -285,7 +299,7 @@ def optimize_primary_params(X, y, n_trials=50):
     )
     
     logger.info(f"Starting {n_trials} trials for primary model optimization...")
-    study.optimize(objective, n_trials=n_trials, show_progress_bar=False, n_jobs=1)
+    study.optimize(objective, n_trials=n_trials, show_progress_bar=False, n_jobs=-1)
     
     best_params = study.best_params
     logger.info(f"✅ Best Accuracy: {study.best_value:.4f}")
@@ -311,11 +325,7 @@ def optimize_meta_params(X, y, n_trials=50):
     logger.info("=" * 70)
     
     # Convert to float32 if needed
-    if isinstance(X, pd.DataFrame):
-        X_opt = X.copy()
-        X_opt = convert_to_float32(X_opt)
-    else:
-        X_opt = X.astype(np.float32)
+    X_opt = prepare_data_for_optimization(X)
     
     def objective(trial):
         # Suggest hyperparameters
@@ -340,7 +350,7 @@ def optimize_meta_params(X, y, n_trials=50):
         
         # Calculate cross-validated accuracy
         try:
-            scores = cross_val_score(model, X_opt, y, cv=tscv, scoring='accuracy', n_jobs=1)
+            scores = cross_val_score(model, X_opt, y, cv=tscv, scoring='accuracy', n_jobs=-1)
             return scores.mean()
         except Exception as e:
             logger.warning(f"Trial failed: {e}")
@@ -353,7 +363,7 @@ def optimize_meta_params(X, y, n_trials=50):
     )
     
     logger.info(f"Starting {n_trials} trials for meta model optimization...")
-    study.optimize(objective, n_trials=n_trials, show_progress_bar=False, n_jobs=1)
+    study.optimize(objective, n_trials=n_trials, show_progress_bar=False, n_jobs=-1)
     
     best_params = study.best_params
     logger.info(f"✅ Best Accuracy: {study.best_value:.4f}")
