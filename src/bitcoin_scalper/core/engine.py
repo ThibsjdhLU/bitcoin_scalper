@@ -768,121 +768,87 @@ class TradingEngine:
             return None, None
     
     def _get_ml_signal(self, df: pd.DataFrame) -> Tuple[Optional[str], Optional[float]]:
-        """Get signal from ML model (simple or MetaModel)."""
+        """Get signal from ML model (Standard or Meta)."""
         if self.ml_model is None:
             self.logger.warning("ML model not loaded")
-            
-            # TASK 3: Temporary "coin flip" logic for debugging paper trading
-            # Generate random signal with 50% probability
-            import random
-            if random.random() < 0.50:  # 50% chance
-                signal = random.choice(['buy', 'sell'])
-                confidence = random.uniform(0.6, 0.8)  # Simulated confidence
-                self.logger.info(f"[DEBUG] Random Coin Flip Signal: {signal} (confidence: {confidence:.2f})")
-                return signal, confidence
-            
             return None, None
         
         try:
-            # === CHECK IF MODEL IS A METAMODEL ===
-            is_meta_model = isinstance(self.ml_model, MetaModel)
-            
-            if is_meta_model:
-                # === META-LABELING PREDICTION PIPELINE ===
-                # Prepare features
-                if self.features_list:
-                    missing_cols = [col for col in self.features_list if col not in df.columns]
-                    if missing_cols:
-                        self.logger.warning(f"Missing features: {missing_cols}")
-                        available_features = [col for col in self.features_list if col in df.columns]
-                        X = df[available_features].tail(1)
-                    else:
-                        X = df[self.features_list].tail(1)
-                else:
-                    X = df.select_dtypes(include=[np.number]).tail(1)
-                
-                # Get meta-labeling prediction
-                result = self.ml_model.predict_meta(X)
-                
-                # Extract results
-                final_signal = result['final_signal'][0]
-                meta_conf = result['meta_conf'][0]
-                raw_signal = result['raw_signal'][0]
-                
-                # Map raw signal to string
-                raw_signal_str = {1: 'BUY', -1: 'SELL', 0: 'NEUTRAL'}[raw_signal]
-                
-                # === CRITICAL LOGIC: Meta filtering with enhanced logging ===
-                if final_signal == 0:
-                    # Signal was filtered by meta model
-                    if raw_signal != 0:
-                        # Original signal was non-neutral but got filtered
-                        self.logger.info(
-                            f"🤖 Raw Signal: {raw_signal_str} | "
-                            f"🛡️ Meta Conf: {meta_conf:.2f} (< {self.meta_threshold:.2f}) "
-                            f"→ ❌ BLOCKED"
-                        )
-                    signal = 'hold'
-                    confidence = meta_conf
-                else:
-                    # Signal passed meta filter
-                    final_signal_str = {1: 'BUY', -1: 'SELL'}[final_signal]
-                    self.logger.info(
-                        f"🤖 Raw Signal: {raw_signal_str} | "
-                        f"🛡️ Meta Conf: {meta_conf:.2f} (>= {self.meta_threshold:.2f}) "
-                        f"→ ✅ {final_signal_str}"
-                    )
-                    signal = 'buy' if final_signal == 1 else 'sell'
-                    confidence = meta_conf
-                
-                return signal, confidence
-            
+            # Prepare features
+            if self.features_list:
+                # Align features (missing cols check)
+                available_features = [col for col in self.features_list if col in df.columns]
+                if len(available_features) < len(self.features_list):
+                    # Warning logs can go here
+                    pass
+                X = df[available_features].tail(1)
             else:
-                # === SIMPLE MODEL PREDICTION (Legacy path) ===
-                # Prepare features
-                if self.features_list:
-                    missing_cols = [col for col in self.features_list if col not in df.columns]
-                    if missing_cols:
-                        self.logger.warning(f"Missing features: {missing_cols}")
-                        # Use available features
-                        available_features = [col for col in self.features_list if col in df.columns]
-                        X = df[available_features].tail(1)
-                    else:
-                        X = df[self.features_list].tail(1)
-                else:
-                    # Use all numeric columns
-                    X = df.select_dtypes(include=[np.number]).tail(1)
+                X = df.select_dtypes(include=[np.number]).tail(1)
+            
+            # --- META-MODEL LOGIC (Le Patch commence ici) ---
+            # On vérifie si c'est un MetaModel (par nom de classe pour éviter l'import)
+            is_meta = self.ml_model.__class__.__name__ == 'MetaModel'
+            
+            if is_meta:
+                # 1. Récupérer le dictionnaire brut
+                # Note: Assure-toi que predict_meta renvoie bien un dict ou un tuple
+                meta_res = self.ml_model.predict_meta(X)
                 
-                # Get prediction
+                # 2. Gestion des formats (Dict vs Tuple)
+                if isinstance(meta_res, dict):
+                    raw_pred = meta_res.get('final_signal')
+                    conf = meta_res.get('meta_conf')
+                elif isinstance(meta_res, tuple):
+                    raw_pred, conf = meta_res[0], meta_res[1]
+                else:
+                    raw_pred = meta_res
+                    conf = 0.0
+
+                # 3. LE FIX CRITIQUE : Conversion Numpy -> Scalaire
+                # Si c'est un tableau [1], on veut juste 1
+                if hasattr(raw_pred, 'item'): 
+                    pred = int(raw_pred.item())
+                elif hasattr(raw_pred, '__iter__') and len(raw_pred) == 1:
+                    pred = int(raw_pred[0])
+                else:
+                    pred = int(raw_pred)
+
+                # Pareil pour la confiance
+                if hasattr(conf, 'item'): 
+                    confidence = float(conf.item())
+                elif hasattr(conf, '__iter__') and len(conf) == 1:
+                    confidence = float(conf[0])
+                else:
+                    confidence = float(conf)
+
+            else:
+                # --- STANDARD MODEL LOGIC ---
                 if self.ml_pipeline:
-                    pred = self.ml_pipeline.predict(X)[0]
+                    raw_pred = self.ml_pipeline.predict(X)[0]
                 else:
-                    pred = self.ml_model.predict(X)[0]
+                    raw_pred = self.ml_model.predict(X)[0]
                 
-                # Get confidence if available
-                confidence = None
+                pred = int(raw_pred) # Force scalar
+                
+                # Confidence standard
+                confidence = 0.0
                 try:
                     if hasattr(self.ml_model, 'predict_proba'):
-                        proba = self.ml_model.predict_proba(X)[0]
-                        confidence = float(np.max(proba))
-                    elif hasattr(self.ml_pipeline, 'predict_proba'):
-                        proba = self.ml_pipeline.predict_proba(X)[0]
-                        confidence = float(np.max(proba))
-                except:
-                    pass
-                
-                # Map prediction to signal
-                if pred == 1:
-                    signal = 'buy'
-                elif pred == -1:
-                    signal = 'sell'
-                else:
-                    signal = 'hold'
-                
-                return signal, confidence
+                        probs = self.ml_model.predict_proba(X)[0]
+                        confidence = float(np.max(probs))
+                except: pass
+
+            # --- SIGNAL MAPPING ---
+            # Maintenant 'pred' est garanti d'être un int (1, -1, 0)
+            # Donc ça ne plantera plus !
+            signal_map = {1: 'buy', -1: 'sell', 0: 'hold'}
+            signal = signal_map.get(pred, 'hold')
+            
+            return signal, confidence
             
         except Exception as e:
             self.logger.error(f"ML prediction failed: {e}")
+            # En cas de crash, on ne casse pas la boucle, on hold
             return None, None
     
     def _get_rl_signal(self, df: pd.DataFrame) -> Tuple[Optional[str], Optional[float]]:
