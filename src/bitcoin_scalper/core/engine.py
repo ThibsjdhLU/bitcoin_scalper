@@ -37,6 +37,7 @@ from bitcoin_scalper.core.data_cleaner import DataCleaner
 from bitcoin_scalper.core.feature_engineering import FeatureEngineering
 from bitcoin_scalper.core.risk_management import RiskManager
 from bitcoin_scalper.risk.sizing import KellySizer, TargetVolatilitySizer
+from bitcoin_scalper.models.meta_model import MetaModel
 
 
 class TradingMode(Enum):
@@ -91,6 +92,7 @@ class TradingEngine:
         position_sizer: str = "kelly",  # "kelly" or "target_vol"
         drift_detection: bool = True,
         safe_mode_on_drift: bool = True,
+        meta_threshold: float = 0.6,  # Meta-labeling confidence threshold
     ):
         """
         Initialize the trading engine.
@@ -106,6 +108,8 @@ class TradingEngine:
             position_sizer: Position sizing method
             drift_detection: Enable drift detection
             safe_mode_on_drift: Enter safe mode when drift detected
+            meta_threshold: Confidence threshold for meta-labeling (default: 0.6)
+                          Only trade when meta model confidence >= threshold
         """
         self.symbol = symbol
         self.timeframe = timeframe
@@ -114,10 +118,12 @@ class TradingEngine:
         self.drift_detection_enabled = drift_detection
         self.safe_mode_on_drift = safe_mode_on_drift
         self.in_safe_mode = False
+        self.meta_threshold = meta_threshold  # Meta-labeling threshold
         
         # Initialize logger
         self.logger = TradingLogger(log_dir=log_dir)
         self.logger.info(f"Initializing TradingEngine in {mode.value.upper()} mode")
+        self.logger.info(f"Meta-labeling threshold: {meta_threshold:.2f}")
         
         # Initialize components
         self._init_data_components()
@@ -226,7 +232,11 @@ class TradingEngine:
     model_path: str,
     features_list: Optional[List[str]] = None):
         """
-        Load a trained ML model. 
+        Load a trained ML model or MetaModel.
+        
+        Supports both:
+        - Simple models (CatBoost, XGBoost, etc.)
+        - MetaModel (two-stage meta-labeling pipeline)
         
         Args:
             model_path: Path to model file
@@ -241,47 +251,76 @@ class TradingEngine:
             import joblib
             from bitcoin_scalper.core.export import load_objects
             
-            # Try to load using the export module
+            # === STEP 1: Try to load as MetaModel first ===
             try:
-                objects = load_objects(model_path)
-                self.ml_pipeline = objects. get('pipeline')
-                self.ml_model = objects.get('model')
-                self.features_list = None  # load_objects doesn't return features_list
-                self.logger.info("ML model loaded successfully via load_objects")
+                loaded_model = joblib.load(model_path)
+                
+                # Check if it's a MetaModel instance
+                if isinstance(loaded_model, MetaModel):
+                    self.ml_model = loaded_model
+                    self.ml_pipeline = None  # MetaModel handles its own pipeline
+                    self.logger.info("✅ Loaded MetaModel successfully (meta-labeling enabled)")
+                    self.logger.info(f"   Meta threshold: {self.meta_threshold:.2f}")
+                    
+                    # Extract features list if available
+                    if loaded_model.feature_names is not None:
+                        self.features_list = loaded_model.feature_names
+                        self.logger.info(f"   Features: {len(self.features_list)} from MetaModel")
+                    else:
+                        self.features_list = features_list
+                    
+                    return True
+                    
+                # Not a MetaModel, proceed with regular model loading
+                self.logger.info("Loaded object is not a MetaModel, treating as simple model")
+                self.ml_model = loaded_model
+                self.ml_pipeline = None
+                
             except Exception as e:
-                # Fallback to direct load
-                self.logger.warning(f"load_objects failed: {e}, trying direct load")
-                
-                # Load CatBoost model properly
-                try:
-                    from catboost import CatBoostClassifier
-                    # Load model as class method
-                    self.ml_model = CatBoostClassifier().load_model(f"{model_path}_model. cbm")
-                except ImportError:
-                    self.logger.warning("CatBoost not installed, trying joblib for XGBoost or other models")
-                    # Try joblib as fallback (for XGBoost or other models)
-                    try: 
-                        self.ml_model = joblib.load(f"{model_path}_model.pkl")
-                    except Exception as e3:
-                        self.logger. error(f"Failed to load model with joblib: {e3}")
-                        raise
-                except Exception as e2:
-                    self.logger.warning(f"CatBoost load failed: {e2}, trying joblib")
-                    # Try joblib as last resort (for XGBoost or other models)
-                    self.ml_model = joblib. load(f"{model_path}_model.pkl")
-                
-                self.logger.info("ML model loaded successfully via direct load")
+                self.logger.info(f"Direct joblib load failed: {e}, trying other methods")
             
-            # === ROBUST FEATURE LIST HANDLING ===
+            # === STEP 2: Try to load using export module ===
+            if self.ml_model is None:
+                try:
+                    objects = load_objects(model_path)
+                    self.ml_pipeline = objects.get('pipeline')
+                    self.ml_model = objects.get('model')
+                    self.features_list = None  # load_objects doesn't return features_list
+                    self.logger.info("ML model loaded successfully via load_objects")
+                except Exception as e:
+                    # Fallback to direct load
+                    self.logger.warning(f"load_objects failed: {e}, trying direct load")
+                    
+                    # Load CatBoost model properly
+                    try:
+                        from catboost import CatBoostClassifier
+                        # Load model as class method
+                        self.ml_model = CatBoostClassifier().load_model(f"{model_path}_model.cbm")
+                    except ImportError:
+                        self.logger.warning("CatBoost not installed, trying joblib for XGBoost or other models")
+                        # Try joblib as fallback (for XGBoost or other models)
+                        try: 
+                            self.ml_model = joblib.load(f"{model_path}_model.pkl")
+                        except Exception as e3:
+                            self.logger.error(f"Failed to load model with joblib: {e3}")
+                            raise
+                    except Exception as e2:
+                        self.logger.warning(f"CatBoost load failed: {e2}, trying joblib")
+                        # Try joblib as last resort (for XGBoost or other models)
+                        self.ml_model = joblib.load(f"{model_path}_model.pkl")
+                    
+                    self.logger.info("ML model loaded successfully via direct load")
+            
+            # === STEP 3: ROBUST FEATURE LIST HANDLING ===
             if features_list: 
                 # User explicitly provided features list
                 self.features_list = features_list
                 self.logger.info(f"Using user-provided features list ({len(self.features_list)} features)")
             else:
-                # Try to load features list from . pkl file (legacy support)
+                # Try to load features list from .pkl file (legacy support)
                 try:
-                    self.features_list = joblib. load(f"{model_path}_features.pkl")
-                    self. logger.info(f"Loaded features list from . pkl file ({len(self.features_list)} features)")
+                    self.features_list = joblib.load(f"{model_path}_features.pkl")
+                    self.logger.info(f"Loaded features list from .pkl file ({len(self.features_list)} features)")
                 except Exception as pkl_error:
                     self.logger.warning(f"Could not load features list from .pkl file: {pkl_error}")
                     self.features_list = None
@@ -294,37 +333,37 @@ class TradingEngine:
                         # Try CatBoost feature_names_ attribute
                         if hasattr(self.ml_model, 'feature_names_'):
                             self.features_list = list(self.ml_model.feature_names_)
-                            self.logger.info(f"Successfully extracted {len(self.features_list)} features from CatBoost model. feature_names_")
+                            self.logger.info(f"Successfully extracted {len(self.features_list)} features from CatBoost model.feature_names_")
                         
                         # Try XGBoost/LGBM feature_names_in_ attribute (scikit-learn compatible)
                         elif hasattr(self.ml_model, 'feature_names_in_'):
-                            self.features_list = list(self.ml_model. feature_names_in_)
+                            self.features_list = list(self.ml_model.feature_names_in_)
                             self.logger.info(f"Successfully extracted {len(self.features_list)} features from model.feature_names_in_")
                         
                         # Try XGBoost get_booster().feature_names
-                        elif hasattr(self. ml_model, 'get_booster'):
-                            booster = self.ml_model. get_booster()
+                        elif hasattr(self.ml_model, 'get_booster'):
+                            booster = self.ml_model.get_booster()
                             if hasattr(booster, 'feature_names'):
                                 self.features_list = list(booster.feature_names)
-                                self.logger.info(f"Successfully extracted {len(self. features_list)} features from XGBoost booster.feature_names")
+                                self.logger.info(f"Successfully extracted {len(self.features_list)} features from XGBoost booster.feature_names")
                         
                         # Last resort: try _Booster.feature_names for native XGBoost
                         elif hasattr(self.ml_model, 'feature_names'):
-                            self. features_list = list(self. ml_model.feature_names)
+                            self.features_list = list(self.ml_model.feature_names)
                             self.logger.info(f"Successfully extracted {len(self.features_list)} features from model.feature_names")
                         
                         else:
-                            self.logger. warning("Model object has no recognizable feature_names attribute")
+                            self.logger.warning("Model object has no recognizable feature_names attribute")
                             self.features_list = None
                     
                     except Exception as extract_error:
-                        self. logger.error(f"Failed to extract feature names from model:  {extract_error}")
+                        self.logger.error(f"Failed to extract feature names from model: {extract_error}")
                         self.features_list = None
                 
                 # Final warning if no features could be determined
                 if self.features_list is None:
                     self.logger.warning(
-                        "WARNING: No feature list available!  Predictions may fail. "
+                        "WARNING: No feature list available! Predictions may fail. "
                         "The model will attempt to use all numeric columns, which may cause "
                         "'Feature names unseen at fit time' errors."
                     )
@@ -729,7 +768,7 @@ class TradingEngine:
             return None, None
     
     def _get_ml_signal(self, df: pd.DataFrame) -> Tuple[Optional[str], Optional[float]]:
-        """Get signal from ML model."""
+        """Get signal from ML model (simple or MetaModel)."""
         if self.ml_model is None:
             self.logger.warning("ML model not loaded")
             
@@ -745,47 +784,102 @@ class TradingEngine:
             return None, None
         
         try:
-            # Prepare features
-            if self.features_list:
-                missing_cols = [col for col in self.features_list if col not in df.columns]
-                if missing_cols:
-                    self.logger.warning(f"Missing features: {missing_cols}")
-                    # Use available features
-                    available_features = [col for col in self.features_list if col in df.columns]
-                    X = df[available_features].tail(1)
+            # === CHECK IF MODEL IS A METAMODEL ===
+            is_meta_model = isinstance(self.ml_model, MetaModel)
+            
+            if is_meta_model:
+                # === META-LABELING PREDICTION PIPELINE ===
+                # Prepare features
+                if self.features_list:
+                    missing_cols = [col for col in self.features_list if col not in df.columns]
+                    if missing_cols:
+                        self.logger.warning(f"Missing features: {missing_cols}")
+                        available_features = [col for col in self.features_list if col in df.columns]
+                        X = df[available_features].tail(1)
+                    else:
+                        X = df[self.features_list].tail(1)
                 else:
-                    X = df[self.features_list].tail(1)
+                    X = df.select_dtypes(include=[np.number]).tail(1)
+                
+                # Get meta-labeling prediction
+                result = self.ml_model.predict_meta(X)
+                
+                # Extract results
+                final_signal = result['final_signal'][0]
+                meta_conf = result['meta_conf'][0]
+                raw_signal = result['raw_signal'][0]
+                
+                # Map raw signal to string
+                raw_signal_str = {1: 'BUY', -1: 'SELL', 0: 'NEUTRAL'}[raw_signal]
+                
+                # === CRITICAL LOGIC: Meta filtering with enhanced logging ===
+                if final_signal == 0:
+                    # Signal was filtered by meta model
+                    if raw_signal != 0:
+                        # Original signal was non-neutral but got filtered
+                        self.logger.info(
+                            f"🤖 Raw Signal: {raw_signal_str} | "
+                            f"🛡️ Meta Conf: {meta_conf:.2f} (< {self.meta_threshold:.2f}) "
+                            f"→ ❌ BLOCKED"
+                        )
+                    signal = 'hold'
+                    confidence = meta_conf
+                else:
+                    # Signal passed meta filter
+                    final_signal_str = {1: 'BUY', -1: 'SELL'}[final_signal]
+                    self.logger.info(
+                        f"🤖 Raw Signal: {raw_signal_str} | "
+                        f"🛡️ Meta Conf: {meta_conf:.2f} (>= {self.meta_threshold:.2f}) "
+                        f"→ ✅ {final_signal_str}"
+                    )
+                    signal = 'buy' if final_signal == 1 else 'sell'
+                    confidence = meta_conf
+                
+                return signal, confidence
+            
             else:
-                # Use all numeric columns
-                X = df.select_dtypes(include=[np.number]).tail(1)
-            
-            # Get prediction
-            if self.ml_pipeline:
-                pred = self.ml_pipeline.predict(X)[0]
-            else:
-                pred = self.ml_model.predict(X)[0]
-            
-            # Get confidence if available
-            confidence = None
-            try:
-                if hasattr(self.ml_model, 'predict_proba'):
-                    proba = self.ml_model.predict_proba(X)[0]
-                    confidence = float(np.max(proba))
-                elif hasattr(self.ml_pipeline, 'predict_proba'):
-                    proba = self.ml_pipeline.predict_proba(X)[0]
-                    confidence = float(np.max(proba))
-            except:
-                pass
-            
-            # Map prediction to signal
-            if pred == 1:
-                signal = 'buy'
-            elif pred == -1:
-                signal = 'sell'
-            else:
-                signal = 'hold'
-            
-            return signal, confidence
+                # === SIMPLE MODEL PREDICTION (Legacy path) ===
+                # Prepare features
+                if self.features_list:
+                    missing_cols = [col for col in self.features_list if col not in df.columns]
+                    if missing_cols:
+                        self.logger.warning(f"Missing features: {missing_cols}")
+                        # Use available features
+                        available_features = [col for col in self.features_list if col in df.columns]
+                        X = df[available_features].tail(1)
+                    else:
+                        X = df[self.features_list].tail(1)
+                else:
+                    # Use all numeric columns
+                    X = df.select_dtypes(include=[np.number]).tail(1)
+                
+                # Get prediction
+                if self.ml_pipeline:
+                    pred = self.ml_pipeline.predict(X)[0]
+                else:
+                    pred = self.ml_model.predict(X)[0]
+                
+                # Get confidence if available
+                confidence = None
+                try:
+                    if hasattr(self.ml_model, 'predict_proba'):
+                        proba = self.ml_model.predict_proba(X)[0]
+                        confidence = float(np.max(proba))
+                    elif hasattr(self.ml_pipeline, 'predict_proba'):
+                        proba = self.ml_pipeline.predict_proba(X)[0]
+                        confidence = float(np.max(proba))
+                except:
+                    pass
+                
+                # Map prediction to signal
+                if pred == 1:
+                    signal = 'buy'
+                elif pred == -1:
+                    signal = 'sell'
+                else:
+                    signal = 'hold'
+                
+                return signal, confidence
             
         except Exception as e:
             self.logger.error(f"ML prediction failed: {e}")
