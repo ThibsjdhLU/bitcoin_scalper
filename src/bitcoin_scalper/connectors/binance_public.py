@@ -182,7 +182,7 @@ class BinancePublicClient:
             ohlcv = self.exchange.fetch_ohlcv(
                 symbol=symbol,
                 timeframe=timeframe,
-                limit=min(limit, 5000)  # Binance limit is 5000
+                limit = 5000  # Binance limit is 5000
             )
             
             if not ohlcv:
