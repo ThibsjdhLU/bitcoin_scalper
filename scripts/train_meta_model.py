@@ -48,6 +48,15 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Default CatBoost parameters for Meta model (used as fallback)
+DEFAULT_META_PARAMS = {
+    'iterations': 200,
+    'depth': 6,
+    'learning_rate': 0.05,
+    'l2_leaf_reg': 3.0,
+    'border_count': 128
+}
+
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Train MetaModel for Bitcoin trading with Optuna optimization')
@@ -388,15 +397,8 @@ def optimize_meta_params(X, y, n_trials=50):
     except ValueError as e:
         # No successful trials - return default CatBoost parameters
         logger.warning(f"⚠️  Meta optimization failed ({e}), using default parameters")
-        default_params = {
-            'iterations': 200,
-            'depth': 6,
-            'learning_rate': 0.05,
-            'l2_leaf_reg': 3.0,
-            'border_count': 128
-        }
-        logger.info(f"📦 Using default parameters: {default_params}")
-        return default_params
+        logger.info(f"📦 Using default parameters: {DEFAULT_META_PARAMS}")
+        return DEFAULT_META_PARAMS.copy()
 
 
 def evaluate_model(meta_model, X_test, y_dir_test):
@@ -550,13 +552,7 @@ def main():
     except Exception as e:
         logger.error(f"❌ Meta optimization failed with error: {e}")
         logger.info("📦 Using default meta parameters to ensure pipeline completion")
-        best_meta_params = {
-            'iterations': 200,
-            'depth': 6,
-            'learning_rate': 0.05,
-            'l2_leaf_reg': 3.0,
-            'border_count': 128
-        }
+        best_meta_params = DEFAULT_META_PARAMS.copy()
     
     # 9. Create final MetaModel with optimized parameters
     logger.info("\n🤖 STEP 9: CREATING FINAL METAMODEL")
