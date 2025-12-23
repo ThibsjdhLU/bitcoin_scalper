@@ -402,34 +402,39 @@ class TradingEngine:
             # The model was trained on features like "1min_<CLOSE>", "1min_<TICKVOL>", etc.
             # We need to create these prefixed columns from the existing raw columns.
             try:
-                # Determine the prefix based on timeframe
                 prefix = self._get_timeframe_prefix(self.timeframe)
                 
-                # Raw tags that may need prefixing
-                # Note: This list matches the columns in the rename_map above (lines 389-397)
-                # to ensure all renamed columns get prefixed variants
-                raw_tags = ['<OPEN>', '<HIGH>', '<LOW>', '<CLOSE>', '<TICKVOL>', '<VOL>']
+                # ==============================================================================
+                # 🔥 PATCH CRITIQUE : GÉNÉRATION DES FEATURES TEMPORELLES (TIME FEATURES)
+                # ==============================================================================
+                # Le modèle a besoin de savoir "quand" on est pour ses prédictions.
+                # Il attend: 1min_day, 1min_hour, 1min_hour_sin/cos, etc.
                 
-                # Create prefixed columns if the raw column exists
-                for tag in raw_tags:
-                    if tag in df.columns:
-                        prefixed_col = prefix + tag
-                        df[prefixed_col] = df[tag]
+                # 1. Sécurisation de l'index temporel
+                if not isinstance(df.index, pd.DatetimeIndex):
+                    df.index = pd.to_datetime(df.index)
+
+                # 2. Features de base (Jour, Heure, Minute)
+                df[f'{prefix}day'] = df.index.dayofweek
+                df[f'{prefix}hour'] = df.index.hour
+                df[f'{prefix}minute'] = df.index.minute
+
+                # 3. Encodage Cyclique (Sinus/Cosinus)
+                # Indispensable pour que le modèle comprenne que 23h est proche de 00h
+                import numpy as np # Assure-toi que numpy est importé en haut du fichier
                 
-            except Exception as e:
-                self.logger.warning(
-                    f"Prefixing logic failed for timeframe {self.timeframe}: {e}. "
-                    f"This may cause model feature mismatch errors."
-                )
-                # Don't fail the entire tick processing for this
-            # ----------------------------------------------------------------
-            
-            # Step 2: Compute features WITH PREFIX
-            # This must be done AFTER prefixing raw columns so that features like
-            # 1min_<TICKVOL>_zscore_100, 1min_adx, 1min_adi are generated correctly
-            try:
-                prefix = self._get_timeframe_prefix(self.timeframe)
+                # Cycle de 24h pour les heures
+                df[f'{prefix}hour_sin'] = np.sin(2 * np.pi * df.index.hour / 24)
+                df[f'{prefix}hour_cos'] = np.cos(2 * np.pi * df.index.hour / 24)
                 
+                # Cycle de 60min pour les minutes (Bonus sécurité, souvent utilisé avec l'heure)
+                df[f'{prefix}minute_sin'] = np.sin(2 * np.pi * df.index.minute / 60)
+                df[f'{prefix}minute_cos'] = np.cos(2 * np.pi * df.index.minute / 60)
+                
+                # ==============================================================================
+                # FIN DU PATCH
+                # ==============================================================================
+
                 # Call add_indicators with the proper prefix and column names
                 df = self.feature_eng.add_indicators(
                     df,
