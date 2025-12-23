@@ -140,6 +140,7 @@ class TradingConfig:
     model_path: Optional[str] = None
     symbol: str = "BTCUSD"
     timeframe: str = "M1"
+    meta_threshold: float = 0.6
     
     # Risk parameters
     max_drawdown: float = 0.05

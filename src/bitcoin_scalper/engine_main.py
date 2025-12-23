@@ -101,6 +101,7 @@ def run_live_mode(config: TradingConfig, logger: TradingLogger):
         position_sizer=config.position_sizer,
         drift_detection=config.drift_enabled,
         safe_mode_on_drift=config.safe_mode_on_drift,
+        meta_threshold=config.meta_threshold
     )
     
     # Load model
