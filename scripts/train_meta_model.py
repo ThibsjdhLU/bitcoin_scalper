@@ -79,9 +79,11 @@ def convert_to_float32(df: pd.DataFrame) -> pd.DataFrame:
     Returns:
         DataFrame with numeric columns converted to float32
     """
-    numeric_cols = df.select_dtypes(include=[np.float64, np.int64, np.int32]).columns
+    numeric_cols = df.select_dtypes(include=['number']).columns
     for col in numeric_cols:
-        df[col] = df[col].astype(np.float32)
+        # Only convert if not already float32 to avoid unnecessary operations
+        if df[col].dtype != np.float32:
+            df[col] = df[col].astype(np.float32)
     return df
 
 
@@ -285,8 +287,9 @@ def optimize_primary_params(X, y, n_trials=50):
         tscv = TimeSeriesSplit(n_splits=3)
         
         # Calculate cross-validated accuracy
+        # Use n_jobs=1 to avoid oversubscription when trials run in parallel
         try:
-            scores = cross_val_score(model, X_opt, y, cv=tscv, scoring='accuracy', n_jobs=-1)
+            scores = cross_val_score(model, X_opt, y, cv=tscv, scoring='accuracy', n_jobs=1)
             return scores.mean()
         except Exception as e:
             logger.warning(f"Trial failed: {e}")
@@ -349,8 +352,9 @@ def optimize_meta_params(X, y, n_trials=50):
         tscv = TimeSeriesSplit(n_splits=3)
         
         # Calculate cross-validated accuracy
+        # Use n_jobs=1 to avoid oversubscription when trials run in parallel
         try:
-            scores = cross_val_score(model, X_opt, y, cv=tscv, scoring='accuracy', n_jobs=-1)
+            scores = cross_val_score(model, X_opt, y, cv=tscv, scoring='accuracy', n_jobs=1)
             return scores.mean()
         except Exception as e:
             logger.warning(f"Trial failed: {e}")
