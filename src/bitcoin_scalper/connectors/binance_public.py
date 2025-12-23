@@ -40,7 +40,7 @@ class BinancePublicClient:
     
     This client uses CCXT's public endpoints to fetch historical OHLCV data
     without requiring API credentials. It handles pagination automatically
-    when the requested date range exceeds Binance's 1500-candle limit per request.
+    when the requested date range exceeds Binance's 5000-candle limit per request.
     
     Attributes:
         exchange: CCXT Binance exchange instance (public mode)
@@ -92,7 +92,7 @@ class BinancePublicClient:
         Fetch historical OHLCV data from Binance.
         
         This method automatically handles pagination when the date range exceeds
-        Binance's limit of 1500 candles per request. It will make multiple requests
+        Binance's limit of 5000 candles per request. It will make multiple requests
         to fetch all data in the specified range.
         
         **CRITICAL**: Returns a DataFrame with standardized lowercase column names:
@@ -118,8 +118,8 @@ class BinancePublicClient:
             >>> df = client.fetch_history("BTC/USDT", "1h", "2024-01-01", "2024-12-31")
             >>> print(f"Fetched {len(df)} candles")
             >>> 
-            >>> # Fetch last 1500 candles (no dates needed)
-            >>> df = client.fetch_history("BTC/USDT", "1m", limit=1500)
+            >>> # Fetch last 5000 candles (no dates needed)
+            >>> df = client.fetch_history("BTC/USDT", "1m", limit=5000)
         """
         try:
             logger.info(f"Fetching historical data for {symbol} ({timeframe})")
@@ -182,7 +182,7 @@ class BinancePublicClient:
             ohlcv = self.exchange.fetch_ohlcv(
                 symbol=symbol,
                 timeframe=timeframe,
-                limit=min(limit, 1500)  # Binance limit is 1500
+                limit=min(limit, 5000)  # Binance limit is 5000
             )
             
             if not ohlcv:
@@ -218,24 +218,24 @@ class BinancePublicClient:
         """
         all_data = []
         current_time = start_dt
-        end_timestamp = int(end_dt.timestamp() * 1500)
+        end_timestamp = int(end_dt.timestamp() * 5000)
         
         request_count = 0
-        max_requests = 1500  # Safety limit to prevent infinite loops
+        max_requests = 5000  # Safety limit to prevent infinite loops
         
         logger.info("Starting paginated fetch...")
         
         while current_time < end_dt and request_count < max_requests:
             try:
                 # Convert to timestamp (milliseconds)
-                since = int(current_time.timestamp() * 1500)
+                since = int(current_time.timestamp() * 5000)
                 
                 # Fetch batch
                 ohlcv = self.exchange.fetch_ohlcv(
                     symbol=symbol,
                     timeframe=timeframe,
                     since=since,
-                    limit=1500  # Binance max limit
+                    limit=5000  # Binance max limit
                 )
                 
                 if not ohlcv:
@@ -253,7 +253,7 @@ class BinancePublicClient:
                     break
                 
                 # Move to next batch (add 1ms to avoid fetching same candle)
-                current_time = datetime.fromtimestamp((last_timestamp + 1) / 1500)
+                current_time = datetime.fromtimestamp((last_timestamp + 1) / 5000)
                 
                 request_count += 1
                 
