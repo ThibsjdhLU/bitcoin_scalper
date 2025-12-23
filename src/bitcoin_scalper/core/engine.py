@@ -230,7 +230,8 @@ class TradingEngine:
     def load_ml_model(
     self,
     model_path: str,
-    features_list: Optional[List[str]] = None):
+    features_list: Optional[List[str]] = None,
+    meta_threshold: Optional[float] = None):
         """
         Load a trained ML model or MetaModel.
         
@@ -241,6 +242,7 @@ class TradingEngine:
         Args:
             model_path: Path to model file
             features_list: List of feature names (if None, will try to load from file)
+            meta_threshold: Meta-labeling threshold (if None, uses engine's threshold)
         """
         if self.mode != TradingMode.ML: 
             raise ValueError("Cannot load ML model in RL mode")
@@ -259,8 +261,20 @@ class TradingEngine:
                 if isinstance(loaded_model, MetaModel):
                     self.ml_model = loaded_model
                     self.ml_pipeline = None  # MetaModel handles its own pipeline
+                    
+                    # CRITICAL: Override meta_threshold from config (SINGLE SOURCE OF TRUTH)
+                    threshold_to_use = meta_threshold if meta_threshold is not None else self.meta_threshold
+                    original_threshold = loaded_model.meta_threshold
+                    
+                    if threshold_to_use != original_threshold:
+                        self.logger.warning(
+                            f"⚠️  Overriding MetaModel threshold: {original_threshold:.2f} → {threshold_to_use:.2f} "
+                            f"(from engine_config.yaml)"
+                        )
+                        loaded_model.meta_threshold = threshold_to_use
+                    
                     self.logger.info("✅ Loaded MetaModel successfully (meta-labeling enabled)")
-                    self.logger.info(f"   Meta threshold: {self.meta_threshold:.2f}")
+                    self.logger.info(f"   Meta threshold: {loaded_model.meta_threshold:.2f} (ACTIVE)")
                     
                     # Extract features list if available
                     if loaded_model.feature_names is not None:

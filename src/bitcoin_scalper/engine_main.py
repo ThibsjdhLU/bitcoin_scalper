@@ -107,7 +107,10 @@ def run_live_mode(config: TradingConfig, logger: TradingLogger):
     # Load model
     if config.model_path:
         if mode == TradingMode.ML:
-            success = engine.load_ml_model(config.model_path)
+            success = engine.load_ml_model(
+                config.model_path,
+                meta_threshold=config.meta_threshold
+            )
             if not success:
                 logger.error("Failed to load ML model. Exiting.")
                 return
@@ -283,12 +286,16 @@ def run_paper_mode(config: TradingConfig, logger: TradingLogger):
         position_sizer=config.position_sizer,
         drift_detection=config.drift_enabled,
         safe_mode_on_drift=config.safe_mode_on_drift,
+        meta_threshold=config.meta_threshold
     )
     
     # Load model
     if config.model_path:
         if mode == TradingMode.ML:
-            success = engine.load_ml_model(config.model_path)
+            success = engine.load_ml_model(
+                config.model_path,
+                meta_threshold=config.meta_threshold
+            )
             if not success:
                 logger.warning("Failed to load ML model. Running without model.")
         else:
