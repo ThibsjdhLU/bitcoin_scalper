@@ -1,33 +1,8 @@
 """
 Paper Trading Client - Simulated Trading for Testing and Development.
 
-This module implements a paper trading client that simulates order execution
-without connecting to a real broker. It maintains internal state for:
-- Account balance and equity
-- Open positions
-- Order history
-
-The paper client provides the same interface as MT5RestClient but executes
-orders instantly with simulated fills. This is essential for:
-- Testing trading strategies without risk
-- Developing and debugging the engine
-- Demonstrating the bot's behavior
-
-All paper trades are logged with clear markers to prevent confusion with real trades.
-
-Usage:
-    >>> from bitcoin_scalper.connectors.paper import PaperMT5Client
-    >>> 
-    >>> # Initialize with starting balance
-    >>> client = PaperMT5Client(initial_balance=10000.0)
-    >>> 
-    >>> # Execute paper order
-    >>> result = client.send_order("BTCUSD", action="buy", volume=0.1)
-    >>> print(f"Paper order executed: {result}")
-    >>> 
-    >>> # Check positions
-    >>> positions = client.get_positions()
-    >>> print(f"Open positions: {len(positions)}")
+FIXED VERSION: Implements Persistent Random Walk to avoid history rewriting.
+This ensures technical indicators remain stable between calls.
 """
 
 import time
@@ -37,10 +12,9 @@ import pandas as pd
 import numpy as np
 from typing import List, Dict, Any, Optional
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
-
 
 @dataclass
 class PaperPosition:
@@ -56,58 +30,21 @@ class PaperPosition:
     profit: float = 0.0
     
     def update_profit(self, current_price: float) -> float:
-        """
-        Update and return profit based on current price.
-        
-        Args:
-            current_price: Current market price
-            
-        Returns:
-            Profit in dollars
-        """
+        """Update and return profit based on current price."""
         if self.action == "buy":
             self.profit = (current_price - self.open_price) * self.volume
         else:  # sell
             self.profit = (self.open_price - current_price) * self.volume
         return self.profit
 
-
 class PaperMT5Client:
     """
-    Paper trading client that simulates MT5RestClient interface.
+    Paper trading client that simulates MT5RestClient interface with STABLE history.
     
-    This client maintains internal state and simulates instant order fills.
-    It provides the same API as MT5RestClient but does not connect to any
-    real broker or execute real trades.
-    
-    Key Features:
-    - Tracks balance and equity
-    - Manages simulated positions
-    - Instant order execution (simulated slippage optional)
-    - Order history logging
-    - Thread-safe operations
-    
-    Attributes:
-        initial_balance: Starting account balance
-        balance: Current account balance
-        equity: Current equity (balance + unrealized P&L)
-        positions: List of open positions
-        order_history: History of all executed orders
-        simulated_prices: Dict of symbol -> current price
-        
-    Example:
-        >>> client = PaperMT5Client(initial_balance=10000.0)
-        >>> 
-        >>> # Set current market price
-        >>> client.set_price("BTCUSD", 50000.0)
-        >>> 
-        >>> # Execute buy order
-        >>> result = client.send_order("BTCUSD", action="buy", volume=0.1)
-        >>> 
-        >>> # Check account info
-        >>> account = client._request("GET", "/account")
-        >>> print(f"Balance: ${account['balance']:.2f}")
-        >>> print(f"Equity: ${account['equity']:.2f}")
+    Changes in this version:
+    - Persistent History: Generates history once and appends to it (no regeneration).
+    - Realistic Walk: Uses Geometric Brownian Motion properties for more realistic volatility.
+    - Time Sync: Aligns candles with real system clock.
     """
     
     def __init__(
@@ -115,15 +52,8 @@ class PaperMT5Client:
         initial_balance: float = 10000.0,
         simulated_slippage: float = 0.0001,  # 0.01% slippage
         enable_slippage: bool = False,
+        initial_price: float = 50000.0
     ):
-        """
-        Initialize paper trading client.
-        
-        Args:
-            initial_balance: Starting balance in USD
-            simulated_slippage: Simulated slippage as fraction (e.g., 0.0001 = 0.01%)
-            enable_slippage: Whether to apply simulated slippage
-        """
         self.initial_balance = initial_balance
         self.balance = initial_balance
         self.equity = initial_balance
@@ -133,150 +63,155 @@ class PaperMT5Client:
         # State tracking
         self.positions: List[PaperPosition] = []
         self.order_history: List[Dict[str, Any]] = []
-        self._next_ticket = 1000  # Starting ticket number
+        self._next_ticket = 1000
         
-        # Current market prices (symbol -> price)
+        # --- Persistent Market Data Engine ---
+        self.current_symbol = "BTC/USDT" # Default tracking
+        self.history: List[Dict[str, Any]] = []
         self.simulated_prices: Dict[str, float] = {}
         
-        # Mock attributes to match MT5RestClient interface
+        # Init History (Pre-load 5000 candles to stabilize indicators)
+        logger.info("[PAPER] Generating 5000 minutes of stable history...")
+        self._init_history(initial_price, count=5000)
+        
+        # Mock attributes
         self.base_url = "paper://localhost"
         self.api_key = "paper_trading"
         self.timeout = 30.0
         self.max_retries = 3
         
-        logger.info(
-            f"[PAPER] PaperMT5Client initialized with balance: ${initial_balance:.2f}"
-        )
+        logger.info(f"[PAPER] Ready. Current simulated price: ${self._get_current_price(self.current_symbol):.2f}")
     
+    def _init_history(self, start_price: float, count: int):
+        """Generates a stable baseline history ending 'now'."""
+        now = int(time.time())
+        # Snap to nearest minute
+        now = now - (now % 60)
+        
+        timestamps = [now - (i * 60) for i in range(count)]
+        timestamps.reverse() # Oldest first
+        
+        price = start_price
+        for ts in timestamps:
+            candle, price = self._generate_next_candle(ts, price)
+            self.history.append(candle)
+            
+        # Set current price
+        self.simulated_prices[self.current_symbol] = self.history[-1]['close']
+
+    def _generate_next_candle(self, timestamp: int, open_price: float) -> tuple:
+        """Generates a single realistic candle from an open price."""
+        # Volatility parameters (tuned for BTC-like moves)
+        volatility_min = 0.0005  # 0.05% per minute
+        trend = random.uniform(-0.0001, 0.0001) # Slight drift
+        
+        change_pct = np.random.normal(trend, volatility_min)
+        close_price = open_price * (1 + change_pct)
+        
+        # High/Low generation
+        move = abs(close_price - open_price)
+        noise_h = abs(np.random.normal(0, volatility_min/2)) * open_price
+        noise_l = abs(np.random.normal(0, volatility_min/2)) * open_price
+        
+        high_price = max(open_price, close_price) + noise_h
+        low_price = min(open_price, close_price) - noise_l
+        
+        candle = {
+            'timestamp': timestamp,
+            'open': open_price,
+            'high': high_price,
+            'low': low_price,
+            'close': close_price,
+            'volume': random.uniform(50, 500), # Random volume
+            'symbol': self.current_symbol
+        }
+        return candle, close_price
+
+    def _update_market(self):
+        """Checks time and appends new candles if a minute has passed."""
+        if not self.history:
+            return
+
+        last_ts = self.history[-1]['timestamp']
+        now = int(time.time())
+        # Snap to minute
+        # We allow a new candle only if the minute is fully completed or we simulate live
+        # Here we simulate 'closed' candles logic, so we wait for minute change
+        current_minute_ts = now - (now % 60)
+        
+        while last_ts + 60 <= current_minute_ts:
+            next_ts = last_ts + 60
+            last_close = self.history[-1]['close']
+            new_candle, new_close = self._generate_next_candle(next_ts, last_close)
+            
+            self.history.append(new_candle)
+            self.simulated_prices[self.current_symbol] = new_close
+            last_ts = next_ts
+            
+            # Keep memory clean (keep last 10k candles)
+            if len(self.history) > 10000:
+                self.history.pop(0)
+
     def set_price(self, symbol: str, price: float) -> None:
-        """
-        Set current market price for a symbol.
-        
-        This is used to simulate market data updates.
-        
-        Args:
-            symbol: Trading symbol
-            price: Current market price
-        """
+        """Force set price (used by external tools, rarely needed now)."""
         self.simulated_prices[symbol] = price
-        
-        # Update positions profit
+        self._update_positions_pnl(symbol, price)
+        self._update_equity()
+    
+    def _update_positions_pnl(self, symbol: str, price: float):
         for pos in self.positions:
             if pos.symbol == symbol:
                 pos.update_profit(price)
-        
-        # Update equity
-        self._update_equity()
-    
+
     def _update_equity(self) -> None:
-        """Update equity based on current positions P&L."""
         unrealized_pnl = sum(pos.profit for pos in self.positions)
         self.equity = self.balance + unrealized_pnl
     
     def _get_current_price(self, symbol: str) -> float:
-        """
-        Get current market price for symbol.
-        
-        Args:
-            symbol: Trading symbol
-            
-        Returns:
-            Current price
-            
-        Raises:
-            ValueError: If price not set for symbol
-        """
-        if symbol not in self.simulated_prices:
-            # For testing, generate a default price if not set
-            logger.warning(
-                f"[PAPER] No price set for {symbol}, using default 50000.0"
-            )
-            self.simulated_prices[symbol] = 50000.0
-        
-        return self.simulated_prices[symbol]
+        self._update_market() # Ensure we are up to date
+        return self.simulated_prices.get(symbol, 50000.0)
     
     def _apply_slippage(self, price: float, action: str) -> float:
-        """
-        Apply simulated slippage to price.
-        
-        Args:
-            price: Base price
-            action: "buy" or "sell"
-            
-        Returns:
-            Price with slippage applied
-        """
-        if not self.enable_slippage:
-            return price
-        
-        # Buy: pay slightly more, Sell: receive slightly less
-        if action == "buy":
-            return price * (1 + self.simulated_slippage)
-        else:  # sell
-            return price * (1 - self.simulated_slippage)
-    
+        if not self.enable_slippage: return price
+        if action == "buy": return price * (1 + self.simulated_slippage)
+        else: return price * (1 - self.simulated_slippage)
+
+    # --- API Interface (MT5 Compatible) ---
+
     def _request(self, method: str, endpoint: str, **kwargs) -> Any:
-        """
-        Simulate REST API request interface.
+        self._update_market() # Tick the clock
         
-        This method provides compatibility with MT5RestClient API.
-        
-        Args:
-            method: HTTP method (GET, POST, etc.)
-            endpoint: API endpoint
-            **kwargs: Additional parameters
-            
-        Returns:
-            Response data
-        """
-        # Account info endpoint
         if endpoint == "/account":
             return {
                 'balance': self.balance,
                 'equity': self.equity,
-                'margin': 0.0,  # Paper trading has no margin requirements
+                'margin': 0.0,
                 'free_margin': self.equity,
                 'margin_level': 0.0 if len(self.positions) == 0 else float('inf'),
                 'paper_mode': True,
             }
-        
-        # Status endpoint
         elif endpoint == "/status":
             return {
-                'status': 'ok',
-                'mode': 'paper',
-                'connected': True,
-                'positions': len(self.positions),
-                'balance': self.balance,
+                'status': 'ok', 'mode': 'paper', 'connected': True,
+                'positions': len(self.positions), 'balance': self.balance
             }
-        
-        # Positions endpoint
         elif endpoint == "/positions":
             return self._format_positions()
-        
-        # Order endpoint
         elif endpoint == "/order" and method == "POST":
-            json_data = kwargs.get('json', {})
-            return self._execute_paper_order(json_data)
+            return self._execute_paper_order(kwargs.get('json', {}))
         
-        # Default response
         return {'status': 'ok', 'paper_mode': True}
     
     def _format_positions(self) -> List[Dict[str, Any]]:
-        """
-        Format positions for API response.
-        
-        Returns:
-            List of position dictionaries
-        """
+        current_price = self._get_current_price(self.current_symbol)
         return [
             {
                 'ticket': pos.ticket,
                 'symbol': pos.symbol,
-                'type': 0 if pos.action == "buy" else 1,  # 0=buy, 1=sell
+                'type': 0 if pos.action == "buy" else 1,
                 'volume': pos.volume,
                 'price_open': pos.open_price,
-                'price_current': self.simulated_prices.get(pos.symbol, pos.open_price),
+                'price_current': current_price,
                 'profit': pos.profit,
                 'sl': pos.sl,
                 'tp': pos.tp,
@@ -286,149 +221,56 @@ class PaperMT5Client:
         ]
     
     def _execute_paper_order(self, order_data: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Execute a paper order (internal method).
-        
-        Args:
-            order_data: Order parameters
-            
-        Returns:
-            Order result dictionary
-        """
-        symbol = order_data.get('symbol')
+        symbol = order_data.get('symbol', self.current_symbol)
         action = order_data.get('action')
-        volume = order_data.get('volume', 0.01)
+        volume = float(order_data.get('volume', 0.01))
         sl = order_data.get('sl')
         tp = order_data.get('tp')
         
-        # Get current price
         current_price = self._get_current_price(symbol)
-        
-        # Apply slippage
         fill_price = self._apply_slippage(current_price, action)
         
-        # Create position
         ticket = self._next_ticket
         self._next_ticket += 1
         
         position = PaperPosition(
-            ticket=ticket,
-            symbol=symbol,
-            action=action,
-            volume=volume,
-            open_price=fill_price,
-            open_time=time.time(),
-            sl=sl,
-            tp=tp,
+            ticket=ticket, symbol=symbol, action=action, volume=volume,
+            open_price=fill_price, open_time=time.time(), sl=sl, tp=tp,
         )
         
         self.positions.append(position)
         
-        # Record in history
-        order_record = {
-            'ticket': ticket,
-            'symbol': symbol,
-            'action': action,
-            'volume': volume,
-            'price': fill_price,
-            'sl': sl,
-            'tp': tp,
-            'time': time.time(),
-            'status': 'filled',
-        }
-        self.order_history.append(order_record)
+        self.order_history.append({
+            'ticket': ticket, 'symbol': symbol, 'action': action,
+            'volume': volume, 'price': fill_price, 'sl': sl, 'tp': tp,
+            'time': time.time(), 'status': 'filled',
+        })
         
-        logger.info(
-            f"[PAPER] Order Executed: {action.upper()} {volume} {symbol} @ ${fill_price:.2f}"
-        )
-        
+        logger.info(f"[PAPER] Order Executed: {action.upper()} {volume} {symbol} @ ${fill_price:.2f}")
         return {
-            'status': 'success',
-            'ticket': ticket,
-            'symbol': symbol,
-            'action': action,
-            'volume': volume,
-            'price': fill_price,
-            'sl': sl,
-            'tp': tp,
-            'paper_mode': True,
+            'status': 'success', 'ticket': ticket, 'symbol': symbol,
+            'action': action, 'volume': volume, 'price': fill_price,
+            'sl': sl, 'tp': tp, 'paper_mode': True,
         }
     
-    def send_order(
-        self,
-        symbol: str,
-        action: str,
-        volume: float,
-        price: Optional[float] = None,
-        order_type: str = "market",
-        **kwargs
-    ) -> Dict[str, Any]:
-        """
-        Send a paper order (simulated execution).
-        
-        This method matches the MT5RestClient.send_order interface.
-        
-        Args:
-            symbol: Trading symbol
-            action: "buy" or "sell"
-            volume: Position size
-            price: Limit price (ignored for market orders)
-            order_type: Order type (only "market" supported)
-            **kwargs: Additional parameters (sl, tp, etc.)
-            
-        Returns:
-            Order execution result
-        """
-        order_data = {
-            'symbol': symbol,
-            'action': action,
-            'volume': volume,
-            'order_type': order_type,
-            **kwargs
-        }
-        
-        return self._execute_paper_order(order_data)
+    def send_order(self, symbol: str, action: str, volume: float, price: Optional[float] = None, order_type: str = "market", **kwargs) -> Dict[str, Any]:
+        return self._execute_paper_order({
+            'symbol': symbol, 'action': action, 'volume': volume, 'order_type': order_type, **kwargs
+        })
     
     def get_positions(self) -> List[Dict[str, Any]]:
-        """
-        Get all open positions.
-        
-        Returns:
-            List of position dictionaries
-        """
         return self._format_positions()
     
     def get_status(self) -> Dict[str, Any]:
-        """
-        Get paper trading status.
-        
-        Returns:
-            Status dictionary
-        """
         return self._request("GET", "/status")
     
     def get_ticks(self, symbol: str, limit: int = 100) -> List[Dict[str, Any]]:
-        """
-        Get simulated tick data.
-        
-        Args:
-            symbol: Trading symbol
-            limit: Number of ticks to return
-            
-        Returns:
-            List of tick dictionaries
-        """
-        # Generate simulated ticks around current price
+        # Generate micro-ticks around current candle close
         current_price = self._get_current_price(symbol)
-        
         ticks = []
         timestamp = time.time()
-        
         for i in range(limit):
-            # Small random walk
-            price_change = random.uniform(-0.001, 0.001) * current_price
-            tick_price = current_price + price_change
-            
+            tick_price = current_price + np.random.normal(0, current_price * 0.0001)
             ticks.append({
                 'timestamp': timestamp - (limit - i),
                 'bid': tick_price * 0.9999,
@@ -437,151 +279,49 @@ class PaperMT5Client:
                 'volume': random.uniform(0.1, 1.0),
                 'symbol': symbol,
             })
-        
         return ticks
     
-    def get_ohlcv(
-        self,
-        symbol: str,
-        timeframe: str = "M1",
-        limit: int = 1000
-    ) -> List[Dict[str, Any]]:
-        """
-        Get simulated OHLCV data.
+    def get_ohlcv(self, symbol: str, timeframe: str = "M1", limit: int = 1000) -> List[Dict[str, Any]]:
+        """Return the stable history slice."""
+        self._update_market() # Sync with time
         
-        Args:
-            symbol: Trading symbol
-            timeframe: Timeframe (e.g., "M1", "M5")
-            limit: Number of candles to return
-            
-        Returns:
-            List of OHLCV dictionaries
-        """
-        # Get base price
-        current_price = self._get_current_price(symbol)
-        
-        # Generate realistic price walk
-        dates = pd.date_range(end=pd.Timestamp.now(), periods=limit, freq='1min')
-        
-        candles = []
-        price = current_price
-        
-        for ts in dates:
-            # Random walk with small changes
-            price_change = np.random.normal(0, current_price * 0.001)
-            open_price = price
-            high_price = open_price + abs(np.random.normal(0, current_price * 0.0005))
-            low_price = open_price - abs(np.random.normal(0, current_price * 0.0005))
-            close_price = open_price + price_change
-            
-            candles.append({
-                'timestamp': int(ts.timestamp()),
-                'open': open_price,
-                'high': high_price,
-                'low': low_price,
-                'close': close_price,
-                'volume': random.uniform(50, 200),
-                'symbol': symbol,
-            })
-            
-            price = close_price
-        
-        # Update current price to last close
-        self.set_price(symbol, candles[-1]['close'])
-        
-        return candles
+        # If we asked for more than we have, we might return less (or should we backfill more?)
+        # For now, return what we have.
+        if limit > len(self.history):
+            return self.history
+        return self.history[-limit:]
     
     def close_position(self, ticket: int) -> Dict[str, Any]:
-        """
-        Close a position.
-        
-        Args:
-            ticket: Position ticket number
-            
-        Returns:
-            Result dictionary
-        """
-        # Find position
-        position = None
-        for pos in self.positions:
-            if pos.ticket == ticket:
-                position = pos
-                break
-        
+        position = next((p for p in self.positions if p.ticket == ticket), None)
         if not position:
-            return {
-                'status': 'error',
-                'error': f'Position {ticket} not found',
-            }
+            return {'status': 'error', 'error': f'Position {ticket} not found'}
         
-        # Calculate final profit
         current_price = self._get_current_price(position.symbol)
         position.update_profit(current_price)
         
-        # Update balance
         self.balance += position.profit
-        
-        # Remove position
         self.positions.remove(position)
-        
-        # Update equity
         self._update_equity()
         
-        logger.info(
-            f"[PAPER] Position Closed: {position.action.upper()} {position.volume} "
-            f"{position.symbol} @ ${current_price:.2f}, P&L: ${position.profit:.2f}"
-        )
-        
-        return {
-            'status': 'success',
-            'ticket': ticket,
-            'profit': position.profit,
-            'close_price': current_price,
-            'paper_mode': True,
-        }
+        logger.info(f"[PAPER] Position Closed: {position.action.upper()} {position.volume} {position.symbol} @ ${current_price:.2f}, P&L: ${position.profit:.2f}")
+        return {'status': 'success', 'ticket': ticket, 'profit': position.profit, 'close_price': current_price, 'paper_mode': True}
     
     def close_all_positions(self) -> Dict[str, Any]:
-        """
-        Close all open positions.
-        
-        Returns:
-            Result dictionary with summary
-        """
         closed_tickets = []
         total_profit = 0.0
-        
-        # Close positions one by one (iterate over copy)
         for position in list(self.positions):
             result = self.close_position(position.ticket)
             if result['status'] == 'success':
                 closed_tickets.append(position.ticket)
                 total_profit += result['profit']
         
-        logger.info(
-            f"[PAPER] Closed {len(closed_tickets)} positions, "
-            f"Total P&L: ${total_profit:.2f}"
-        )
-        
-        return {
-            'status': 'success',
-            'closed_count': len(closed_tickets),
-            'tickets': closed_tickets,
-            'total_profit': total_profit,
-            'paper_mode': True,
-        }
-    
+        logger.info(f"[PAPER] Closed {len(closed_tickets)} positions, Total P&L: ${total_profit:.2f}")
+        return {'status': 'success', 'closed_count': len(closed_tickets), 'tickets': closed_tickets, 'total_profit': total_profit, 'paper_mode': True}
+
     def reset(self) -> None:
-        """
-        Reset paper trading account to initial state.
-        
-        This closes all positions and resets balance to initial value.
-        """
         self.positions.clear()
         self.order_history.clear()
         self.balance = self.initial_balance
         self.equity = self.initial_balance
         self._next_ticket = 1000
-        
-        logger.info(
-            f"[PAPER] Account reset to initial balance: ${self.initial_balance:.2f}"
-        )
+        logger.info(f"[PAPER] Account reset to initial balance: ${self.initial_balance:.2f}")
