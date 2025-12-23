@@ -61,10 +61,28 @@ def parse_args():
                        help='Prediction horizon for label generation')
     parser.add_argument('--label_k', type=float, default=0.5, 
                        help='Standard deviation multiplier for label thresholds')
+    parser.add_argument('--n_trials', type=int, default=50,
+                       help='Number of Optuna trials for hyperparameter optimization')
     parser.add_argument('--output', type=str,
                        default=str(project_root / 'models/meta_model_production.pkl'),
                        help='Output path for trained model')
     return parser.parse_args()
+
+
+def convert_to_float32(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Convert all numeric columns to float32 to reduce memory usage.
+    
+    Args:
+        df: DataFrame with numeric columns
+        
+    Returns:
+        DataFrame with numeric columns converted to float32
+    """
+    numeric_cols = df.select_dtypes(include=[np.float64, np.int64, np.int32]).columns
+    for col in numeric_cols:
+        df[col] = df[col].astype(np.float32)
+    return df
 
 
 def load_and_prepare_data(csv_path: str):
@@ -76,9 +94,7 @@ def load_and_prepare_data(csv_path: str):
     df = load_minute_csv(csv_path, fill_method='ffill')
     
     # Convert all numeric columns to float32 to reduce RAM usage
-    numeric_cols = df.select_dtypes(include=[np.float64, np.int64, np.int32]).columns
-    for col in numeric_cols:
-        df[col] = df[col].astype(np.float32)
+    df = convert_to_float32(df)
     
     logger.info(f"✅ Loaded {len(df)} rows (converted to float32)")
     return df
@@ -96,9 +112,7 @@ def generate_features(df: pd.DataFrame):
     df = df.dropna()
     
     # Convert all numeric columns to float32 to reduce RAM usage
-    numeric_cols = df.select_dtypes(include=[np.float64, np.int64, np.int32]).columns
-    for col in numeric_cols:
-        df[col] = df[col].astype(np.float32)
+    df = convert_to_float32(df)
     
     logger.info(f"✅ Generated features (dropped {initial_len - len(df)} NaN rows, converted to float32)")
     return df
@@ -212,14 +226,14 @@ def generate_meta_labels_cv(X, y_true, primary_params, cv_folds=3):
     return y_meta
 
 
-def optimize_primary_params(X, y):
+def optimize_primary_params(X, y, n_trials=50):
     """
     Optimize CatBoost hyperparameters for the primary model using Optuna.
-    Runs 50 trials to maximize Accuracy.
     
     Args:
         X: Feature matrix (DataFrame or ndarray)
         y: Target labels (Series or ndarray)
+        n_trials: Number of optimization trials to run
     
     Returns:
         dict: Best hyperparameters found
@@ -231,9 +245,7 @@ def optimize_primary_params(X, y):
     # Convert to float32 if needed
     if isinstance(X, pd.DataFrame):
         X_opt = X.copy()
-        numeric_cols = X_opt.select_dtypes(include=[np.float64, np.int64, np.int32]).columns
-        for col in numeric_cols:
-            X_opt[col] = X_opt[col].astype(np.float32)
+        X_opt = convert_to_float32(X_opt)
     else:
         X_opt = X.astype(np.float32)
     
@@ -272,8 +284,8 @@ def optimize_primary_params(X, y):
         sampler=optuna.samplers.TPESampler(seed=42)
     )
     
-    logger.info("Starting 50 trials for primary model optimization...")
-    study.optimize(objective, n_trials=50, show_progress_bar=False, n_jobs=1)
+    logger.info(f"Starting {n_trials} trials for primary model optimization...")
+    study.optimize(objective, n_trials=n_trials, show_progress_bar=False, n_jobs=1)
     
     best_params = study.best_params
     logger.info(f"✅ Best Accuracy: {study.best_value:.4f}")
@@ -282,13 +294,14 @@ def optimize_primary_params(X, y):
     return best_params
 
 
-def optimize_meta_params(X, y):
+def optimize_meta_params(X, y, n_trials=50):
     """
     Optimize CatBoost hyperparameters for the meta model using Optuna.
     
     Args:
         X: Feature matrix (DataFrame or ndarray)
         y: Target labels (Series or ndarray)
+        n_trials: Number of optimization trials to run
     
     Returns:
         dict: Best hyperparameters found
@@ -300,9 +313,7 @@ def optimize_meta_params(X, y):
     # Convert to float32 if needed
     if isinstance(X, pd.DataFrame):
         X_opt = X.copy()
-        numeric_cols = X_opt.select_dtypes(include=[np.float64, np.int64, np.int32]).columns
-        for col in numeric_cols:
-            X_opt[col] = X_opt[col].astype(np.float32)
+        X_opt = convert_to_float32(X_opt)
     else:
         X_opt = X.astype(np.float32)
     
@@ -341,8 +352,8 @@ def optimize_meta_params(X, y):
         sampler=optuna.samplers.TPESampler(seed=43)
     )
     
-    logger.info("Starting optimization for meta model...")
-    study.optimize(objective, n_trials=50, show_progress_bar=False, n_jobs=1)
+    logger.info(f"Starting {n_trials} trials for meta model optimization...")
+    study.optimize(objective, n_trials=n_trials, show_progress_bar=False, n_jobs=1)
     
     best_params = study.best_params
     logger.info(f"✅ Best Accuracy: {study.best_value:.4f}")
@@ -395,10 +406,14 @@ def evaluate_model(meta_model, X_test, y_dir_test):
     if mask_final.sum() > 0:
         final_acc = accuracy_score(y_true[mask_final], final[mask_final])
         # Filter rate = (Trades Removed / Original Trades)
-        filter_rate = (1 - mask_final.sum() / max(mask_raw.sum(), 1)) * 100
+        # Only calculate if there were raw trades
+        if mask_raw.sum() > 0:
+            filter_rate = (1 - mask_final.sum() / mask_raw.sum()) * 100
+        else:
+            filter_rate = 0.0
     else:
         final_acc = 0.0
-        filter_rate = 100.0
+        filter_rate = 100.0 if mask_raw.sum() > 0 else 0.0
         
     logger.info(f"Primary Accuracy (Raw):    {raw_acc:.4f}")
     logger.info(f"Final Accuracy (Filtered): {final_acc:.4f}")
@@ -429,9 +444,7 @@ def main():
     X = df[[c for c in df.columns if c not in exclude]]
     
     # Convert to float32 for all numeric columns
-    numeric_cols = X.select_dtypes(include=[np.float64, np.int64, np.int32]).columns
-    for col in numeric_cols:
-        X[col] = X[col].astype(np.float32)
+    X = convert_to_float32(X)
     
     split_idx = int(len(X) * (1 - args.test_size))
     X_train, X_test = X.iloc[:split_idx], X.iloc[split_idx:]
@@ -444,7 +457,7 @@ def main():
     logger.info("🔧 STEP 4.5: HYPERPARAMETER OPTIMIZATION")
     logger.info("=" * 70)
     
-    best_primary_params = optimize_primary_params(X_train, y_dir_train)
+    best_primary_params = optimize_primary_params(X_train, y_dir_train, args.n_trials)
     
     # Build full primary params dict
     primary_params = {
@@ -459,40 +472,8 @@ def main():
     # This ensures y_meta_train contains mistakes!
     y_meta_train = generate_meta_labels_cv(X_train, y_dir_train, primary_params)
     
-    # 6. Optimize Meta Model Parameters
-    # For meta optimization, we need augmented features (original + primary probabilities)
-    # We'll train a temporary primary model first
-    logger.info("\nTraining temporary primary model for meta optimization...")
-    temp_primary = CatBoostClassifier(
-        **primary_params,
-        loss_function='MultiClass',
-        verbose=False,
-        random_state=42,
-        task_type='CPU',
-        allow_writing_files=False
-    )
-    temp_primary.fit(X_train, y_dir_train)
-    
-    # Generate augmented features for meta training
-    primary_proba_train = temp_primary.predict_proba(X_train)
-    
-    if isinstance(X_train, pd.DataFrame):
-        proba_cols = [f'primary_proba_{i}' for i in range(primary_proba_train.shape[1])]
-        proba_df = pd.DataFrame(
-            primary_proba_train,
-            index=X_train.index,
-            columns=proba_cols
-        )
-        X_meta_train = pd.concat([X_train, proba_df], axis=1)
-    else:
-        X_meta_train = np.hstack([X_train, primary_proba_train])
-    
-    # Optimize meta parameters
-    best_meta_params = optimize_meta_params(X_meta_train, y_meta_train)
-    
-    # 7. Train Final MetaModel with optimized parameters
-    logger.info("\n🤖 STEP 5: FINAL TRAINING WITH OPTIMIZED PARAMETERS")
-    
+    # 6. Train primary model (will be reused for meta optimization)
+    logger.info("\nTraining primary model with optimized parameters...")
     primary_model = CatBoostClassifier(
         iterations=best_primary_params['iterations'],
         depth=best_primary_params['depth'],
@@ -505,6 +486,27 @@ def main():
         task_type='CPU',
         allow_writing_files=False
     )
+    primary_model.fit(X_train, y_dir_train)
+    
+    # 7. Generate augmented features for meta optimization
+    primary_proba_train = primary_model.predict_proba(X_train)
+    
+    if isinstance(X_train, pd.DataFrame):
+        proba_cols = [f'primary_proba_{i}' for i in range(primary_proba_train.shape[1])]
+        proba_df = pd.DataFrame(
+            primary_proba_train,
+            index=X_train.index,
+            columns=proba_cols
+        )
+        X_meta_train = pd.concat([X_train, proba_df], axis=1)
+    else:
+        X_meta_train = np.hstack([X_train, primary_proba_train])
+    
+    # 8. Optimize meta parameters
+    best_meta_params = optimize_meta_params(X_meta_train, y_meta_train, args.n_trials)
+    
+    # 9. Create final MetaModel with optimized parameters
+    logger.info("\n🤖 STEP 5: CREATING FINAL METAMODEL")
     
     meta_model_classifier = CatBoostClassifier(
         iterations=best_meta_params['iterations'],
@@ -521,14 +523,14 @@ def main():
     
     meta_model = MetaModel(primary_model, meta_model_classifier, args.threshold)
     
-    # Train the CLASS wrapper
+    # Train the MetaModel wrapper (will train only the meta classifier since primary is already fitted)
     # Note: We pass y_meta_train as y_success. The MetaModel class will train the secondary model on this.
     meta_model.train(X_train, y_dir_train, y_meta_train)
     
-    # 8. Evaluate
+    # 10. Evaluate
     raw_acc, final_acc, filter_rate = evaluate_model(meta_model, X_test, y_dir_test)
 
-    # 9. Save
+    # 11. Save
     save_model(meta_model, args.output, best_primary_params, best_meta_params)
 
 
