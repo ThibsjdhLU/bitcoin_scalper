@@ -19,7 +19,7 @@ sys.path.insert(0, str(src_path))
 import numpy as np
 import pandas as pd
 from sklearn.metrics import accuracy_score
-from sklearn.model_selection import cross_val_predict, TimeSeriesSplit, cross_val_score
+from sklearn.model_selection import cross_val_predict, TimeSeriesSplit, cross_val_score, train_test_split
 import joblib
 import optuna
 
@@ -321,7 +321,7 @@ def optimize_meta_params(X, y, n_trials=50):
         n_trials: Number of optimization trials to run
     
     Returns:
-        dict: Best hyperparameters found
+        dict: Best hyperparameters found (or default params if optimization fails)
     """
     logger.info("\n" + "=" * 70)
     logger.info("🔍 OPTIMIZING META MODEL HYPERPARAMETERS")
@@ -348,14 +348,23 @@ def optimize_meta_params(X, y, n_trials=50):
         # Create model
         model = CatBoostClassifier(**params)
         
-        # Use TimeSeriesSplit for cross-validation
-        tscv = TimeSeriesSplit(n_splits=3)
+        # Use train_test_split with shuffle=False (time-series respecting split)
+        X_train, X_val, y_train, y_val = train_test_split(
+            X_opt, y, test_size=0.2, shuffle=False
+        )
         
-        # Calculate cross-validated accuracy
-        # Use n_jobs=1 to avoid oversubscription when trials run in parallel
+        # Safety check: ensure we have at least 2 classes in training set
+        unique_classes = len(np.unique(y_train))
+        if unique_classes < 2:
+            logger.warning(f"Trial skipped: only {unique_classes} class(es) in training set")
+            return 0.0
+        
+        # Train and evaluate
         try:
-            scores = cross_val_score(model, X_opt, y, cv=tscv, scoring='accuracy', n_jobs=1)
-            return scores.mean()
+            model.fit(X_train, y_train)
+            y_pred = model.predict(X_val)
+            score = accuracy_score(y_val, y_pred)
+            return score
         except Exception as e:
             logger.warning(f"Trial failed: {e}")
             return 0.0
@@ -367,13 +376,27 @@ def optimize_meta_params(X, y, n_trials=50):
     )
     
     logger.info(f"Starting {n_trials} trials for meta model optimization...")
-    study.optimize(objective, n_trials=n_trials, show_progress_bar=False, n_jobs=-1)
+    # Use n_jobs=1 to avoid memory conflicts and interleaved logs
+    study.optimize(objective, n_trials=n_trials, show_progress_bar=False, n_jobs=1)
     
-    best_params = study.best_params
-    logger.info(f"✅ Best Accuracy: {study.best_value:.4f}")
-    logger.info(f"✅ Best Parameters: {best_params}")
-    
-    return best_params
+    # Safely retrieve best params with fallback to defaults
+    try:
+        best_params = study.best_params
+        logger.info(f"✅ Best Accuracy: {study.best_value:.4f}")
+        logger.info(f"✅ Best Parameters: {best_params}")
+        return best_params
+    except ValueError as e:
+        # No successful trials - return default CatBoost parameters
+        logger.warning(f"⚠️  Meta optimization failed ({e}), using default parameters")
+        default_params = {
+            'iterations': 200,
+            'depth': 6,
+            'learning_rate': 0.05,
+            'l2_leaf_reg': 3.0,
+            'border_count': 128
+        }
+        logger.info(f"📦 Using default parameters: {default_params}")
+        return default_params
 
 
 def evaluate_model(meta_model, X_test, y_dir_test):
@@ -516,11 +539,27 @@ def main():
     else:
         X_meta_train = np.hstack([X_train, primary_proba_train])
     
-    # 8. Optimize meta parameters
-    best_meta_params = optimize_meta_params(X_meta_train, y_meta_train, args.n_trials)
+    # 8. Optimize meta parameters (with robust error handling)
+    logger.info("\n" + "=" * 70)
+    logger.info("🔧 STEP 8: META MODEL OPTIMIZATION")
+    logger.info("=" * 70)
+    
+    try:
+        best_meta_params = optimize_meta_params(X_meta_train, y_meta_train, args.n_trials)
+        logger.info("✅ Meta optimization completed successfully")
+    except Exception as e:
+        logger.error(f"❌ Meta optimization failed with error: {e}")
+        logger.info("📦 Using default meta parameters to ensure pipeline completion")
+        best_meta_params = {
+            'iterations': 200,
+            'depth': 6,
+            'learning_rate': 0.05,
+            'l2_leaf_reg': 3.0,
+            'border_count': 128
+        }
     
     # 9. Create final MetaModel with optimized parameters
-    logger.info("\n🤖 STEP 5: CREATING FINAL METAMODEL")
+    logger.info("\n🤖 STEP 9: CREATING FINAL METAMODEL")
     
     meta_model_classifier = CatBoostClassifier(
         iterations=best_meta_params['iterations'],
@@ -542,20 +581,25 @@ def main():
     meta_model.train(X_train, y_dir_train, y_meta_train)
     
     # 10. Evaluate
+    logger.info("\n" + "=" * 70)
+    logger.info("📊 STEP 10: EVALUATION")
+    logger.info("=" * 70)
     raw_acc, final_acc, filter_rate = evaluate_model(meta_model, X_test, y_dir_test)
 
     # 11. Save
+    logger.info("\n" + "=" * 70)
+    logger.info("💾 STEP 11: MODEL SAVING")
+    logger.info("=" * 70)
     save_model(meta_model, args.output, best_primary_params, best_meta_params)
 
 
 def save_model(model, path, primary_params, meta_params):
-    logger.info("\n💾 STEP 7: SAVING")
     p = Path(path)
     p.parent.mkdir(parents=True, exist_ok=True)
     
     # Save the model
     joblib.dump(model, p)
-    logger.info(f"Saved model to {p}")
+    logger.info(f"✅ Saved model to {p}")
     
     # Save hyperparameters as JSON
     params_path = p.parent / f"{p.stem}_params.json"
@@ -566,7 +610,10 @@ def save_model(model, path, primary_params, meta_params):
     }
     with open(params_path, 'w') as f:
         json.dump(params_data, f, indent=2)
-    logger.info(f"Saved hyperparameters to {params_path}")
+    logger.info(f"✅ Saved hyperparameters to {params_path}")
+    logger.info("\n" + "=" * 70)
+    logger.info("🎉 PIPELINE COMPLETED SUCCESSFULLY!")
+    logger.info("=" * 70)
 
 if __name__ == '__main__':
     main()
