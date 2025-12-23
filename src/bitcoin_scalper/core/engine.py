@@ -398,16 +398,6 @@ class TradingEngine:
                 df = df.rename(columns=rename_map)
             # -----------------------------------------------------------------------
             
-            # Step 2: Compute features
-            try:
-                df = self.feature_eng.add_indicators(df)
-                df = self.feature_eng.add_features(df)
-            except Exception as e:
-                self.logger.error(f"Feature engineering failed: {e}")
-                result['error'] = f'Feature engineering error: {e}'
-                result['reason'] = 'Cannot compute features'
-                return result
-            
             # --- PREFIXING LOGIC: Add timeframe prefix to raw columns ---
             # The model was trained on features like "1min_<CLOSE>", "1min_<TICKVOL>", etc.
             # We need to create these prefixed columns from the existing raw columns.
@@ -433,6 +423,36 @@ class TradingEngine:
                 )
                 # Don't fail the entire tick processing for this
             # ----------------------------------------------------------------
+            
+            # Step 2: Compute features WITH PREFIX
+            # This must be done AFTER prefixing raw columns so that features like
+            # 1min_<TICKVOL>_zscore_100, 1min_adx, 1min_adi are generated correctly
+            try:
+                prefix = self._get_timeframe_prefix(self.timeframe)
+                
+                # Call add_indicators with the proper prefix and column names
+                df = self.feature_eng.add_indicators(
+                    df,
+                    price_col='<CLOSE>',
+                    high_col='<HIGH>',
+                    low_col='<LOW>',
+                    volume_col='<TICKVOL>',
+                    prefix=prefix
+                )
+                
+                # Call add_features with the proper prefix
+                df = self.feature_eng.add_features(
+                    df,
+                    price_col='<CLOSE>',
+                    volume_col='<TICKVOL>',
+                    prefix=prefix
+                )
+                
+            except Exception as e:
+                self.logger.error(f"Feature engineering failed: {e}")
+                result['error'] = f'Feature engineering error: {e}'
+                result['reason'] = 'Cannot compute features'
+                return result
             
             # Step 3: Check for drift (if enabled and not in safe mode)
             if self.drift_detection_enabled and not self.in_safe_mode:
