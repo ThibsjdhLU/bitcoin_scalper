@@ -319,7 +319,7 @@ def run_paper_mode(config: TradingConfig, logger: TradingLogger):
                 ohlcv = paper_client.get_ohlcv(
                     config.symbol,
                     timeframe=config.timeframe,
-                    limit=1500  # Get last 1500 candles for indicators
+                    limit=5000  # Get last 1500 candles for indicators
                 )
                 
                 if not ohlcv or len(ohlcv) < 30:
