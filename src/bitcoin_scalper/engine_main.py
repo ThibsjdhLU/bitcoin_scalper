@@ -143,7 +143,7 @@ def run_live_mode(config: TradingConfig, logger: TradingLogger):
                     df = connector.fetch_ohlcv(
                         config.symbol,
                         timeframe=config.timeframe,
-                        limit=1000  # Get last 1000 candles for indicators
+                        limit=1500  # Get last 1500 candles for indicators
                     )
                     
                     if df.empty or len(df) < 30:
@@ -157,7 +157,7 @@ def run_live_mode(config: TradingConfig, logger: TradingLogger):
                     ohlcv = connector.get_ohlcv(
                         config.symbol,
                         timeframe=config.timeframe,
-                        limit=1000  # Get last 1000 candles for indicators
+                        limit=1500  # Get last 1500 candles for indicators
                     )
                     
                     if not ohlcv or len(ohlcv) < 30:
@@ -250,7 +250,7 @@ def run_paper_mode(config: TradingConfig, logger: TradingLogger):
     
     # Initialize paper trading client
     paper_client = PaperMT5Client(
-        initial_balance=config.paper_initial_balance if hasattr(config, 'paper_initial_balance') else 10000.0,
+        initial_balance=config.paper_initial_balance if hasattr(config, 'paper_initial_balance') else 15000.0,
         enable_slippage=config.paper_simulate_slippage if hasattr(config, 'paper_simulate_slippage') else False,
     )
     
@@ -319,7 +319,7 @@ def run_paper_mode(config: TradingConfig, logger: TradingLogger):
                 ohlcv = paper_client.get_ohlcv(
                     config.symbol,
                     timeframe=config.timeframe,
-                    limit=1000  # Get last 1000 candles for indicators
+                    limit=1500  # Get last 1500 candles for indicators
                 )
                 
                 if not ohlcv or len(ohlcv) < 30:
