@@ -2,16 +2,18 @@
 
 # Exchange Configuration
 exchange: binance
-api_key: "ENV_VAR" # Laisse ça, il ira chercher dans tes variables d'env ou le fichier .env
+api_key: "ENV_VAR"
 api_secret: "ENV_VAR"
 testnet: true
 
 trading:
   mode: ml
-  model_type: catboost  # <--- IMPORTANT : On est passé sur CatBoost
+  model_type: catboost
   model_path: models/meta_model_production.pkl
   symbol: BTC/USDT
   timeframe: 1m
+  meta_threshold: 0.53  # <--- AJOUTEZ CETTE LIGNE ICI
+
 
 # 👇 AJOUTE CETTE SECTION (L'ADN du Trial 16 à 62% de précision)
 model_params:
