@@ -259,28 +259,39 @@ def main():
     logger.info("\n📊 STEP 6: EVALUATION (Test Set)")
     
     # Predict on test
-    # predict_meta returns numpy arrays or simple types, not Series
     res = meta_model.predict_meta(X_test, return_all=True)
-    raw = res['raw_signal']
-    final = res['final_signal']
-    conf = res['meta_conf']
     
-    # Convert y_dir_test to numpy for safe comparison
-    y_test_np = y_dir_test.values
+    # Convert ALL to flat numpy arrays to avoid indexing errors
+    # flatten() ensures we have 1D arrays (N,)
+    raw = np.array(res['raw_signal']).flatten()
+    final = np.array(res['final_signal']).flatten()
+    y_true = np.array(y_dir_test).flatten()
     
-    # Metrics calculation
-    # 1. Primary Model Performance (Raw)
-    active_mask_raw = (raw != 0)
-    if active_mask_raw.sum() > 0:
-        raw_acc = accuracy_score(y_test_np[active_mask_raw], raw[active_mask_raw])
+    # Check shapes
+    if len(raw) != len(y_true):
+        logger.warning(f"Shape mismatch: raw={len(raw)}, true={len(y_true)}. Adjusting...")
+        min_len = min(len(raw), len(y_true))
+        raw = raw[:min_len]
+        final = final[:min_len]
+        y_true = y_true[:min_len]
+
+    # Metrics 1: Primary (Raw)
+    # Mask where signal is NOT 0 (Neutral)
+    mask_raw = (raw != 0) 
+    
+    if mask_raw.sum() > 0:
+        # We only evaluate accuracy on active trades
+        raw_acc = accuracy_score(y_true[mask_raw], raw[mask_raw])
     else:
         raw_acc = 0.0
         
-    # 2. Meta Model Performance (Filtered)
-    active_mask_final = (final != 0)
-    if active_mask_final.sum() > 0:
-        final_acc = accuracy_score(y_test_np[active_mask_final], final[active_mask_final])
-        filter_rate = (1 - active_mask_final.sum() / active_mask_raw.sum()) * 100
+    # Metrics 2: Final (Meta Filtered)
+    mask_final = (final != 0)
+    
+    if mask_final.sum() > 0:
+        final_acc = accuracy_score(y_true[mask_final], final[mask_final])
+        # Filter rate = (Trades Removed / Original Trades)
+        filter_rate = (1 - mask_final.sum() / mask_raw.sum()) * 100
     else:
         final_acc = 0.0
         filter_rate = 100.0
