@@ -346,6 +346,8 @@ class TestTradingEngine:
         ]
         
         # Mock the feature engineering to just return the df as-is for testing
+        # Note: Direct method replacement is used here for simplicity.
+        # In production tests, consider using pytest's monkeypatch or unittest.mock
         original_add_indicators = engine.feature_eng.add_indicators
         original_add_features = engine.feature_eng.add_features
         

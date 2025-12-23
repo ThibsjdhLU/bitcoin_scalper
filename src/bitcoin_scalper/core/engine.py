@@ -416,6 +416,8 @@ class TradingEngine:
                 prefix = self._get_timeframe_prefix(self.timeframe)
                 
                 # Raw tags that may need prefixing
+                # Note: This list matches the columns in the rename_map above (lines 389-397)
+                # to ensure all renamed columns get prefixed variants
                 raw_tags = ['<OPEN>', '<HIGH>', '<LOW>', '<CLOSE>', '<TICKVOL>', '<VOL>']
                 
                 # Create prefixed columns if the raw column exists
@@ -425,7 +427,10 @@ class TradingEngine:
                         df[prefixed_col] = df[tag]
                 
             except Exception as e:
-                self.logger.warning(f"Prefixing logic failed: {e}")
+                self.logger.warning(
+                    f"Prefixing logic failed for timeframe {self.timeframe}: {e}. "
+                    f"This may cause model feature mismatch errors."
+                )
                 # Don't fail the entire tick processing for this
             # ----------------------------------------------------------------
             
