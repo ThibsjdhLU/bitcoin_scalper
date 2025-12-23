@@ -16,11 +16,11 @@ Usage:
 """
 
 import sys
-import os
 from pathlib import Path
 import argparse
 import logging
 from datetime import datetime
+import json
 
 # Add src/ to PYTHONPATH
 script_dir = Path(__file__).parent.absolute()
@@ -30,8 +30,7 @@ sys.path.insert(0, str(src_path))
 
 import numpy as np
 import pandas as pd
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, classification_report, confusion_matrix
+from sklearn.metrics import accuracy_score, classification_report
 import joblib
 
 # Import project modules
@@ -563,7 +562,6 @@ def save_model(meta_model, output_path: str, verbose=False):
         'meta_model': 'CatBoostClassifier'
     }
     
-    import json
     with open(metadata_path, 'w') as f:
         json.dump(metadata, f, indent=2)
     
