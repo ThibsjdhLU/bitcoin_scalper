@@ -8,7 +8,7 @@ import pandas as pd
 import tempfile
 from pathlib import Path
 
-from src.bitcoin_scalper.models.meta_model import MetaModel
+from bitcoin_scalper.models.meta_model import MetaModel
 
 
 class DummyClassifier:

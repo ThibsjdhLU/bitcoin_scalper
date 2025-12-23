@@ -20,6 +20,39 @@ except ImportError:
     HAS_CATBOOST = False
 
 
+class DummyClassifier:
+    """Simple dummy classifier for demo when CatBoost is not available."""
+    
+    def __init__(self, seed=None):
+        self.is_fitted = False
+        self.classes_ = None
+        self.n_classes_ = 0
+        self.seed = seed
+        self._rng = np.random.RandomState(seed)
+    
+    def fit(self, X, y, sample_weight=None, eval_set=None, **kwargs):
+        """Fit the dummy model."""
+        self.is_fitted = True
+        self.classes_ = np.unique(y)
+        self.n_classes_ = len(self.classes_)
+        self._rng = np.random.RandomState(self.seed)
+        return self
+    
+    def predict(self, X):
+        """Make dummy predictions."""
+        if not self.is_fitted:
+            raise ValueError("Model not fitted")
+        return self._rng.choice(self.classes_, size=len(X))
+    
+    def predict_proba(self, X):
+        """Make dummy probability predictions."""
+        if not self.is_fitted:
+            raise ValueError("Model not fitted")
+        n_samples = len(X)
+        proba = self._rng.rand(n_samples, self.n_classes_)
+        return proba / proba.sum(axis=1, keepdims=True)
+
+
 def create_sample_data(n_samples=1000):
     """Create sample trading data."""
     np.random.seed(42)
@@ -90,8 +123,7 @@ def main():
         )
         print("   Using CatBoost classifiers (production-ready)")
     else:
-        # Fallback to dummy for demo
-        from tests.models.test_meta_model import DummyClassifier
+        # Fallback to dummy for demo (defined above)
         primary_model = DummyClassifier(seed=42)
         meta_model_classifier = DummyClassifier(seed=43)
         print("   Using dummy classifiers (demo only)")
