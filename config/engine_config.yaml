@@ -12,7 +12,7 @@ trading:
   model_path: models/meta_model_production.pkl
   symbol: BTC/USDT
   timeframe: 1m
-  meta_threshold: 0.53  # <--- AJOUTEZ CETTE LIGNE ICI
+  meta_threshold: 0.53
 
 
 # 👇 AJOUTE CETTE SECTION (L'ADN du Trial 16 à 62% de précision)
