@@ -259,35 +259,40 @@ def main():
     logger.info("\n📊 STEP 6: EVALUATION (Test Set)")
     
     # Predict on test
+    # predict_meta returns numpy arrays or simple types, not Series
     res = meta_model.predict_meta(X_test, return_all=True)
     raw = res['raw_signal']
     final = res['final_signal']
     conf = res['meta_conf']
     
-    # Metrics
-    # True Success on Test = Did the raw signal match the ground truth?
-    active_mask = (raw != 0)
-    actual_success = (raw[active_mask] == y_dir_test[active_mask])
+    # Convert y_dir_test to numpy for safe comparison
+    y_test_np = y_dir_test.values
     
-    raw_acc = accuracy_score(y_dir_test, raw)
-    
-    # Filtered metrics
-    active_final = (final != 0)
-    if active_final.sum() > 0:
-        final_acc = accuracy_score(y_dir_test[active_final], final[active_final])
-        filter_rate = (1 - active_final.sum()/active_mask.sum()) * 100
+    # Metrics calculation
+    # 1. Primary Model Performance (Raw)
+    active_mask_raw = (raw != 0)
+    if active_mask_raw.sum() > 0:
+        raw_acc = accuracy_score(y_test_np[active_mask_raw], raw[active_mask_raw])
+    else:
+        raw_acc = 0.0
+        
+    # 2. Meta Model Performance (Filtered)
+    active_mask_final = (final != 0)
+    if active_mask_final.sum() > 0:
+        final_acc = accuracy_score(y_test_np[active_mask_final], final[active_mask_final])
+        filter_rate = (1 - active_mask_final.sum() / active_mask_raw.sum()) * 100
     else:
         final_acc = 0.0
         filter_rate = 100.0
         
-    logger.info(f"Primary Accuracy (Raw):   {raw_acc:.4f}")
+    logger.info(f"Primary Accuracy (Raw):    {raw_acc:.4f}")
     logger.info(f"Final Accuracy (Filtered): {final_acc:.4f}")
     logger.info(f"Trades Ignored: {filter_rate:.1f}%")
     
     if final_acc > raw_acc:
         logger.info(f"🚀 PERFORMANCE BOOST: +{(final_acc-raw_acc)*100:.2f}%")
     else:
-        logger.info(f"⚠️ No boost detected (Market might be too easy or too hard)")
+        logger.info(f"⚠️ No boost detected (Threshold {args.threshold} might be too high/low)")
 
     # 7. Save
     save_model(meta_model, args.output)
