@@ -18,7 +18,7 @@ sys.path.insert(0, str(src_path))
 
 import numpy as np
 import pandas as pd
-from sklearn.metrics import accuracy_score, classification_report, precision_score
+from sklearn.metrics import accuracy_score
 from sklearn.model_selection import cross_val_predict, TimeSeriesSplit, cross_val_score
 import joblib
 import optuna
@@ -50,23 +50,20 @@ logger = logging.getLogger(__name__)
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description='Train MetaModel for Bitcoin trading')
+    parser = argparse.ArgumentParser(description='Train MetaModel for Bitcoin trading with Optuna optimization')
     parser.add_argument('--csv', type=str, 
                        default=str(project_root / 'data/raw/BTCUSD_M1_202301010000_202512011647.csv'),
                        help='Path to OHLCV CSV file')
     parser.add_argument('--test_size', type=float, default=0.2, help='Test set size')
-    parser.add_argument('--primary_iterations', type=int, default=200)
-    parser.add_argument('--primary_depth', type=int, default=6)
-    parser.add_argument('--primary_lr', type=float, default=0.05)
-    parser.add_argument('--meta_iterations', type=int, default=100)
-    parser.add_argument('--meta_depth', type=int, default=4)
-    parser.add_argument('--meta_lr', type=float, default=0.05)
-    parser.add_argument('--threshold', type=float, default=0.6)
-    parser.add_argument('--horizon', type=int, default=15)
-    parser.add_argument('--label_k', type=float, default=0.5)
+    parser.add_argument('--threshold', type=float, default=0.6, 
+                       help='Meta model confidence threshold for signal filtering')
+    parser.add_argument('--horizon', type=int, default=15, 
+                       help='Prediction horizon for label generation')
+    parser.add_argument('--label_k', type=float, default=0.5, 
+                       help='Standard deviation multiplier for label thresholds')
     parser.add_argument('--output', type=str,
-                       default=str(project_root / 'models/meta_model_production.pkl'))
-    parser.add_argument('--verbose', action='store_true')
+                       default=str(project_root / 'models/meta_model_production.pkl'),
+                       help='Output path for trained model')
     return parser.parse_args()
 
 
