@@ -224,117 +224,117 @@ class TradingEngine:
     def load_ml_model(
     self,
     model_path: str,
-    features_list: Optional[List[str]] = None
-):
-    """
-    Load a trained ML model. 
-    
-    Args:
-        model_path: Path to model file
-        features_list: List of feature names (if None, will try to load from file)
-    """
-    if self.mode != TradingMode.ML: 
-        raise ValueError("Cannot load ML model in RL mode")
-    
-    self.logger.info(f"Loading ML model from {model_path}")
-    
-    try:
-        import joblib
-        from bitcoin_scalper.core.export import load_objects
+    features_list: Optional[List[str]] = None):
+        """
+        Load a trained ML model. 
         
-        # Try to load using the export module
+        Args:
+            model_path: Path to model file
+            features_list: List of feature names (if None, will try to load from file)
+        """
+        if self.mode != TradingMode.ML: 
+            raise ValueError("Cannot load ML model in RL mode")
+        
+        self.logger.info(f"Loading ML model from {model_path}")
+        
         try:
-            objects = load_objects(model_path)
-            self.ml_pipeline = objects. get('pipeline')
-            self.ml_model = objects.get('model')
-            self.features_list = None  # load_objects doesn't return features_list
-            self.logger.info("ML model loaded successfully via load_objects")
-        except Exception as e:
-            # Fallback to direct load
-            self.logger.warning(f"load_objects failed: {e}, trying direct load")
+            import joblib
+            from bitcoin_scalper.core.export import load_objects
             
-            # Load CatBoost model properly
+            # Try to load using the export module
             try:
-                from catboost import CatBoostClassifier
-                # Load model as class method
-                self.ml_model = CatBoostClassifier().load_model(f"{model_path}_model. cbm")
-            except ImportError:
-                self.logger.warning("CatBoost not installed, trying joblib for XGBoost or other models")
-                # Try joblib as fallback (for XGBoost or other models)
-                try: 
-                    self.ml_model = joblib.load(f"{model_path}_model.pkl")
-                except Exception as e3:
-                    self.logger. error(f"Failed to load model with joblib: {e3}")
-                    raise
-            except Exception as e2:
-                self.logger.warning(f"CatBoost load failed: {e2}, trying joblib")
-                # Try joblib as last resort (for XGBoost or other models)
-                self.ml_model = joblib. load(f"{model_path}_model.pkl")
-            
-            self.logger.info("ML model loaded successfully via direct load")
-        
-        # === ROBUST FEATURE LIST HANDLING ===
-        if features_list: 
-            # User explicitly provided features list
-            self.features_list = features_list
-            self.logger.info(f"Using user-provided features list ({len(self.features_list)} features)")
-        else:
-            # Try to load features list from . pkl file (legacy support)
-            try:
-                self.features_list = joblib. load(f"{model_path}_features.pkl")
-                self. logger.info(f"Loaded features list from . pkl file ({len(self.features_list)} features)")
-            except Exception as pkl_error:
-                self.logger.warning(f"Could not load features list from .pkl file: {pkl_error}")
-                self.features_list = None
-            
-            # CRITICAL: If features_list is still None, extract from model object
-            if self.features_list is None and self.ml_model is not None:
-                self.logger.info("Attempting to extract feature names directly from model object...")
+                objects = load_objects(model_path)
+                self.ml_pipeline = objects. get('pipeline')
+                self.ml_model = objects.get('model')
+                self.features_list = None  # load_objects doesn't return features_list
+                self.logger.info("ML model loaded successfully via load_objects")
+            except Exception as e:
+                # Fallback to direct load
+                self.logger.warning(f"load_objects failed: {e}, trying direct load")
                 
+                # Load CatBoost model properly
                 try:
-                    # Try CatBoost feature_names_ attribute
-                    if hasattr(self.ml_model, 'feature_names_'):
-                        self.features_list = list(self.ml_model.feature_names_)
-                        self.logger.info(f"Successfully extracted {len(self.features_list)} features from CatBoost model. feature_names_")
+                    from catboost import CatBoostClassifier
+                    # Load model as class method
+                    self.ml_model = CatBoostClassifier().load_model(f"{model_path}_model. cbm")
+                except ImportError:
+                    self.logger.warning("CatBoost not installed, trying joblib for XGBoost or other models")
+                    # Try joblib as fallback (for XGBoost or other models)
+                    try: 
+                        self.ml_model = joblib.load(f"{model_path}_model.pkl")
+                    except Exception as e3:
+                        self.logger. error(f"Failed to load model with joblib: {e3}")
+                        raise
+                except Exception as e2:
+                    self.logger.warning(f"CatBoost load failed: {e2}, trying joblib")
+                    # Try joblib as last resort (for XGBoost or other models)
+                    self.ml_model = joblib. load(f"{model_path}_model.pkl")
+                
+                self.logger.info("ML model loaded successfully via direct load")
+            
+            # === ROBUST FEATURE LIST HANDLING ===
+            if features_list: 
+                # User explicitly provided features list
+                self.features_list = features_list
+                self.logger.info(f"Using user-provided features list ({len(self.features_list)} features)")
+            else:
+                # Try to load features list from . pkl file (legacy support)
+                try:
+                    self.features_list = joblib. load(f"{model_path}_features.pkl")
+                    self. logger.info(f"Loaded features list from . pkl file ({len(self.features_list)} features)")
+                except Exception as pkl_error:
+                    self.logger.warning(f"Could not load features list from .pkl file: {pkl_error}")
+                    self.features_list = None
+                
+                # CRITICAL: If features_list is still None, extract from model object
+                if self.features_list is None and self.ml_model is not None:
+                    self.logger.info("Attempting to extract feature names directly from model object...")
                     
-                    # Try XGBoost/LGBM feature_names_in_ attribute (scikit-learn compatible)
-                    elif hasattr(self.ml_model, 'feature_names_in_'):
-                        self.features_list = list(self.ml_model. feature_names_in_)
-                        self.logger.info(f"Successfully extracted {len(self.features_list)} features from model.feature_names_in_")
+                    try:
+                        # Try CatBoost feature_names_ attribute
+                        if hasattr(self.ml_model, 'feature_names_'):
+                            self.features_list = list(self.ml_model.feature_names_)
+                            self.logger.info(f"Successfully extracted {len(self.features_list)} features from CatBoost model. feature_names_")
+                        
+                        # Try XGBoost/LGBM feature_names_in_ attribute (scikit-learn compatible)
+                        elif hasattr(self.ml_model, 'feature_names_in_'):
+                            self.features_list = list(self.ml_model. feature_names_in_)
+                            self.logger.info(f"Successfully extracted {len(self.features_list)} features from model.feature_names_in_")
+                        
+                        # Try XGBoost get_booster().feature_names
+                        elif hasattr(self. ml_model, 'get_booster'):
+                            booster = self.ml_model. get_booster()
+                            if hasattr(booster, 'feature_names'):
+                                self.features_list = list(booster.feature_names)
+                                self.logger.info(f"Successfully extracted {len(self. features_list)} features from XGBoost booster.feature_names")
+                        
+                        # Last resort: try _Booster.feature_names for native XGBoost
+                        elif hasattr(self.ml_model, 'feature_names'):
+                            self. features_list = list(self. ml_model.feature_names)
+                            self.logger.info(f"Successfully extracted {len(self.features_list)} features from model.feature_names")
+                        
+                        else:
+                            self.logger. warning("Model object has no recognizable feature_names attribute")
+                            self.features_list = None
                     
-                    # Try XGBoost get_booster().feature_names
-                    elif hasattr(self. ml_model, 'get_booster'):
-                        booster = self.ml_model. get_booster()
-                        if hasattr(booster, 'feature_names'):
-                            self.features_list = list(booster.feature_names)
-                            self.logger.info(f"Successfully extracted {len(self. features_list)} features from XGBoost booster.feature_names")
-                    
-                    # Last resort: try _Booster.feature_names for native XGBoost
-                    elif hasattr(self.ml_model, 'feature_names'):
-                        self. features_list = list(self. ml_model.feature_names)
-                        self.logger.info(f"Successfully extracted {len(self.features_list)} features from model.feature_names")
-                    
-                    else:
-                        self.logger. warning("Model object has no recognizable feature_names attribute")
+                    except Exception as extract_error:
+                        self. logger.error(f"Failed to extract feature names from model:  {extract_error}")
                         self.features_list = None
                 
-                except Exception as extract_error:
-                    self. logger.error(f"Failed to extract feature names from model:  {extract_error}")
-                    self.features_list = None
+                # Final warning if no features could be determined
+                if self.features_list is None:
+                    self.logger.warning(
+                        "WARNING: No feature list available!  Predictions may fail. "
+                        "The model will attempt to use all numeric columns, which may cause "
+                        "'Feature names unseen at fit time' errors."
+                    )
             
-            # Final warning if no features could be determined
-            if self.features_list is None:
-                self.logger.warning(
-                    "WARNING: No feature list available!  Predictions may fail. "
-                    "The model will attempt to use all numeric columns, which may cause "
-                    "'Feature names unseen at fit time' errors."
-                )
-        
-        return True
-        
-    except Exception as e:
-        self.logger.error(f"Failed to load ML model: {e}")
-        return False
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Failed to load ML model: {e}")
+            return False
+            
     def load_rl_agent(
         self,
         agent_path: str,
