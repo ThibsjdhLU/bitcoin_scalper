@@ -11,7 +11,7 @@ trading:
   model_type: catboost  # <--- IMPORTANT : On est passé sur CatBoost
   model_path: models/model
   symbol: BTC/USDT
-  timeframe: 5m
+  timeframe: 1m
 
 # 👇 AJOUTE CETTE SECTION (L'ADN du Trial 16 à 62% de précision)
 model_params:
