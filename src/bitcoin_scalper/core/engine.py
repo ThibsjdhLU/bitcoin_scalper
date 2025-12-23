@@ -418,8 +418,10 @@ class TradingEngine:
                 elif not isinstance(df.index, pd.DatetimeIndex):
                     df.index = pd.to_datetime(df.index, errors='coerce')
                 
-                # Store original 1m index for final merge
-                original_1m_index = df.index.copy()
+                # Ensure index is sorted and unique for resampling
+                df = df.sort_index()
+                if df.index.duplicated().any():
+                    df = df[~df.index.duplicated(keep='last')]
                 
                 # ==========================================================================
                 # Step A: Generate 1-MINUTE Features (prefix="1min_")
@@ -507,7 +509,8 @@ class TradingEngine:
                 # B.7: Merge 5-minute features back to 1-minute DataFrame using forward fill (ffill)
                 # This aligns 5min features to each 1min bar by carrying the last known 5min value forward
                 df = df.join(df_5m_features, how='left')
-                df = df.ffill()  # Forward fill to propagate 5min values to 1min bars
+                # Forward fill only the 5min columns to propagate values to 1min bars
+                df[cols_5m] = df[cols_5m].ffill()
                 
             except Exception as e:
                 self.logger.error(f"Feature engineering failed: {e}")
