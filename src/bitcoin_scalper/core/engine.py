@@ -408,6 +408,32 @@ class TradingEngine:
                 result['reason'] = 'Cannot compute features'
                 return result
             
+            # --- PREFIXING LOGIC: Add timeframe prefix to raw columns ---
+            # The model was trained on features like "1min_<CLOSE>", "1min_<TICKVOL>", etc.
+            # We need to create these prefixed columns from the existing raw columns.
+            try:
+                # Determine the prefix based on timeframe
+                prefix = self._get_timeframe_prefix(self.timeframe)
+                
+                # Raw tags that may need prefixing
+                # Note: This list matches the columns in the rename_map above (lines 389-397)
+                # to ensure all renamed columns get prefixed variants
+                raw_tags = ['<OPEN>', '<HIGH>', '<LOW>', '<CLOSE>', '<TICKVOL>', '<VOL>']
+                
+                # Create prefixed columns if the raw column exists
+                for tag in raw_tags:
+                    if tag in df.columns:
+                        prefixed_col = prefix + tag
+                        df[prefixed_col] = df[tag]
+                
+            except Exception as e:
+                self.logger.warning(
+                    f"Prefixing logic failed for timeframe {self.timeframe}: {e}. "
+                    f"This may cause model feature mismatch errors."
+                )
+                # Don't fail the entire tick processing for this
+            # ----------------------------------------------------------------
+            
             # Step 3: Check for drift (if enabled and not in safe mode)
             if self.drift_detection_enabled and not self.in_safe_mode:
                 drift_detected = self._check_drift(df)
@@ -447,7 +473,8 @@ class TradingEngine:
             
             # Step 6: Calculate position size
             try:
-                price = df['close'].iloc[-1]
+                # Get price from appropriate column
+                price = df[self._get_price_column(df)].iloc[-1]
                 volume = self._calculate_position_size(
                     signal=signal,
                     price=price,
@@ -469,7 +496,7 @@ class TradingEngine:
                 signal=signal,
                 confidence=confidence,
                 features={
-                    'price': float(df['close'].iloc[-1]),
+                    'price': float(df[self._get_price_column(df)].iloc[-1]),
                     'volume_suggested': volume,
                 }
             )
@@ -495,6 +522,56 @@ class TradingEngine:
                 unit='ms',
                 tick_number=self.tick_count
             )
+    
+    def _get_timeframe_prefix(self, timeframe: str) -> str:
+        """
+        Map timeframe string to prefix format used in feature columns.
+        
+        Args:
+            timeframe: Timeframe string (e.g., "M1", "1m", "M5", "5m")
+        
+        Returns:
+            Prefix string (e.g., "1min_", "5min_")
+        """
+        # Normalize timeframe to lowercase for consistent handling
+        tf_lower = timeframe.lower()
+        
+        # Map various timeframe formats to prefix
+        timeframe_map = {
+            'm1': '1min_',
+            '1m': '1min_',
+            '1min': '1min_',
+            'm5': '5min_',
+            '5m': '5min_',
+            '5min': '5min_',
+            'm15': '15min_',
+            '15m': '15min_',
+            '15min': '15min_',
+            'm30': '30min_',
+            '30m': '30min_',
+            '30min': '30min_',
+            'h1': '1h_',
+            '1h': '1h_',
+            'h4': '4h_',
+            '4h': '4h_',
+            'd1': '1d_',
+            '1d': '1d_',
+        }
+        
+        return timeframe_map.get(tf_lower, '1min_')  # Default to 1min_ if unknown
+    
+    def _get_price_column(self, df: pd.DataFrame) -> str:
+        """
+        Get the appropriate price column name from the DataFrame.
+        Handles both renamed (<CLOSE>) and standard (close) column names.
+        
+        Args:
+            df: DataFrame to check
+        
+        Returns:
+            Column name to use for price data
+        """
+        return '<CLOSE>' if '<CLOSE>' in df.columns else 'close'
     
     def _get_signal(self, df: pd.DataFrame) -> Tuple[Optional[str], Optional[float]]:
         """
@@ -660,9 +737,10 @@ class TradingEngine:
             
             # For now, use price volatility as the drift metric
             # In a more advanced setup, you'd track actual prediction errors
-            if 'close' in df.columns and len(df) >= 20:
+            price_col = self._get_price_column(df)
+            if price_col in df.columns and len(df) >= 20:
                 # Calculate recent volatility
-                returns = df['close'].pct_change().dropna()
+                returns = df[price_col].pct_change().dropna()
                 if len(returns) >= 2:
                     recent_volatility = float(returns.tail(20).std())
                     
@@ -726,7 +804,7 @@ class TradingEngine:
                     volatility = float(df['atr'].iloc[-1]) / price
                 else:
                     # Estimate from recent price changes
-                    returns = df['close'].pct_change().dropna()
+                    returns = df[self._get_price_column(df)].pct_change().dropna()
                     volatility = float(returns.std()) if len(returns) > 0 else 0.02
                 
                 size = self.position_sizer.calculate_size(

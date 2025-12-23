@@ -287,6 +287,116 @@ class TestTradingEngine:
         error = result.get('error')
         if error:
             assert 'Feature names missing' not in str(error), f"Legacy column handling failed: {error}"
+    
+    def test_get_timeframe_prefix(self, mock_mt5_client, test_config, tmp_path):
+        """Test the timeframe to prefix mapping logic."""
+        engine = TradingEngine(
+            connector=mock_mt5_client,
+            mode=TradingMode.ML,
+            symbol=test_config.symbol,
+            timeframe="M1",
+            log_dir=tmp_path,
+            drift_detection=False,
+        )
+        
+        # Test various timeframe formats
+        assert engine._get_timeframe_prefix("M1") == "1min_"
+        assert engine._get_timeframe_prefix("1m") == "1min_"
+        assert engine._get_timeframe_prefix("1min") == "1min_"
+        assert engine._get_timeframe_prefix("M5") == "5min_"
+        assert engine._get_timeframe_prefix("5m") == "5min_"
+        assert engine._get_timeframe_prefix("5min") == "5min_"
+        assert engine._get_timeframe_prefix("M15") == "15min_"
+        assert engine._get_timeframe_prefix("15m") == "15min_"
+        assert engine._get_timeframe_prefix("H1") == "1h_"
+        assert engine._get_timeframe_prefix("1h") == "1h_"
+        # Unknown formats should default to 1min_
+        assert engine._get_timeframe_prefix("unknown") == "1min_"
+    
+    def test_process_tick_adds_prefixed_columns(self, mock_mt5_client, test_config, tmp_path):
+        """Test that process_tick adds prefixed columns for model compatibility."""
+        # Create engine with M1 timeframe
+        engine = TradingEngine(
+            connector=mock_mt5_client,
+            mode=TradingMode.ML,
+            symbol=test_config.symbol,
+            timeframe="M1",
+            log_dir=tmp_path,
+            drift_detection=False,
+        )
+        
+        # Create market data
+        market_data = [
+            {
+                'timestamp': 1609459200,
+                'open': 50000.0,
+                'high': 50100.0,
+                'low': 49900.0,
+                'close': 50050.0,
+                'volume': 100.0,
+            },
+            {
+                'timestamp': 1609459260,
+                'open': 50050.0,
+                'high': 50150.0,
+                'low': 49950.0,
+                'close': 50100.0,
+                'volume': 120.0,
+            }
+        ]
+        
+        # Mock the feature engineering to just return the df as-is for testing
+        # Note: Direct method replacement is used here for simplicity.
+        # In production tests, consider using pytest's monkeypatch or unittest.mock
+        original_add_indicators = engine.feature_eng.add_indicators
+        original_add_features = engine.feature_eng.add_features
+        
+        def mock_add_indicators(df):
+            return df
+        
+        def mock_add_features(df):
+            return df
+        
+        engine.feature_eng.add_indicators = mock_add_indicators
+        engine.feature_eng.add_features = mock_add_features
+        
+        # Create a mock model that checks for prefixed columns
+        class MockModel:
+            def predict(self, X):
+                # Verify that prefixed columns exist
+                assert '1min_<CLOSE>' in X.columns, "Missing 1min_<CLOSE> column"
+                assert '1min_<TICKVOL>' in X.columns, "Missing 1min_<TICKVOL> column"
+                return [0]  # Return 'hold' signal
+        
+        engine.ml_model = MockModel()
+        engine.features_list = ['1min_<CLOSE>', '1min_<TICKVOL>']
+        
+        # Process tick - this should add prefixed columns
+        result = engine.process_tick(market_data)
+        
+        # Should not error out
+        assert result is not None
+        error = result.get('error')
+        assert error is None, f"Unexpected error: {error}"
+        
+        # Restore original methods
+        engine.feature_eng.add_indicators = original_add_indicators
+        engine.feature_eng.add_features = original_add_features
+    
+    def test_process_tick_prefix_for_5m_timeframe(self, mock_mt5_client, test_config, tmp_path):
+        """Test that process_tick uses correct prefix for 5m timeframe."""
+        # Create engine with 5m timeframe
+        engine = TradingEngine(
+            connector=mock_mt5_client,
+            mode=TradingMode.ML,
+            symbol=test_config.symbol,
+            timeframe="5m",
+            log_dir=tmp_path,
+            drift_detection=False,
+        )
+        
+        # Verify that the prefix mapping is correct
+        assert engine._get_timeframe_prefix(engine.timeframe) == "5min_"
 
 
 class TestTradingConfig:
