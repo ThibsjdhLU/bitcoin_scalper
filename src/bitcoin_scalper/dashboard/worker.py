@@ -123,7 +123,7 @@ class TradingWorker(QThread):
         """Initialize the trading engine with configuration."""
         try:
             # Create a mock connector for demo purposes
-            from bitcoin_scalper.core.paper_trading import PaperMT5Client
+            from bitcoin_scalper.connectors.paper import PaperMT5Client
             
             # Get initial balance from config or use default
             initial_balance = getattr(self.config, 'initial_balance', 10000.0)
