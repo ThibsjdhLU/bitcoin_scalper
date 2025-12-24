@@ -334,5 +334,5 @@ class TradingWorker(QThread):
                 self.engine.ml_model.meta_threshold = threshold
             
             self.log_message.emit(
-                f"⚙️  Meta threshold updated:  {old_threshold:. 2f} → {threshold:.2f}"
+                f"⚙️  Meta threshold updated:  {old_threshold:.2f} → {threshold:.2f}"
             )
