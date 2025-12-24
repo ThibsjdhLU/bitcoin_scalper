@@ -160,7 +160,14 @@ class BinanceConnector:
         """
         try:
             logger.debug(f"Fetching OHLCV: {symbol}, {timeframe}, limit={limit}")
-            
+            max_per_request = 1000
+            if limit is not None and int(limit) > max_per_request:
+                logger.debug(
+                    f"Requested limit ({limit}) > per-request cap ({max_per_request}), "
+                    "delegating to fetch_ohlcv_historical()"
+                )
+                return self.fetch_ohlcv_historical(symbol, timeframe, limit)
+
             # Fetch OHLCV data from Binance
             # CCXT returns: [[timestamp, open, high, low, close, volume], ...]
             ohlcv = self.exchange.fetch_ohlcv(
