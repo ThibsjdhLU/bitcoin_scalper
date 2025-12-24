@@ -209,9 +209,9 @@ class TradingWorker(QThread):
                 if data and len(data) < 500:
                     self.log_message.emit(f"⚠️  Warning: Only {len(data)} candles fetched (need ≥500 for features)")
                 return data
-        
-            return None
-    
+        except Exception as e:
+            self.log_message.emit(f"❌ Error fetching market data: {str(e)}")
+        return None
     def _process_tick_result(self, result: Dict[str, Any], market_data: List[Dict[str, Any]]):
         """
         Process tick result and emit appropriate signals.
