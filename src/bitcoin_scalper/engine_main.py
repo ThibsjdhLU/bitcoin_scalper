@@ -168,6 +168,10 @@ def run_live_mode(config: TradingConfig, logger: TradingLogger):
                     if not ohlcv or len(ohlcv) < 30:
                         logger.warning("Insufficient market data")
                         continue
+
+            except Exception as e:
+                logger.error(f"Failed to fetch market data: {e}")
+                continue
             
             # Process the tick
             result = engine.process_tick(ohlcv)
