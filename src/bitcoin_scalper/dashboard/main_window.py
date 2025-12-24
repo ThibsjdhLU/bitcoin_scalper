@@ -86,7 +86,8 @@ class MainWindow(QMainWindow):
         layout.addWidget(title)
         
         # Metric cards
-        self.balance_card = StatCard("Balance", "$10,000.00", 'neutral')
+        initial_balance = getattr(self. config, 'paper_initial_balance', 15000.0)
+        self.balance_card = StatCard("Balance", f"${initial_balance:,.2f}", 'neutral')
         layout.addWidget(self.balance_card)
         
         self.pnl_card = StatCard("P&L", "$0.00", 'neutral')
