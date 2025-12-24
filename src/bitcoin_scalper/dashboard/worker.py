@@ -135,7 +135,7 @@ class TradingWorker(QThread):
             from bitcoin_scalper.connectors.paper import PaperMT5Client
             
             # Get initial balance from config (matching engine_main.py line 257)
-            initial_balance = getattr(self.config, 'paper_initial_balance', 15000. 0)
+            initial_balance = getattr(self.config, 'paper_initial_balance', 15000.0)
             enable_slippage = getattr(self. config, 'paper_simulate_slippage', False)
             
             connector = PaperMT5Client(
