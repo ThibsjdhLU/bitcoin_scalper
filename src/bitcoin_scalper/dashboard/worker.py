@@ -131,23 +131,14 @@ class TradingWorker(QThread):
     def _initialize_engine(self):
         """Initialize the trading engine with configuration."""
         try:
-            # Create a paper trading connector (matching engine_main.py paper mode)
-            from bitcoin_scalper.connectors.paper import PaperMT5Client
+            # Utiliser Binance pour des données RÉELLES
+            from bitcoin_scalper.connectors. binance_connector import BinanceConnector
             
-            # Get initial balance from config (matching engine_main.py line 257)
-            initial_balance = getattr(self.config, 'paper_initial_balance', 15000.0)
-            enable_slippage = getattr(self. config, 'paper_simulate_slippage', False)
-            
-            connector = PaperMT5Client(
-                initial_balance=initial_balance,
-                enable_slippage=enable_slippage,
+            connector = BinanceConnector(
+                api_key=self.config.binance_api_key,
+                api_secret=self. config.binance_api_secret,
+                testnet=self. config.binance_testnet
             )
-            
-            # Set initial price for symbol (matching engine_main.py paper mode)
-            # Note: This default price matches engine_main.py line 264
-            # In production, this could be fetched from real market data
-            initial_price = 50000.0  # Default BTC price
-            connector.set_price(self.config.symbol, initial_price)
             
             # Store initial balance for tracking
             self.initial_balance = initial_balance
