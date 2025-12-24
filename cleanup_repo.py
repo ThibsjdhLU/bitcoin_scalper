@@ -14,7 +14,6 @@ ENTRY_POINTS = [
 
 # Dossiers à ignorer totalement (ne pas toucher)
 IGNORE_DIRS = [
-    "src/bitcoin_scalper/legacy", 
     "tests", 
     "venv", 
     ".git", 
