@@ -130,7 +130,9 @@ class TradingWorker(QThread):
     
     def _initialize_engine(self):
         """Initialize the trading engine with configuration."""
+        
         try:
+            initial_balance = getattr(self. config, 'paper_initial_balance', 15000.0)
             # Utiliser Binance pour des données RÉELLES
             from bitcoin_scalper.connectors. binance_connector import BinanceConnector
             
