@@ -217,7 +217,7 @@ class CandlestickChart(QWidget):
         self._redraw_signals()
 
 
-class LogConsole(QTextEdit):
+class LogConsole(QPlainTextEdit):
     """
     Scrolling log console widget.
     
