@@ -1,6 +1,10 @@
 # Bitcoin Scalper Trading Dashboard 📊
 
+**Complete Reconstruction - MVC Architecture with Real-Time Meta-Labeling Control**
+
 A professional, real-time trading dashboard built with PyQt6 for monitoring and controlling the Bitcoin scalper trading bot.
+
+> **✨ Recent Rebuild**: This dashboard has been completely reconstructed following strict MVC principles with a focus on the critical meta-labeling threshold control. All components have been verified and tested for production use.
 
 ## Features ✨
 
@@ -119,20 +123,62 @@ risk:
 
 ## Architecture 🏗️
 
+### MVC Pattern Implementation
+
+The dashboard follows a clean MVC (Model-View-Controller) architecture with 5 core files:
+
 ```
 dashboard/
-├── __init__.py          # Package initialization
-├── styles.py            # Dark theme and color palette
-├── worker.py            # TradingWorker thread (runs engine)
-├── widgets.py           # Custom UI components
-│   ├── CandlestickChart    # Real-time price chart
-│   ├── LogConsole          # Scrolling log display
-│   ├── StatCard            # Metric display cards
-│   └── MetaConfidencePanel # Meta-labeling control
-└── main_window.py       # Main application window
+├── __init__.py              # Package initialization
+├── styles.py                # VIEW - Dark theme, color constants, QSS stylesheet
+│   ├── BACKGROUND_DARK (#121212)   # Main dark background constant
+│   ├── TEXT_WHITE (#e0e0e0)        # Primary text color constant
+│   ├── ACCENT_GREEN (#00ff00)      # Buy/profit accent constant
+│   ├── ACCENT_RED (#ff0044)        # Sell/loss accent constant
+│   ├── COLORS dict                  # Complete color palette
+│   └── DARK_THEME_QSS              # Exported CSS stylesheet
+├── worker.py                # CONTROLLER - TradingWorker thread
+│   ├── TradingWorker(QThread)      # Runs engine in separate thread
+│   ├── run() method                 # Infinite loop calling process_tick()
+│   ├── load_ml_model()              # Model initialization
+│   └── update_meta_threshold()      # Live threshold updates
+├── widgets.py               # VIEW - Custom UI components
+│   ├── ChartWidget (CandlestickChart)  # pyqtgraph OHLC visualization
+│   ├── ControlPanel (MetaConfidencePanel)  # Meta threshold slider
+│   ├── LogConsole                      # Real-time log display
+│   └── StatCard                        # Metric cards
+└── main_window.py           # VIEW - Main application assembly
+    ├── MainWindow(QMainWindow)     # Assembles all widgets
+    ├── Start/Stop buttons           # Control worker loop
+    └── Signal connections           # Wires everything together
 
-run_dashboard.py         # Entry point script
+run_dashboard.py             # ENTRY POINT - Launch script
 ```
+
+### Key Architecture Principles
+
+1. **Separation of Concerns**
+   - `styles.py`: Pure presentation (colors, CSS)
+   - `worker.py`: Pure logic (engine orchestration)
+   - `widgets.py`: Reusable UI components
+   - `main_window.py`: Component assembly and wiring
+   - `run_dashboard.py`: Configuration and initialization
+
+2. **Thread Safety**
+   - Trading engine runs in `TradingWorker(QThread)`
+   - UI updates via Qt signals/slots (thread-safe)
+   - No direct cross-thread access
+
+3. **Real-time Updates**
+   - `process_tick()` called in infinite loop
+   - Results emitted as signals
+   - UI updates automatically via slot connections
+
+4. **Critical Slider Logic**
+   - Meta threshold slider in `ControlPanel`
+   - Range: 0.00 to 1.00 (0-100% confidence)
+   - **Updates `worker.engine.meta_threshold` in real-time**
+   - Connected via: `slider.valueChanged → worker.update_meta_threshold()`
 
 ### Signal Flow
 
@@ -240,6 +286,31 @@ When adding new features:
 ## License 📄
 
 MIT License - See project root LICENSE file
+
+## Verification ✅
+
+All dashboard components have been tested and verified:
+
+```bash
+# Run component validation tests
+python test_dashboard_components.py
+```
+
+Expected output:
+```
+✅ All Dashboard Components Validated Successfully!
+
+Key Features Confirmed:
+  ✓ MVC architecture with 5 files
+  ✓ Color constants: BACKGROUND_DARK, TEXT_WHITE, ACCENT_GREEN, ACCENT_RED
+  ✓ DARK_THEME_QSS stylesheet exported
+  ✓ TradingWorker with process_tick() loop
+  ✓ Meta threshold slider (0.00-1.00) updates engine in real-time
+  ✓ START/STOP buttons control trading loop
+  ✓ ChartWidget (pyqtgraph) for candlesticks
+  ✓ LogConsole for real-time logs
+  ✓ ControlPanel with meta_threshold slider
+```
 
 ## Credits 👏
 
