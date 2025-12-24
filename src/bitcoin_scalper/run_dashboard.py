@@ -111,7 +111,7 @@ def main():
     app = QApplication(sys.argv)
     app.setApplicationName("Bitcoin Scalper")
     app.setOrganizationName("Trading Systems")
-    app.setAttribute(Qt.ApplicationAttribute. AA_EnableHighDpiScaling)
+    #app.setAttribute(Qt.ApplicationAttribute. AA_EnableHighDpiScaling)
     # Enable high DPI support for macOS
     #app.setAttribute(Qt.ApplicationAttribute.AA_UseHighDpiPixmaps)
     
