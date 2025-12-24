@@ -206,9 +206,9 @@ class TradingWorker(QThread):
                     timeframe=self.config.timeframe,
                     limit=5000  # Match engine_main.py paper mode for proper indicator calculation
                 )
+                if data and len(data) < 500:
+                    self.log_message.emit(f"⚠️  Warning: Only {len(data)} candles fetched (need ≥500 for features)")
                 return data
-        except Exception as e:
-            self.log_message.emit(f"⚠️  Data fetch error: {str(e)}")
         
         return None
     
