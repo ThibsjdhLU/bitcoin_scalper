@@ -134,7 +134,9 @@ class TradingWorker(QThread):
                 enable_slippage=enable_slippage,
             )
             
-            # Set initial price for symbol (matching engine_main.py line 264)
+            # Set initial price for symbol (matching engine_main.py paper mode)
+            # Note: This default price matches engine_main.py line 264
+            # In production, this could be fetched from real market data
             initial_price = 50000.0  # Default BTC price
             connector.set_price(self.config.symbol, initial_price)
             

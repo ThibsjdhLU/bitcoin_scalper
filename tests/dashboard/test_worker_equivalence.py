@@ -54,13 +54,14 @@ class TestWorkerCodeStructure(unittest.TestCase):
     def test_configuration_parameter_equivalence(self):
         """Test that all critical configuration parameters are equivalent."""
         # This test documents the expected equivalence
+        # References to engine_main.py run_paper_mode() function
         critical_params = {
-            'data_limit': 5000,  # Must match engine_main.py line 330
-            'initial_balance_config_key': 'paper_initial_balance',  # line 257
-            'initial_balance_default': 15000.0,  # line 257
-            'slippage_config_key': 'paper_simulate_slippage',  # line 258
-            'includes_safe_mode_on_drift': True,  # line 288
-            'initial_price': 50000.0,  # line 264
+            'data_limit': 5000,  # Must match engine_main.py paper mode
+            'initial_balance_config_key': 'paper_initial_balance',
+            'initial_balance_default': 15000.0,
+            'slippage_config_key': 'paper_simulate_slippage',
+            'includes_safe_mode_on_drift': True,
+            'initial_price': 50000.0,
         }
         
         # Document expected behavior
@@ -79,8 +80,8 @@ class TestWorkerEngineMainEquivalence(unittest.TestCase):
     def test_code_path_equivalence(self):
         """Document the code path equivalence between worker.py and engine_main.py."""
         equivalence_map = {
-            'worker._initialize_engine()': 'engine_main.run_paper_mode() lines 243-308',
-            'worker._fetch_market_data()': 'engine_main.run_paper_mode() lines 326-339',
+            'worker._initialize_engine()': 'engine_main.run_paper_mode() - engine initialization',
+            'worker._fetch_market_data()': 'engine_main.run_paper_mode() - data fetching',
             'connector initialization': 'Both use PaperMT5Client with same params',
             'engine initialization': 'Both use TradingEngine with same params',
             'model loading': 'Both use engine.load_ml_model() with meta_threshold',
