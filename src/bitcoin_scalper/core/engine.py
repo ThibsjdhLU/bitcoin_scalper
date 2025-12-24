@@ -577,37 +577,70 @@ class TradingEngine:
                 # Step B: Generate 5-MINUTE Features (CRITICAL - Resampling)
                 # ==========================================================================
                 prefix_5m = "5min_"
-                
+
                 # B.1: Resample 1-minute data to 5-minute (OHLCV aggregation)
-                # Use standard OHLCV resampling rules
-                df_5m = df[['<OPEN>', '<HIGH>', '<LOW>', '<CLOSE>', '<TICKVOL>']].resample('5min').agg({
-                    '<OPEN>': 'first',
-                    '<HIGH>': 'max',
-                    '<LOW>': 'min',
-                    '<CLOSE>': 'last',
-                    '<TICKVOL>': 'sum'
-                }).dropna()
-                
+                try:
+                    # Diagnostic logs: show index info before resampling
+                    idx_min = df.index.min() if not df.empty else None
+                    idx_max = df.index.max() if not df.empty else None
+                    self.logger.info(f"🔍 1min data span: {idx_min} -> {idx_max} (rows={len(df)})")
+                    # Detect approximate frequency (may be None if irregular)
+                    inferred_freq = pd.infer_freq(df.index) if len(df.index) >= 3 else None
+                    self.logger.debug(f"Detected 1min index frequency: {inferred_freq}")
+
+                    # If index has gaps or is irregular, reindex to a continuous 1-minute range and ffill.
+                    # This ensures resample('5min') aggregates across correct buckets instead of collapsing into 1.
+                    if idx_min is None or idx_max is None:
+                        self.logger.error("Empty or invalid 1-minute index - cannot resample to 5min")
+                        df_5m = pd.DataFrame()
+                    else:
+                        # Build full 1-minute index (preserve timezone if present)
+                        full_idx = pd.date_range(start=idx_min, end=idx_max, freq='1min', tz=df.index.tz)
+                        if len(full_idx) != len(df.index):
+                            self.logger.info(f"Detected gaps in 1min data: expected {len(full_idx)} rows, got {len(df.index)}. Applying reindex + ffill")
+                            # Reindex and fill OHLCV columns forward to keep last known values for aggregation
+                            df = df.reindex(full_idx)
+                            # Forward-fill core OHLCV columns only
+                            for c in ['<OPEN>', '<HIGH>', '<LOW>', '<CLOSE>', '<TICKVOL>']:
+                                if c in df.columns:
+                                    df[c] = df[c].ffill()
+                        # Now do the resample to 5min OHLCV
+                        df_5m = df[['<OPEN>', '<HIGH>', '<LOW>', '<CLOSE>', '<TICKVOL>']].resample('5min').agg({
+                            '<OPEN>': 'first',
+                            '<HIGH>': 'max',
+                            '<LOW>': 'min',
+                            '<CLOSE>': 'last',
+                            '<TICKVOL>': 'sum'
+                        }).dropna()
+                        self.logger.info(f"📊 Resampled to 5min: {len(df_5m)} candles (from {len(df)} 1min rows)")
+                except Exception as e:
+                    self.logger.error(f"Resampling 1min -> 5min failed: {e}")
+                    raise
+
                 # B.2: Generate Time Features for 5-minute data
-                df_5m[f'{prefix_5m}day'] = df_5m.index.dayofweek
-                df_5m[f'{prefix_5m}hour'] = df_5m.index.hour
-                df_5m[f'{prefix_5m}minute'] = df_5m.index.minute
-                
-                # B.3: Cyclical Time Features for 5-minute data
-                df_5m[f'{prefix_5m}hour_sin'] = np.sin(2 * np.pi * df_5m.index.hour / 24)
-                df_5m[f'{prefix_5m}hour_cos'] = np.cos(2 * np.pi * df_5m.index.hour / 24)
-                df_5m[f'{prefix_5m}minute_sin'] = np.sin(2 * np.pi * df_5m.index.minute / 60)
-                df_5m[f'{prefix_5m}minute_cos'] = np.cos(2 * np.pi * df_5m.index.minute / 60)
-                
-                # B.4: Technical Indicators for 5-minute timeframe
-                df_5m = self.feature_eng.add_indicators(
-                    df_5m,
-                    price_col='<CLOSE>',
-                    high_col='<HIGH>',
-                    low_col='<LOW>',
-                    volume_col='<TICKVOL>',
-                    prefix=prefix_5m
-                )
+                if not df_5m.empty:
+                    df_5m[f'{prefix_5m}day'] = df_5m.index.dayofweek
+                    df_5m[f'{prefix_5m}hour'] = df_5m.index.hour
+                    df_5m[f'{prefix_5m}minute'] = df_5m.index.minute
+
+                    # B.3: Cyclical Time Features for 5-minute data
+                    df_5m[f'{prefix_5m}hour_sin'] = np.sin(2 * np.pi * df_5m.index.hour / 24)
+                    df_5m[f'{prefix_5m}hour_cos'] = np.cos(2 * np.pi * df_5m.index.hour / 24)
+                    df_5m[f'{prefix_5m}minute_sin'] = np.sin(2 * np.pi * df_5m.index.minute / 60)
+                    df_5m[f'{prefix_5m}minute_cos'] = np.cos(2 * np.pi * df_5m.index.minute / 60)
+
+                    # B.4: Technical Indicators for 5-minute timeframe
+                    df_5m = self.feature_eng.add_indicators(
+                        df_5m,
+                        price_col='<CLOSE>',
+                        high_col='<HIGH>',
+                        low_col='<LOW>',
+                        volume_col='<TICKVOL>',
+                        prefix=prefix_5m
+                    )
+                else:
+                    # Keep behaviour consistent: empty df_5m will be handled below
+                    self.logger.warning("No 5-minute candles produced after resampling (df_5m is empty)")
                 
                 # Check if feature engineering returned empty dataframe for 5-minute data
                 if df_5m.empty:
