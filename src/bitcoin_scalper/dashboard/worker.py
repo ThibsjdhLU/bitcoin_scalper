@@ -56,9 +56,9 @@ class TradingWorker(QThread):
         self._running = False
         self._paused = False
         
-        # Trading state
-        self.balance = 10000.0
-        self.initial_balance = 10000.0
+        # Trading state (initial balance will be set from config in _initialize_engine)
+        self.balance = 0.0
+        self.initial_balance = 0.0
         self.trade_count = 0
         self.wins = 0
         self.losses = 0
@@ -122,20 +122,29 @@ class TradingWorker(QThread):
     def _initialize_engine(self):
         """Initialize the trading engine with configuration."""
         try:
-            # Create a mock connector for demo purposes
+            # Create a paper trading connector (matching engine_main.py paper mode)
             from bitcoin_scalper.connectors.paper import PaperMT5Client
             
-            # Get initial balance from config or use default
-            initial_balance = getattr(self.config, 'initial_balance', 10000.0)
+            # Get initial balance from config (matching engine_main.py line 257)
+            initial_balance = getattr(self.config, 'paper_initial_balance', 15000.0)
+            enable_slippage = getattr(self.config, 'paper_simulate_slippage', False)
             
             connector = PaperMT5Client(
                 initial_balance=initial_balance,
-                symbol=self.config.symbol,
+                enable_slippage=enable_slippage,
             )
+            
+            # Set initial price for symbol (matching engine_main.py line 264)
+            initial_price = 50000.0  # Default BTC price
+            connector.set_price(self.config.symbol, initial_price)
+            
+            # Store initial balance for tracking
+            self.initial_balance = initial_balance
+            self.balance = initial_balance
             
             self.log_message.emit(f"Creating trading engine (mode: {self.config.mode})")
             
-            # Prepare risk parameters dict
+            # Prepare risk parameters dict (matching engine_main.py line 278-285)
             risk_params = {
                 'max_drawdown': self.config.max_drawdown,
                 'max_daily_loss': self.config.max_daily_loss,
@@ -145,7 +154,7 @@ class TradingWorker(QThread):
                 'target_volatility': self.config.target_volatility,
             }
             
-            # Initialize engine
+            # Initialize engine (matching engine_main.py line 272-290)
             self.engine = TradingEngine(
                 connector=connector,
                 mode=TradingMode.ML if self.config.mode == 'ml' else TradingMode.RL,
@@ -155,6 +164,7 @@ class TradingWorker(QThread):
                 risk_params=risk_params,
                 position_sizer=self.config.position_sizer,
                 drift_detection=self.config.drift_enabled,
+                safe_mode_on_drift=self.config.safe_mode_on_drift,
                 meta_threshold=self.config.meta_threshold,
             )
             
@@ -186,10 +196,11 @@ class TradingWorker(QThread):
         """
         try:
             if self.engine and self.engine.connector:
+                # Get sufficient data for indicators (matching engine_main.py line 330)
                 data = self.engine.connector.get_ohlcv(
                     symbol=self.config.symbol,
                     timeframe=self.config.timeframe,
-                    limit=100  # Get last 100 bars for indicators
+                    limit=5000  # Match engine_main.py paper mode for proper indicator calculation
                 )
                 return data
         except Exception as e:
