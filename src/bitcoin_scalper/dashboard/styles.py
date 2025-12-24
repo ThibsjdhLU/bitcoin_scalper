@@ -5,29 +5,35 @@ Provides a modern "Mission Control" dark cyberpunk aesthetic
 optimized for macOS with professional trading interface colors.
 """
 
-# Color Palette
+# Color Palette - Named Constants for Easy Access
+BACKGROUND_DARK = '#121212'      # Main dark background
+TEXT_WHITE = '#e0e0e0'           # Primary white text
+ACCENT_GREEN = '#00ff00'         # Buy signals, profit
+ACCENT_RED = '#ff0044'           # Sell signals, loss
+
+# Complete Color Palette
 COLORS = {
     # Background colors
-    'bg_primary': '#1e1e1e',      # Main background
-    'bg_secondary': '#2d2d2d',    # Secondary panels
-    'bg_tertiary': '#3d3d3d',     # Hover states
-    'bg_chart': '#0a0a0a',        # Chart background
+    'bg_primary': BACKGROUND_DARK,    # Main background
+    'bg_secondary': '#2d2d2d',        # Secondary panels
+    'bg_tertiary': '#3d3d3d',         # Hover states
+    'bg_chart': '#0a0a0a',            # Chart background
     
     # Text colors
-    'text_primary': '#e0e0e0',    # Main text
-    'text_secondary': '#a0a0a0',  # Secondary text
-    'text_disabled': '#606060',   # Disabled text
+    'text_primary': TEXT_WHITE,       # Main text
+    'text_secondary': '#a0a0a0',      # Secondary text
+    'text_disabled': '#606060',       # Disabled text
     
     # Accent colors
-    'accent_green': '#00ff00',    # Buy signals, profit
-    'accent_red': '#ff0044',      # Sell signals, loss
-    'accent_yellow': '#ffaa00',   # Warnings
-    'accent_blue': '#00aaff',     # Info
-    'accent_purple': '#aa00ff',   # Meta-labeling
+    'accent_green': ACCENT_GREEN,     # Buy signals, profit
+    'accent_red': ACCENT_RED,         # Sell signals, loss
+    'accent_yellow': '#ffaa00',       # Warnings
+    'accent_blue': '#00aaff',         # Info
+    'accent_purple': '#aa00ff',       # Meta-labeling
     
     # Status colors
-    'profit': '#00ff00',
-    'loss': '#ff0044',
+    'profit': ACCENT_GREEN,
+    'loss': ACCENT_RED,
     'neutral': '#808080',
     'hold': '#888888',
     'filtered': '#555555',
@@ -37,6 +43,9 @@ COLORS = {
     'border_active': '#606060',
 }
 
+# Export the complete QSS stylesheet
+DARK_THEME_QSS = None  # Will be set by get_main_stylesheet()
+
 
 def get_main_stylesheet() -> str:
     """
@@ -45,7 +54,7 @@ def get_main_stylesheet() -> str:
     Returns:
         Complete QSS stylesheet as string
     """
-    return f"""
+    stylesheet = f"""
     /* ===== MAIN WINDOW ===== */
     QMainWindow {{
         background-color: {COLORS['bg_primary']};
@@ -278,6 +287,12 @@ def get_main_stylesheet() -> str:
         background-color: {COLORS['bg_tertiary']};
     }}
     """
+    
+    # Store in global variable for export
+    global DARK_THEME_QSS
+    DARK_THEME_QSS = stylesheet
+    
+    return stylesheet
 
 
 def get_stat_card_style(value_type: str = 'neutral') -> str:

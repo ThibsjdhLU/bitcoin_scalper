@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-Bitcoin Scalper Trading Dashboard Launcher. 
+Bitcoin Scalper Trading Dashboard Launcher.
 
 A professional PyQt6-based GUI for monitoring and controlling
-the trading bot with real-time visualization. 
+the trading bot with real-time visualization.
 
 Usage:
-    python src/bitcoin_scalper/run_dashboard. py [--config CONFIG_PATH] [--model MODEL_PATH] [--demo]
+    python src/bitcoin_scalper/run_dashboard.py [--config CONFIG_PATH] [--model MODEL_PATH] [--demo]
 """
 
 import sys
@@ -20,7 +20,7 @@ from PyQt6.QtCore import Qt
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from bitcoin_scalper.core. config import TradingConfig
+from bitcoin_scalper.core.config import TradingConfig
 from bitcoin_scalper.dashboard.main_window import MainWindow
 
 
@@ -48,7 +48,7 @@ Examples:
         '--config', '-c',
         type=str,
         default='config/engine_config.yaml',
-        help='Path to engine configuration YAML file (default: config/engine_config. yaml)'
+        help='Path to engine configuration YAML file (default: config/engine_config.yaml)'
     )
     
     parser.add_argument(
@@ -67,7 +67,7 @@ Examples:
     return parser.parse_args()
 
 
-def launch_engine(config_path:  str, demo: bool = False):
+def launch_engine(config_path: str, demo: bool = False):
     """
     Launch the trading engine as a subprocess.
     
@@ -103,8 +103,8 @@ def launch_engine(config_path:  str, demo: bool = False):
     try:
         process = subprocess.Popen(
             cmd,
-            stdout=subprocess. PIPE,
-            stderr=subprocess. PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
             text=True,
             bufsize=1,
             universal_newlines=True
@@ -127,7 +127,7 @@ def main():
     
     # Load configuration
     config_path = Path(args.config)
-    if config_path. exists():
+    if config_path.exists():
         print(f"✓ Loading config from: {config_path}")
         config = TradingConfig.from_yaml(str(config_path))
     else:
@@ -143,7 +143,7 @@ def main():
             print(f"✓ Model file found: {model_path}")
             model_path = str(model_path)
         else:
-            print(f"⚠️  Model file not found:  {model_path}")
+            print(f"⚠️  Model file not found: {model_path}")
             print("Continuing without model (demo mode)")
             model_path = None
     else:
@@ -153,19 +153,19 @@ def main():
     print("\nConfiguration:")
     print(f"  Symbol: {config.symbol}")
     print(f"  Timeframe: {config.timeframe}")
-    print(f"  Mode: {config. mode. upper()}")
+    print(f"  Mode: {config.mode.upper()}")
     print(f"  Meta Threshold: {config.meta_threshold:.2f}")
     
     # Launch engine if demo mode is enabled
     engine_process = None
-    if args. demo:
+    if args.demo:
         print("\n" + "="*70)
-        print("DEMO MODE:  Launching Paper Trading Engine")
+        print("DEMO MODE: Launching Paper Trading Engine")
         print("="*70)
         engine_process = launch_engine(str(config_path), demo=True)
         
         if not engine_process:
-            print("❌ Failed to start engine.  Dashboard will run without engine.")
+            print("❌ Failed to start engine. Dashboard will run without engine.")
     
     print("\n" + "="*70)
     print("Launching dashboard...")
@@ -190,11 +190,11 @@ def main():
     if args.demo and engine_process:
         window.log_console.append_log("="*60)
         window.log_console.append_log("🎯 DEMO MODE ACTIVE")
-        window.log_console. append_log(f"Engine running in PAPER trading mode (PID: {engine_process.pid})")
+        window.log_console.append_log(f"Engine running in PAPER trading mode (PID: {engine_process.pid})")
         window.log_console.append_log("All trades are simulated - no real money at risk")
         window.log_console.append_log("="*60)
-    elif model_path: 
-        window.log_console. append_log(f"Model:  {Path(model_path).name}")
+    elif model_path:
+        window.log_console.append_log(f"Model: {Path(model_path).name}")
     else:
         window.log_console.append_log("Running in DEMO mode (no model loaded)")
     
@@ -211,7 +211,7 @@ def main():
         print("="*70)
         engine_process.terminate()
         try:
-            engine_process. wait(timeout=5)
+            engine_process.wait(timeout=5)
             print("✓ Engine stopped gracefully")
         except subprocess.TimeoutExpired:
             print("⚠️  Engine did not stop gracefully, forcing...")

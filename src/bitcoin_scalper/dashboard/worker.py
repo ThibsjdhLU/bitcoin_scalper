@@ -123,14 +123,27 @@ class TradingWorker(QThread):
         """Initialize the trading engine with configuration."""
         try:
             # Create a mock connector for demo purposes
-            from bitcoin_scalper.core.paper_trading import PaperMT5Client
+            from bitcoin_scalper.connectors.paper import PaperMT5Client
+            
+            # Get initial balance from config or use default
+            initial_balance = getattr(self.config, 'initial_balance', 10000.0)
             
             connector = PaperMT5Client(
-                initial_balance=self.config.risk.get('initial_balance', 10000.0),
+                initial_balance=initial_balance,
                 symbol=self.config.symbol,
             )
             
             self.log_message.emit(f"Creating trading engine (mode: {self.config.mode})")
+            
+            # Prepare risk parameters dict
+            risk_params = {
+                'max_drawdown': self.config.max_drawdown,
+                'max_daily_loss': self.config.max_daily_loss,
+                'risk_per_trade': self.config.risk_per_trade,
+                'max_position_size': self.config.max_position_size,
+                'kelly_fraction': self.config.kelly_fraction,
+                'target_volatility': self.config.target_volatility,
+            }
             
             # Initialize engine
             self.engine = TradingEngine(
@@ -139,7 +152,7 @@ class TradingWorker(QThread):
                 symbol=self.config.symbol,
                 timeframe=self.config.timeframe,
                 log_dir=Path("logs"),
-                risk_params=self.config.risk,
+                risk_params=risk_params,
                 position_sizer=self.config.position_sizer,
                 drift_detection=self.config.drift_enabled,
                 meta_threshold=self.config.meta_threshold,
