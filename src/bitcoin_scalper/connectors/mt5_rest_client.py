@@ -2,6 +2,8 @@ import requests
 import logging
 from typing import List, Dict, Any, Optional
 
+from bitcoin_scalper.core.data_requirements import DEFAULT_FETCH_LIMIT
+
 logger = logging.getLogger("mt5_rest_client")
 
 class MT5RestClientError(Exception):
@@ -55,13 +57,26 @@ class MT5RestClient:
                 if attempt == self.max_retries:
                     raise MT5RestClientError(f"Erreur réseau persistante: {e}")
 
-    def get_ticks(self, symbol: str, limit: int = 100) -> List[Dict[str, Any]]:
-        """Récupère les derniers ticks pour un symbole donné."""
+    def get_ticks(self, symbol: str, limit: int = DEFAULT_FETCH_LIMIT) -> List[Dict[str, Any]]:
+        """
+        Récupère les derniers ticks pour un symbole donné.
+        
+        Args:
+            symbol: Symbol to fetch ticks for
+            limit: Number of ticks (default: 1500 for proper feature engineering)
+        """
         params = {"limit": limit}
         return self._request("GET", f"/ticks/{symbol}", params=params)
 
-    def get_ohlcv(self, symbol: str, timeframe: str = "M1", limit: int = 100) -> List[Dict[str, Any]]:
-        """Récupère les dernières bougies OHLCV pour un symbole et timeframe donnés."""
+    def get_ohlcv(self, symbol: str, timeframe: str = "M1", limit: int = DEFAULT_FETCH_LIMIT) -> List[Dict[str, Any]]:
+        """
+        Récupère les dernières bougies OHLCV pour un symbole et timeframe donnés.
+        
+        Args:
+            symbol: Symbol to fetch OHLCV for
+            timeframe: Timeframe (default: M1)
+            limit: Number of candles (default: 1500 for proper feature engineering)
+        """
         params = {"timeframe": timeframe, "limit": limit}
         return self._request("GET", f"/ohlcv/{symbol}", params=params)
 

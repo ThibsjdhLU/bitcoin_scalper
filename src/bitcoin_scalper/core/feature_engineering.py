@@ -9,6 +9,12 @@ from typing import List, Dict, Any, Optional
 import logging
 
 from bitcoin_scalper.utils.math_tools import frac_diff_ffd
+from bitcoin_scalper.core.data_requirements import (
+    SAFE_MIN_ROWS,
+    MIN_ROWS_AFTER_FEATURE_ENG,
+    validate_data_requirements,
+    INDICATOR_WINDOWS
+)
 
 logger = logging.getLogger("bitcoin_scalper.feature_engineering")
 logger.setLevel(logging.DEBUG)
@@ -121,11 +127,24 @@ class FeatureEngineering:
         Ajoute les indicateurs techniques principaux et avancés au DataFrame OHLCV.
         Sécurité :
             - Tous les indicateurs sont décalés d'une bougie (shift(1)) pour éviter tout look-ahead bias.
+            - Validation de données suffisantes avant traitement
         """
         df = df.copy()
         required_cols = [price_col, high_col, low_col, volume_col]
         if df.empty or not all(col in df.columns for col in required_cols):
             return df
+        
+        # ✅ VALIDATION: Check if we have sufficient input data
+        initial_rows = len(df)
+        logger.info(f"🔍 Feature Engineering: Processing {initial_rows} rows (prefix='{prefix}')")
+        
+        # Warn if data is less than recommended (but don't fail yet)
+        if initial_rows < SAFE_MIN_ROWS:
+            logger.warning(
+                f"⚠️  Input data has only {initial_rows} rows, "
+                f"recommended minimum is {SAFE_MIN_ROWS} rows. "
+                f"Some indicators may not have enough historical data."
+            )
 
         if prefix:
             df[f"{prefix}{price_col}"] = df[price_col]
@@ -195,6 +214,8 @@ class FeatureEngineering:
         # Les lignes restantes avec des NaN sont supprimées (pas d'interpolation hasardeuse)
         # Note: close_frac is excluded as FracDiff naturally produces NaN for warm-up period
         total_rows = len(df)
+        logger.info(f"📊 Before NaN handling: {total_rows} rows, {len(df.columns)} columns")
+        
         if total_rows > 0:
             nan_threshold = 0.10  # 10% seuil
             cols_to_drop = []
@@ -210,20 +231,27 @@ class FeatureEngineering:
             
             if cols_to_drop:
                 df = df.drop(columns=cols_to_drop)
+                logger.info(f"📉 Dropped {len(cols_to_drop)} columns with >10% NaN")
             
-                        # Drop remaining rows with ANY NaN
+            # Drop remaining rows with ANY NaN
             rows_before = len(df)
             df = df.dropna()
             rows_dropped = rows_before - len(df)
             if rows_dropped > 0:
-                logger.info(f"✅ Dropped {rows_dropped} rows with remaining NaN values")
+                logger.info(f"📉 Dropped {rows_dropped} rows with remaining NaN values")
+            
+            logger.info(f"📊 After NaN handling: {len(df)} rows remaining")
             
             # ✅ CRITICAL: Check if we have sufficient data remaining after NaN removal
-            min_required_rows = 300  # Need at least 300 rows for proper feature calculation
-            if len(df) < min_required_rows:
-                logger.error(f"❌ Insufficient data after NaN removal:  {len(df)} rows (minimum: {min_required_rows})")
-                logger.error(f"   Original rows: {total_rows}, dropped: {rows_dropped}")
-                logger.error(f"   This usually means insufficient historical data was fetched.")
+            valid, error_msg = validate_data_requirements(len(df), "post_processing")
+            if not valid:
+                logger.error(f"❌ {error_msg}")
+                logger.error(f"   Original rows: {total_rows}, dropped: {rows_dropped} ({rows_dropped/total_rows*100:.1f}%)")
+                logger.error(f"   Columns remaining: {len(df.columns)}")
+                logger.error(
+                    f"   💡 SOLUTION: Increase fetch limit to at least {SAFE_MIN_ROWS} candles. "
+                    f"Example: connector.fetch_ohlcv(symbol, timeframe, limit={SAFE_MIN_ROWS})"
+                )
                 # Return empty dataframe to signal error upstream
                 return pd.DataFrame()
 

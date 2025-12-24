@@ -14,6 +14,8 @@ from typing import List, Dict, Any, Optional
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 
+from bitcoin_scalper.core.data_requirements import DEFAULT_FETCH_LIMIT
+
 logger = logging.getLogger(__name__)
 
 @dataclass
@@ -264,7 +266,14 @@ class PaperMT5Client:
     def get_status(self) -> Dict[str, Any]:
         return self._request("GET", "/status")
     
-    def get_ticks(self, symbol: str, limit: int = 100) -> List[Dict[str, Any]]:
+    def get_ticks(self, symbol: str, limit: int = DEFAULT_FETCH_LIMIT) -> List[Dict[str, Any]]:
+        """
+        Generate micro-ticks around current candle close.
+        
+        Args:
+            symbol: Symbol to fetch ticks for
+            limit: Number of ticks (default: 1500 for proper feature engineering)
+        """
         # Generate micro-ticks around current candle close
         current_price = self._get_current_price(symbol)
         ticks = []
@@ -281,8 +290,15 @@ class PaperMT5Client:
             })
         return ticks
     
-    def get_ohlcv(self, symbol: str, timeframe: str = "M1", limit: int = 1000) -> List[Dict[str, Any]]:
-        """Return the stable history slice."""
+    def get_ohlcv(self, symbol: str, timeframe: str = "M1", limit: int = DEFAULT_FETCH_LIMIT) -> List[Dict[str, Any]]:
+        """
+        Return the stable history slice.
+        
+        Args:
+            symbol: Symbol to fetch OHLCV for
+            timeframe: Timeframe (default: M1)
+            limit: Number of candles (default: 1500 for proper feature engineering)
+        """
         self._update_market() # Sync with time
         
         # If we asked for more than we have, we might return less (or should we backfill more?)
