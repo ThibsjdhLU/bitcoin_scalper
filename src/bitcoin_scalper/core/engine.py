@@ -551,6 +551,13 @@ class TradingEngine:
                     prefix=prefix_1m
                 )
                 
+                # Check if feature engineering returned empty dataframe (indicates error)
+                if df.empty:
+                    self.logger.error("❌ Feature engineering returned empty DataFrame for 1-minute data")
+                    result['error'] = 'Insufficient data for 1-minute feature engineering'
+                    result['reason'] = 'Need at least 1500 candles for proper indicator calculation'
+                    return result
+                
                 # A.4: Derived features for 1-minute timeframe
                 df = self.feature_eng.add_features(
                     df,
@@ -558,6 +565,13 @@ class TradingEngine:
                     volume_col='<TICKVOL>',
                     prefix=prefix_1m
                 )
+                
+                # Check again after derived features
+                if df.empty:
+                    self.logger.error("❌ Feature engineering returned empty DataFrame after derived features (1-minute)")
+                    result['error'] = 'Insufficient data after deriving 1-minute features'
+                    result['reason'] = 'Need at least 1500 candles for proper indicator calculation'
+                    return result
                 
                 # ==========================================================================
                 # Step B: Generate 5-MINUTE Features (CRITICAL - Resampling)
@@ -595,6 +609,13 @@ class TradingEngine:
                     prefix=prefix_5m
                 )
                 
+                # Check if feature engineering returned empty dataframe for 5-minute data
+                if df_5m.empty:
+                    self.logger.error("❌ Feature engineering returned empty DataFrame for 5-minute data")
+                    result['error'] = 'Insufficient data for 5-minute feature engineering after resampling'
+                    result['reason'] = 'Need at least 1500 1-minute candles (300 5-minute bars) for proper indicator calculation'
+                    return result
+                
                 # B.5: Derived features for 5-minute timeframe
                 df_5m = self.feature_eng.add_features(
                     df_5m,
@@ -602,6 +623,13 @@ class TradingEngine:
                     volume_col='<TICKVOL>',
                     prefix=prefix_5m
                 )
+                
+                # Check again after derived features
+                if df_5m.empty:
+                    self.logger.error("❌ Feature engineering returned empty DataFrame after derived features (5-minute)")
+                    result['error'] = 'Insufficient data after deriving 5-minute features'
+                    result['reason'] = 'Need at least 1500 1-minute candles for proper indicator calculation'
+                    return result
                 
                 # B.6: Select only 5min_ prefixed columns (not raw OHLCV)
                 cols_5m = [col for col in df_5m.columns if col.startswith(prefix_5m)]

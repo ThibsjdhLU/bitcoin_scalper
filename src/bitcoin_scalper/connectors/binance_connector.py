@@ -23,8 +23,8 @@ Usage:
     ...     testnet=True  # Use testnet for testing
     ... )
     >>> 
-    >>> # Fetch market data
-    >>> df = connector.fetch_ohlcv("BTC/USDT", timeframe="1m", limit=100)
+    >>> # Fetch market data (default: 1500 candles for proper indicator calculation)
+    >>> df = connector.fetch_ohlcv("BTC/USDT", timeframe="1m", limit=1500)
     >>> print(df.head())
     >>> 
     >>> # Execute order
@@ -38,6 +38,8 @@ import ccxt
 import pandas as pd
 from typing import Dict, Any, Optional, List
 import logging
+
+from bitcoin_scalper.core.data_requirements import DEFAULT_FETCH_LIMIT
 
 logger = logging.getLogger(__name__)
 
@@ -127,7 +129,7 @@ class BinanceConnector:
         self,
         symbol: str,
         timeframe: str = "1m",
-        limit: int = 100
+        limit: int = DEFAULT_FETCH_LIMIT
     ) -> pd.DataFrame:
         """
         Fetch OHLCV data from Binance.
@@ -140,7 +142,7 @@ class BinanceConnector:
         Args:
             symbol: Trading pair symbol (e.g., "BTC/USDT")
             timeframe: Candle timeframe (e.g., "1m", "5m", "1h")
-            limit: Number of candles to fetch (default: 100)
+            limit: Number of candles to fetch (default: 1500 for proper feature engineering)
         
         Returns:
             DataFrame with columns: ['date', 'open', 'high', 'low', 'close', 'volume']
@@ -150,7 +152,7 @@ class BinanceConnector:
             Exception: If fetching data fails
             
         Example:
-            >>> df = connector.fetch_ohlcv("BTC/USDT", "1m", 100)
+            >>> df = connector.fetch_ohlcv("BTC/USDT", "1m", 1500)
             >>> print(df.columns)
             Index(['open', 'high', 'low', 'close', 'volume'])
             >>> print(df.index.name)
@@ -476,7 +478,7 @@ class BinanceConnector:
         else:
             raise NotImplementedError(f"Endpoint {endpoint} not implemented")
     
-    def get_ohlcv(self, symbol: str, timeframe: str = "1m", limit: int = 100) -> List[Dict[str, Any]]:
+    def get_ohlcv(self, symbol: str, timeframe: str = "1m", limit: int = DEFAULT_FETCH_LIMIT) -> List[Dict[str, Any]]:
         """
         Fetch OHLCV data and return as list of dicts for compatibility with MT5RestClient.
         
@@ -486,7 +488,7 @@ class BinanceConnector:
         Args:
             symbol: Trading pair symbol (e.g., "BTC/USDT")
             timeframe: Candle timeframe (e.g., "1m", "5m", "1h")
-            limit: Number of candles to fetch
+            limit: Number of candles to fetch (default: 1500 for proper feature engineering)
             
         Returns:
             List of dicts with OHLCV data
