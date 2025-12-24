@@ -211,12 +211,21 @@ class FeatureEngineering:
             if cols_to_drop:
                 df = df.drop(columns=cols_to_drop)
             
-            # Drop remaining rows with ANY NaN
+                        # Drop remaining rows with ANY NaN
             rows_before = len(df)
             df = df.dropna()
             rows_dropped = rows_before - len(df)
             if rows_dropped > 0:
                 logger.info(f"✅ Dropped {rows_dropped} rows with remaining NaN values")
+            
+            # ✅ CRITICAL: Check if we have sufficient data remaining after NaN removal
+            min_required_rows = 300  # Need at least 300 rows for proper feature calculation
+            if len(df) < min_required_rows:
+                logger.error(f"❌ Insufficient data after NaN removal:  {len(df)} rows (minimum: {min_required_rows})")
+                logger.error(f"   Original rows: {total_rows}, dropped: {rows_dropped}")
+                logger.error(f"   This usually means insufficient historical data was fetched.")
+                # Return empty dataframe to signal error upstream
+                return pd.DataFrame()
 
         # 2. Décalage immédiat (Shift)
         indicators_to_shift = [
