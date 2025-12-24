@@ -209,3 +209,194 @@ class TestBinanceConnector:
         # Verify
         assert isinstance(df, pd.DataFrame)
         assert df.empty
+
+
+class TestBinanceConnectorHistorical:
+    """Test suite for historical data fetching functionality."""
+    
+    @patch('bitcoin_scalper.connectors.binance_connector.ccxt.binance')
+    def test_fetch_ohlcv_historical_small_limit(self, mock_binance):
+        """Test that fetch_ohlcv_historical delegates to fetch_ohlcv for small limits."""
+        # Setup mock
+        mock_exchange = Mock()
+        mock_binance.return_value = mock_exchange
+        
+        # Mock OHLCV data
+        mock_ohlcv_data = [
+            [1609459200000, 29000.0, 29500.0, 28500.0, 29300.0, 100.0],
+            [1609459260000, 29300.0, 29600.0, 29100.0, 29400.0, 150.0],
+        ]
+        mock_exchange.fetch_ohlcv.return_value = mock_ohlcv_data
+        
+        # Initialize connector
+        connector = BinanceConnector(
+            api_key="test_key",
+            api_secret="test_secret",
+            testnet=True
+        )
+        
+        # Fetch with small limit (should use regular fetch_ohlcv)
+        df = connector.fetch_ohlcv_historical("BTC/USDT", "1m", 500)
+        
+        # Verify single call was made
+        mock_exchange.fetch_ohlcv.assert_called_once()
+        assert len(df) == 2
+        assert isinstance(df, pd.DataFrame)
+    
+    @patch('bitcoin_scalper.connectors.binance_connector.ccxt.binance')
+    def test_fetch_ohlcv_historical_large_limit(self, mock_binance):
+        """Test that fetch_ohlcv_historical makes multiple requests for large limits."""
+        # Setup mock
+        mock_exchange = Mock()
+        mock_binance.return_value = mock_exchange
+        
+        # Mock OHLCV data for batches (simulating 3 batches of 1000 candles each)
+        # Each batch returns different timestamps
+        batch1 = [[1609459200000 + i * 60000, 29000.0 + i, 29500.0, 28500.0, 29300.0, 100.0] for i in range(1000)]
+        batch2 = [[1609399200000 + i * 60000, 28000.0 + i, 28500.0, 27500.0, 28300.0, 100.0] for i in range(1000)]
+        batch3 = [[1609339200000 + i * 60000, 27000.0 + i, 27500.0, 26500.0, 27300.0, 100.0] for i in range(1000)]
+        
+        # Mock returns different data for each call
+        mock_exchange.fetch_ohlcv.side_effect = [batch1, batch2, batch3]
+        
+        # Initialize connector
+        connector = BinanceConnector(
+            api_key="test_key",
+            api_secret="test_secret",
+            testnet=True
+        )
+        
+        # Fetch with large limit (should make multiple requests)
+        df = connector.fetch_ohlcv_historical("BTC/USDT", "1m", 3000)
+        
+        # Verify multiple calls were made
+        assert mock_exchange.fetch_ohlcv.call_count == 3
+        
+        # Verify DataFrame structure
+        assert isinstance(df, pd.DataFrame)
+        assert len(df) == 3000
+        assert df.index.name == 'date'
+        assert list(df.columns) == ['open', 'high', 'low', 'close', 'volume']
+        
+        # Verify data is sorted chronologically
+        assert df.index.is_monotonic_increasing
+    
+    @patch('bitcoin_scalper.connectors.binance_connector.ccxt.binance')
+    def test_fetch_ohlcv_historical_removes_duplicates(self, mock_binance):
+        """Test that fetch_ohlcv_historical removes duplicate timestamps."""
+        # Setup mock
+        mock_exchange = Mock()
+        mock_binance.return_value = mock_exchange
+        
+        # Mock OHLCV data with some duplicate timestamps at batch boundary
+        # We need to return full batches (1000 items) to trigger multiple calls
+        # Batch 1: Most recent 1000 candles
+        batch1 = [[1609459200000 + i * 60000, 29000.0 + i, 29500.0, 28500.0, 29300.0, 100.0] for i in range(1000)]
+        
+        # Batch 2: Older 1000 candles, with first item duplicating the oldest item from batch1
+        # This simulates a boundary overlap that can occur in real API responses
+        batch2_unique = [[1609399200000 + i * 60000, 28000.0 + i, 28500.0, 27500.0, 28300.0, 100.0] for i in range(999)]
+        batch2 = [batch1[0]] + batch2_unique  # Intentional duplicate at boundary
+        
+        mock_exchange.fetch_ohlcv.side_effect = [batch1, batch2]
+        
+        # Initialize connector
+        connector = BinanceConnector(
+            api_key="test_key",
+            api_secret="test_secret",
+            testnet=True
+        )
+        
+        # Fetch historical data (limit > 1000 triggers batching)
+        df = connector.fetch_ohlcv_historical("BTC/USDT", "1m", 2000)
+        
+        # Verify: 1000 (batch1) + 1000 (batch2) - 1 (duplicate) = 1999 unique rows
+        assert len(df) == 1999
+        assert df.index.is_unique
+    
+    @patch('bitcoin_scalper.connectors.binance_connector.ccxt.binance')
+    def test_fetch_ohlcv_historical_handles_empty_response(self, mock_binance):
+        """Test that fetch_ohlcv_historical handles empty responses gracefully."""
+        # Setup mock
+        mock_exchange = Mock()
+        mock_binance.return_value = mock_exchange
+        
+        # Mock empty OHLCV data
+        mock_exchange.fetch_ohlcv.return_value = []
+        
+        # Initialize connector
+        connector = BinanceConnector(
+            api_key="test_key",
+            api_secret="test_secret",
+            testnet=True
+        )
+        
+        # Fetch historical data
+        df = connector.fetch_ohlcv_historical("BTC/USDT", "1m", 2000)
+        
+        # Verify empty DataFrame is returned
+        assert isinstance(df, pd.DataFrame)
+        assert df.empty
+    
+    @patch('bitcoin_scalper.connectors.binance_connector.ccxt.binance')
+    def test_get_ohlcv_uses_historical_for_large_requests(self, mock_binance):
+        """Test that get_ohlcv uses historical fetcher for requests > 1000."""
+        # Setup mock
+        mock_exchange = Mock()
+        mock_binance.return_value = mock_exchange
+        
+        # Mock OHLCV data
+        mock_ohlcv_data = [[1609459200000 + i * 60000, 29000.0 + i, 29500.0, 28500.0, 29300.0, 100.0] for i in range(1500)]
+        mock_exchange.fetch_ohlcv.return_value = mock_ohlcv_data
+        
+        # Initialize connector
+        connector = BinanceConnector(
+            api_key="test_key",
+            api_secret="test_secret",
+            testnet=True
+        )
+        
+        # Fetch with large limit through get_ohlcv
+        result = connector.get_ohlcv("BTC/USDT", "1m", 5000)
+        
+        # Verify result is list of dicts
+        assert isinstance(result, list)
+        assert len(result) == 1500
+        
+        # Verify structure of first dict
+        if result:
+            first_item = result[0]
+            assert 'date' in first_item
+            assert 'open' in first_item
+            assert 'high' in first_item
+            assert 'low' in first_item
+            assert 'close' in first_item
+            assert 'volume' in first_item
+    
+    @patch('bitcoin_scalper.connectors.binance_connector.ccxt.binance')
+    def test_get_ohlcv_uses_regular_fetch_for_small_requests(self, mock_binance):
+        """Test that get_ohlcv uses regular fetcher for requests <= 1000."""
+        # Setup mock
+        mock_exchange = Mock()
+        mock_binance.return_value = mock_exchange
+        
+        # Mock OHLCV data
+        mock_ohlcv_data = [[1609459200000 + i * 60000, 29000.0, 29500.0, 28500.0, 29300.0, 100.0] for i in range(500)]
+        mock_exchange.fetch_ohlcv.return_value = mock_ohlcv_data
+        
+        # Initialize connector
+        connector = BinanceConnector(
+            api_key="test_key",
+            api_secret="test_secret",
+            testnet=True
+        )
+        
+        # Fetch with small limit through get_ohlcv
+        result = connector.get_ohlcv("BTC/USDT", "1m", 500)
+        
+        # Verify single call was made
+        mock_exchange.fetch_ohlcv.assert_called_once()
+        
+        # Verify result
+        assert isinstance(result, list)
+        assert len(result) == 500

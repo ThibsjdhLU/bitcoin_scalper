@@ -198,6 +198,115 @@ class BinanceConnector:
             logger.error(f"Failed to fetch OHLCV data: {e}")
             raise
     
+    def fetch_ohlcv_historical(
+        self,
+        symbol: str,
+        timeframe: str = "1m",
+        limit: int = 5000
+    ) -> pd.DataFrame:
+        """
+        Fetch large amounts of historical OHLCV data by making multiple requests.
+        
+        Binance limits single requests to ~1000-1500 candles. This method
+        makes multiple requests and concatenates them to get more history.
+        
+        Args:
+            symbol: Trading pair symbol (e.g., "BTC/USDT")
+            timeframe: Candle timeframe (e.g., "1m", "5m", "1h")
+            limit: Total number of candles desired (will fetch in batches)
+        
+        Returns:
+            DataFrame with historical OHLCV data
+        """
+        try:
+            # Binance typical max limit per request
+            max_per_request = 1000
+            
+            if limit <= max_per_request:
+                # Single request is sufficient
+                return self.fetch_ohlcv(symbol, timeframe, limit)
+            
+            # Calculate number of batches needed
+            num_batches = (limit + max_per_request - 1) // max_per_request
+            
+            all_data = []
+            since = None  # Start from most recent
+            
+            logger.info(f"Fetching {limit} candles in {num_batches} batches...")
+            
+            for batch in range(num_batches):
+                # Fetch batch
+                batch_limit = min(max_per_request, limit - len(all_data))
+                
+                ohlcv = self.exchange.fetch_ohlcv(
+                    symbol=symbol,
+                    timeframe=timeframe,
+                    limit=batch_limit,
+                    since=since
+                )
+                
+                if not ohlcv:
+                    break
+                
+                # Collect data (will reverse at the end for chronological order)
+                all_data.append(ohlcv)
+                
+                # Set 'since' to the timestamp of the first candle (oldest)
+                # for the next batch to fetch older data
+                since = ohlcv[0][0] - 1
+                
+                # Stop if we got less than requested (no more history available)
+                if len(ohlcv) < batch_limit:
+                    break
+                
+                logger.debug(f"Batch {batch + 1}/{num_batches}: Fetched {len(ohlcv)} candles")
+                
+                # Add small delay between batches to avoid rate limiting
+                if batch < num_batches - 1:  # Don't delay after last batch
+                    import time
+                    time.sleep(0.1)
+            
+            if not all_data:
+                logger.warning(f"No historical OHLCV data returned for {symbol}")
+                return pd.DataFrame()
+            
+            # Flatten and reverse to get chronological order (oldest first)
+            # We fetched newest first, then went backwards in time
+            flat_data = []
+            for batch_data in reversed(all_data):
+                flat_data.extend(batch_data)
+            
+            # Convert to DataFrame
+            df = pd.DataFrame(
+                flat_data,
+                columns=['timestamp', 'open', 'high', 'low', 'close', 'volume']
+            )
+            
+            # Convert timestamp to datetime
+            df['date'] = pd.to_datetime(df['timestamp'], unit='ms')
+            df = df.drop(columns=['timestamp'])
+            df = df.set_index('date')
+            
+            # Ensure numeric types
+            for col in ['open', 'high', 'low', 'close', 'volume']:
+                df[col] = df[col].astype(float)
+            
+            # Remove duplicates (keep first occurrence) - data should already be mostly sorted
+            # but duplicates may occur at batch boundaries
+            df = df[~df.index.duplicated(keep='first')]
+            
+            # Ensure chronological order
+            if not df.index.is_monotonic_increasing:
+                df = df.sort_index()
+            
+            logger.info(f"Fetched total of {len(df)} historical candles for {symbol}")
+            
+            return df
+            
+        except Exception as e:
+            logger.error(f"Failed to fetch historical OHLCV data: {e}")
+            raise
+    
     def execute_order(
         self,
         symbol: str,
@@ -371,7 +480,8 @@ class BinanceConnector:
         """
         Fetch OHLCV data and return as list of dicts for compatibility with MT5RestClient.
         
-        This is a compatibility wrapper around fetch_ohlcv for the MT5RestClient interface.
+        This is a compatibility wrapper that intelligently handles large requests
+        by using fetch_ohlcv_historical when needed.
         
         Args:
             symbol: Trading pair symbol (e.g., "BTC/USDT")
@@ -381,7 +491,12 @@ class BinanceConnector:
         Returns:
             List of dicts with OHLCV data
         """
-        df = self.fetch_ohlcv(symbol, timeframe, limit)
+        # Use historical fetcher for large requests (>1000 candles)
+        if limit > 1000:
+            df = self.fetch_ohlcv_historical(symbol, timeframe, limit)
+        else:
+            df = self.fetch_ohlcv(symbol, timeframe, limit)
+        
         if df.empty:
             return []
         
