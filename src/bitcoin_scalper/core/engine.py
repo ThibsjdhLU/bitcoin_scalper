@@ -136,6 +136,7 @@ class TradingEngine:
         self.last_signal = None
         self.last_prediction_time = None
         self.market_regime = MarketRegime.UNKNOWN
+        self.model_warning_logged = False  # Track if we've already warned about missing model
         
         self.logger.info("TradingEngine initialized successfully")
     
@@ -784,7 +785,10 @@ class TradingEngine:
     def _get_ml_signal(self, df: pd.DataFrame) -> Tuple[Optional[str], Optional[float]]:
         """Get signal from ML model (Standard or Meta)."""
         if self.ml_model is None:
-            self.logger.warning("ML model not loaded")
+            # Only log warning once to avoid log spam
+            if not self.model_warning_logged:
+                self.logger.warning("ML model not loaded - signals will not be generated")
+                self.model_warning_logged = True
             return None, None
         
         try:
@@ -868,7 +872,10 @@ class TradingEngine:
     def _get_rl_signal(self, df: pd.DataFrame) -> Tuple[Optional[str], Optional[float]]:
         """Get signal from RL agent."""
         if self.rl_agent is None:
-            self.logger.warning("RL agent not loaded")
+            # Only log warning once to avoid log spam
+            if not self.model_warning_logged:
+                self.logger.warning("RL agent not loaded - signals will not be generated")
+                self.model_warning_logged = True
             
             # TASK 3: Temporary "coin flip" logic for debugging paper trading
             # Generate random signal with 50% probability
