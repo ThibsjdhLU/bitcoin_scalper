@@ -639,6 +639,17 @@ class TradingEngine:
             result['signal'] = signal
             result['confidence'] = confidence
             
+            # Log the signal BEFORE checking if it's a hold
+            # This allows debugging why trades are rejected (e.g., low confidence)
+            self.logger.log_signal(
+                symbol=self.symbol,
+                signal=signal if signal is not None else 'none',
+                confidence=confidence,
+                features={
+                    'price': float(df[self._get_price_column(df)].iloc[-1]),
+                }
+            )
+            
             if signal is None or signal == 'hold':
                 result['reason'] = 'No trading opportunity'
                 return result
@@ -672,17 +683,6 @@ class TradingEngine:
                 result['signal'] = 'hold'
                 result['reason'] = 'Cannot calculate position size'
                 return result
-            
-            # Log the signal
-            self.logger.log_signal(
-                symbol=self.symbol,
-                signal=signal,
-                confidence=confidence,
-                features={
-                    'price': float(df[self._get_price_column(df)].iloc[-1]),
-                    'volume_suggested': volume,
-                }
-            )
             
             return result
             
