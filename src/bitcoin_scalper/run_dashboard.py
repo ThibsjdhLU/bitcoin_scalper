@@ -21,7 +21,7 @@ from PyQt6.QtCore import Qt
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from bitcoin_scalper.core. config import TradingConfig
-from bitcoin_scalper.dashboard. main_window import MainWindow
+from bitcoin_scalper.dashboard.main_window import MainWindow
 
 
 def parse_args():
@@ -32,7 +32,7 @@ def parse_args():
         epilog="""
 Examples:
     # Launch with default config
-    python src/bitcoin_scalper/run_dashboard. py
+    python src/bitcoin_scalper/run_dashboard.py
     
     # Launch in demo mode (paper trading with engine)
     python src/bitcoin_scalper/run_dashboard.py --demo
@@ -54,7 +54,7 @@ Examples:
     parser.add_argument(
         '--model', '-m',
         type=str,
-        default='/bitcoin_scalper/models/meta_model_production.pkl',
+        default=None,
         help='Path to trained model file (default: None - will use demo mode)'
     )
     
@@ -154,11 +154,11 @@ def main():
     print(f"  Symbol: {config.symbol}")
     print(f"  Timeframe: {config.timeframe}")
     print(f"  Mode: {config. mode. upper()}")
-    print(f"  Meta Threshold: {config.meta_threshold:. 2f}")
+    print(f"  Meta Threshold: {config.meta_threshold:.2f}")
     
     # Launch engine if demo mode is enabled
     engine_process = None
-    if args.demo:
+    if args. demo:
         print("\n" + "="*70)
         print("DEMO MODE:  Launching Paper Trading Engine")
         print("="*70)
@@ -205,7 +205,7 @@ def main():
     exit_code = app.exec()
     
     # Cleanup:  terminate engine process if it was started
-    if engine_process: 
+    if engine_process:
         print("\n" + "="*70)
         print("Shutting down engine...")
         print("="*70)
@@ -222,14 +222,14 @@ def main():
     sys.exit(exit_code)
 
 
-if __name__ == "__main__": 
+if __name__ == "__main__":
     try:
         main()
-    except KeyboardInterrupt: 
+    except KeyboardInterrupt:
         print("\n\nShutting down gracefully...")
         sys.exit(0)
     except Exception as e:
         print(f"\n❌ CRITICAL ERROR: {e}")
         import traceback
-        traceback. print_exc()
+        traceback.print_exc()
         sys.exit(1)
