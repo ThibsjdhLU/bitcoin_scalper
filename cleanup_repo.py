@@ -9,7 +9,8 @@ from typing import Set, List, Dict
 # Les points d'entrée vitaux (Le Bot + L'Entraînement)
 ENTRY_POINTS = [
     "src/bitcoin_scalper/engine_main.py",
-    "scripts/train.py",  # On garde le training pour ne pas casser la R&D
+    "scripts/train.py",
+    "/src/run_dashboard.py" # On garde le training pour ne pas casser la R&D
 ]
 
 # Dossiers à ignorer totalement (ne pas toucher)
