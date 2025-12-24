@@ -248,8 +248,8 @@ class BinanceConnector:
                 if not ohlcv:
                     break
                 
-                # Add to collection (insert at beginning for chronological order)
-                all_data = ohlcv + all_data
+                # Collect data (will reverse at the end for chronological order)
+                all_data.append(ohlcv)
                 
                 # Set 'since' to the timestamp of the first candle (oldest)
                 # for the next batch to fetch older data
@@ -260,14 +260,25 @@ class BinanceConnector:
                     break
                 
                 logger.debug(f"Batch {batch + 1}/{num_batches}: Fetched {len(ohlcv)} candles")
+                
+                # Add small delay between batches to avoid rate limiting
+                if batch < num_batches - 1:  # Don't delay after last batch
+                    import time
+                    time.sleep(0.1)
             
             if not all_data:
                 logger.warning(f"No historical OHLCV data returned for {symbol}")
                 return pd.DataFrame()
             
+            # Flatten and reverse to get chronological order (oldest first)
+            # We fetched newest first, then went backwards in time
+            flat_data = []
+            for batch_data in reversed(all_data):
+                flat_data.extend(batch_data)
+            
             # Convert to DataFrame
             df = pd.DataFrame(
-                all_data,
+                flat_data,
                 columns=['timestamp', 'open', 'high', 'low', 'close', 'volume']
             )
             
@@ -280,8 +291,13 @@ class BinanceConnector:
             for col in ['open', 'high', 'low', 'close', 'volume']:
                 df[col] = df[col].astype(float)
             
-            # Remove duplicates and sort
-            df = df[~df.index.duplicated(keep='first')].sort_index()
+            # Remove duplicates (keep first occurrence) - data should already be mostly sorted
+            # but duplicates may occur at batch boundaries
+            df = df[~df.index.duplicated(keep='first')]
+            
+            # Ensure chronological order
+            if not df.index.is_monotonic_increasing:
+                df = df.sort_index()
             
             logger.info(f"Fetched total of {len(df)} historical candles for {symbol}")
             

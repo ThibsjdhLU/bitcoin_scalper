@@ -288,12 +288,15 @@ class TestBinanceConnectorHistorical:
         mock_exchange = Mock()
         mock_binance.return_value = mock_exchange
         
-        # Mock OHLCV data with some duplicate timestamps
-        # We need to return full batches to trigger multiple calls
+        # Mock OHLCV data with some duplicate timestamps at batch boundary
+        # We need to return full batches (1000 items) to trigger multiple calls
+        # Batch 1: Most recent 1000 candles
         batch1 = [[1609459200000 + i * 60000, 29000.0 + i, 29500.0, 28500.0, 29300.0, 100.0] for i in range(1000)]
-        # Second batch has one duplicate at the boundary
-        batch2_data = [[1609399200000 + i * 60000, 28000.0 + i, 28500.0, 27500.0, 28300.0, 100.0] for i in range(999)]
-        batch2 = [batch1[0]] + batch2_data  # Add duplicate of first item from batch1
+        
+        # Batch 2: Older 1000 candles, with first item duplicating the oldest item from batch1
+        # This simulates a boundary overlap that can occur in real API responses
+        batch2_unique = [[1609399200000 + i * 60000, 28000.0 + i, 28500.0, 27500.0, 28300.0, 100.0] for i in range(999)]
+        batch2 = [batch1[0]] + batch2_unique  # Intentional duplicate at boundary
         
         mock_exchange.fetch_ohlcv.side_effect = [batch1, batch2]
         
@@ -304,10 +307,10 @@ class TestBinanceConnectorHistorical:
             testnet=True
         )
         
-        # Fetch historical data
+        # Fetch historical data (limit > 1000 triggers batching)
         df = connector.fetch_ohlcv_historical("BTC/USDT", "1m", 2000)
         
-        # Verify duplicates were removed (1000 from batch1 + 1000 from batch2 - 1 duplicate = 1999)
+        # Verify: 1000 (batch1) + 1000 (batch2) - 1 (duplicate) = 1999 unique rows
         assert len(df) == 1999
         assert df.index.is_unique
     
