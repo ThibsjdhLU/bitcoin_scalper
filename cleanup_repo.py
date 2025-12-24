@@ -10,7 +10,7 @@ from typing import Set, List, Dict
 ENTRY_POINTS = [
     "src/bitcoin_scalper/engine_main.py",
     "scripts/train.py",
-    "/src/run_dashboard.py" # On garde le training pour ne pas casser la R&D
+    "/src/bitcoin_scalper/run_dashboard.py" # On garde le training pour ne pas casser la R&D
 ]
 
 # Dossiers à ignorer totalement (ne pas toucher)
