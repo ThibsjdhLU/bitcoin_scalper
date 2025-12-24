@@ -140,37 +140,34 @@ def run_live_mode(config: TradingConfig, logger: TradingLogger):
             last_tick_time = current_time
             
             # Get latest market data
+                            # Get latest market data
             try:
                 # Fetch OHLCV data from connector
                 if config.exchange == "binance":
-                    # Binance returns DataFrame directly
-                    df = connector.fetch_ohlcv(
-                        config.symbol,
-                        timeframe=config.timeframe,
-                        limit=1500  # Get last 1500 candles for indicators
-                    )
-                    
-                    if df.empty or len(df) < 30:
-                        logger.warning("Insufficient market data")
-                        continue
-                    
-                    # Convert DataFrame to list of dicts for compatibility
-                    ohlcv = df.reset_index().to_dict('records')
-                else:
-                    # MT5 returns list of dicts
+                    # Use compatibility wrapper get_ohlcv which handles pagination for large limits
+                    # (fetch_ohlcv may be limited by exchange per-request cap; get_ohlcv delegates to
+                    # fetch_ohlcv_historical when limit > 1000)
                     ohlcv = connector.get_ohlcv(
                         config.symbol,
                         timeframe=config.timeframe,
-                        limit=1500  # Get last 1500 candles for indicators
+                        limit=1500  # Request last 1500 candles for indicators
+                    )
+                    
+                    # get_ohlcv returns a list of dicts (compatibility format)
+                    if not ohlcv or len(ohlcv) < 30:
+                        logger.warning("Insufficient market data")
+                        continue
+                else:
+                    # MT5 returns list of dicts directly
+                    ohlcv = connector.get_ohlcv(
+                        config.symbol,
+                        timeframe=config.timeframe,
+                        limit=1500  # Request last 1500 candles for indicators
                     )
                     
                     if not ohlcv or len(ohlcv) < 30:
                         logger.warning("Insufficient market data")
                         continue
-                
-            except Exception as e:
-                logger.error(f"Failed to fetch market data: {e}")
-                continue
             
             # Process the tick
             result = engine.process_tick(ohlcv)
