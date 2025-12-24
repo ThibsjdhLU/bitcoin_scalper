@@ -13,11 +13,10 @@ from datetime import datetime
 
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel,
-    QTextEdit, QFrame, QSlider, QDoubleSpinBox, QProgressBar
+    QPlainTextEdit, QFrame, QSlider, QDoubleSpinBox, QProgressBar
 )
 from PyQt6.QtCore import Qt, pyqtSlot
 from PyQt6.QtGui import QFont
-
 import pyqtgraph as pg
 import numpy as np
 
