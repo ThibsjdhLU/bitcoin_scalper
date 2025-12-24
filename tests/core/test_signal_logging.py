@@ -8,6 +8,14 @@ import pytest
 from unittest.mock import Mock, patch, call
 import pandas as pd
 import numpy as np
+import os
+from pathlib import Path
+
+
+# Get the path to engine.py relative to this test file
+TEST_DIR = Path(__file__).parent
+PROJECT_ROOT = TEST_DIR.parent.parent
+ENGINE_PATH = PROJECT_ROOT / "src" / "bitcoin_scalper" / "core" / "engine.py"
 
 
 def test_signal_logged_before_hold_check():
@@ -27,15 +35,11 @@ def test_signal_logged_before_hold_check():
     mock_logger.info = Mock()
     mock_logger.warning = Mock()
     
-    # Import after mocking to avoid dependency issues
-    import sys
-    sys.path.insert(0, '/home/runner/work/bitcoin_scalper/bitcoin_scalper/src')
-    
     # We'll test the code logic rather than actually running it
     # since we don't have all dependencies installed
     
     # Verify the code structure is correct by reading the file
-    with open('/home/runner/work/bitcoin_scalper/bitcoin_scalper/src/bitcoin_scalper/core/engine.py', 'r') as f:
+    with open(ENGINE_PATH, 'r') as f:
         engine_code = f.read()
     
     # Find process_tick method
@@ -68,7 +72,7 @@ def test_signal_logging_includes_confidence():
     This allows seeing when trades are rejected due to low confidence from
     the meta-model, which is the primary use case for this change.
     """
-    with open('/home/runner/work/bitcoin_scalper/bitcoin_scalper/src/bitcoin_scalper/core/engine.py', 'r') as f:
+    with open(ENGINE_PATH, 'r') as f:
         engine_code = f.read()
     
     # Find the log_signal call
@@ -95,7 +99,7 @@ def test_no_duplicate_signal_logging():
     which meant hold signals were never logged (they exit before reaching it).
     Now there should be only one log_signal call.
     """
-    with open('/home/runner/work/bitcoin_scalper/bitcoin_scalper/src/bitcoin_scalper/core/engine.py', 'r') as f:
+    with open(ENGINE_PATH, 'r') as f:
         engine_code = f.read()
     
     # Find process_tick method
