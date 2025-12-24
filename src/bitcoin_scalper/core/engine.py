@@ -477,7 +477,7 @@ class TradingEngine:
         
         try:
             # Step 1: Clean and validate data
-            if isinstance(market_data, dict):
+                        if isinstance(market_data, dict):
                 cleaned_data = self.data_cleaner.clean_ohlcv([market_data])
                 if not cleaned_data:
                     result['error'] = 'Data cleaning failed'
@@ -485,8 +485,37 @@ class TradingEngine:
                     return result
                 df = pd.DataFrame(cleaned_data)
             elif isinstance(market_data, list):
-                # Handle list of dictionaries (from paper trading or other sources)
+                # Handle list of dictionaries (from paper trading, Binance connector, or other sources)
                 df = pd.DataFrame(market_data)
+
+                # --- TIME INDEX HANDLING (fix for 1970 timestamps / wrong units) ---
+                # Prefer explicit datetime column if present (common names returned by connectors)
+                time_col_candidates = [c for c in df.columns if c.lower() in ('date', 'datetime', 'timestamp', 'time')]
+                if time_col_candidates:
+                    tcol = time_col_candidates[0]
+                    # Convert using unit heuristic when integer dtype (detect s / ms / ns)
+                    try:
+                        if pd.api.types.is_integer_dtype(df[tcol].dtype):
+                            maxv = int(df[tcol].max())
+                            if maxv > 1e15:
+                                unit = 'ns'
+                            elif maxv > 1e12:
+                                unit = 'ms'
+                            elif maxv > 1e9:
+                                unit = 's'
+                            else:
+                                unit = 's'
+                            df[tcol] = pd.to_datetime(df[tcol], unit=unit, errors='coerce')
+                        else:
+                            df[tcol] = pd.to_datetime(df[tcol], errors='coerce')
+                    except Exception:
+                        df[tcol] = pd.to_datetime(df[tcol], errors='coerce')
+                    # Set datetime column as index
+                    df = df.set_index(tcol)
+                else:
+                    # Fallback: try to coerce the existing index (if it's numeric it was being treated as ns)
+                    if not isinstance(df.index, pd.DatetimeIndex):
+                        df.index = pd.to_datetime(df.index, errors='coerce')
             else:
                 df = market_data.copy()
             
