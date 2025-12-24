@@ -6,7 +6,7 @@ A professional PyQt6-based GUI for monitoring and controlling
 the trading bot with real-time visualization. 
 
 Usage:
-    python src/bitcoin_scalper/run_dashboard.py [--config CONFIG_PATH] [--model MODEL_PATH] [--demo]
+    python src/bitcoin_scalper/run_dashboard. py [--config CONFIG_PATH] [--model MODEL_PATH] [--demo]
 """
 
 import sys
@@ -20,7 +20,7 @@ from PyQt6.QtCore import Qt
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from bitcoin_scalper.core.config import TradingConfig
+from bitcoin_scalper.core. config import TradingConfig
 from bitcoin_scalper.dashboard. main_window import MainWindow
 
 
@@ -32,7 +32,7 @@ def parse_args():
         epilog="""
 Examples:
     # Launch with default config
-    python src/bitcoin_scalper/run_dashboard.py
+    python src/bitcoin_scalper/run_dashboard. py
     
     # Launch in demo mode (paper trading with engine)
     python src/bitcoin_scalper/run_dashboard.py --demo
@@ -103,8 +103,8 @@ def launch_engine(config_path:  str, demo: bool = False):
     try:
         process = subprocess.Popen(
             cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            stdout=subprocess. PIPE,
+            stderr=subprocess. PIPE,
             text=True,
             bufsize=1,
             universal_newlines=True
@@ -127,9 +127,9 @@ def main():
     
     # Load configuration
     config_path = Path(args.config)
-    if config_path.exists():
+    if config_path. exists():
         print(f"✓ Loading config from: {config_path}")
-        config = TradingConfig. from_yaml(str(config_path))
+        config = TradingConfig.from_yaml(str(config_path))
     else:
         print(f"⚠️  Config file not found: {config_path}")
         print("Using default configuration")
@@ -143,7 +143,7 @@ def main():
             print(f"✓ Model file found: {model_path}")
             model_path = str(model_path)
         else:
-            print(f"⚠️  Model file not found: {model_path}")
+            print(f"⚠️  Model file not found:  {model_path}")
             print("Continuing without model (demo mode)")
             model_path = None
     else:
@@ -153,12 +153,12 @@ def main():
     print("\nConfiguration:")
     print(f"  Symbol: {config.symbol}")
     print(f"  Timeframe: {config.timeframe}")
-    print(f"  Mode: {config.mode. upper()}")
+    print(f"  Mode: {config. mode. upper()}")
     print(f"  Meta Threshold: {config.meta_threshold:. 2f}")
     
     # Launch engine if demo mode is enabled
     engine_process = None
-    if args. demo:
+    if args.demo:
         print("\n" + "="*70)
         print("DEMO MODE:  Launching Paper Trading Engine")
         print("="*70)
@@ -181,20 +181,20 @@ def main():
     window.show()
     
     # Log startup message
-    window.log_console. append_log("="*60)
+    window.log_console.append_log("="*60)
     window.log_console.append_log("Bitcoin Scalper Trading Dashboard")
     window.log_console.append_log("="*60)
-    window.log_console.append_log(f"Configuration loaded: {config. symbol} {config.timeframe}")
-    window.log_console.append_log(f"Meta threshold: {config.meta_threshold:. 2f}")
+    window.log_console.append_log(f"Configuration loaded: {config.symbol} {config.timeframe}")
+    window.log_console.append_log(f"Meta threshold: {config.meta_threshold:.2f}")
     
     if args.demo and engine_process:
-        window. log_console.append_log("="*60)
+        window.log_console.append_log("="*60)
         window.log_console.append_log("🎯 DEMO MODE ACTIVE")
-        window.log_console. append_log(f"Engine running in PAPER trading mode (PID: {engine_process. pid})")
+        window.log_console. append_log(f"Engine running in PAPER trading mode (PID: {engine_process.pid})")
         window.log_console.append_log("All trades are simulated - no real money at risk")
         window.log_console.append_log("="*60)
-    elif model_path:
-        window.log_console.append_log(f"Model:  {Path(model_path).name}")
+    elif model_path: 
+        window.log_console. append_log(f"Model:  {Path(model_path).name}")
     else:
         window.log_console.append_log("Running in DEMO mode (no model loaded)")
     
@@ -211,7 +211,7 @@ def main():
         print("="*70)
         engine_process.terminate()
         try:
-            engine_process.wait(timeout=5)
+            engine_process. wait(timeout=5)
             print("✓ Engine stopped gracefully")
         except subprocess.TimeoutExpired:
             print("⚠️  Engine did not stop gracefully, forcing...")
@@ -222,14 +222,14 @@ def main():
     sys.exit(exit_code)
 
 
-if __name__ == "__main__":
+if __name__ == "__main__": 
     try:
         main()
-    except KeyboardInterrupt:
+    except KeyboardInterrupt: 
         print("\n\nShutting down gracefully...")
         sys.exit(0)
     except Exception as e:
         print(f"\n❌ CRITICAL ERROR: {e}")
         import traceback
-        traceback.print_exc()
+        traceback. print_exc()
         sys.exit(1)
