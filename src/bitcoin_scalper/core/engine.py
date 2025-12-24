@@ -477,7 +477,7 @@ class TradingEngine:
         
         try:
             # Step 1: Clean and validate data
-                        if isinstance(market_data, dict):
+            if isinstance(market_data, dict):
                 cleaned_data = self.data_cleaner.clean_ohlcv([market_data])
                 if not cleaned_data:
                     result['error'] = 'Data cleaning failed'
