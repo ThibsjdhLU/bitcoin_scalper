@@ -54,7 +54,7 @@ Examples:
     parser.add_argument(
         '--model', '-m',
         type=str,
-        default=None,
+        default='/bitcoin_scalper/models/meta_model_production.pkl',
         help='Path to trained model file (default: None - will use demo mode)'
     )
     
