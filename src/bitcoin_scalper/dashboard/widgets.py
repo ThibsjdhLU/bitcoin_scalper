@@ -429,3 +429,8 @@ class MetaConfidencePanel(QFrame):
     def get_threshold(self) -> float:
         """Get current threshold value."""
         return self.threshold
+
+
+# Aliases for naming consistency with problem statement
+ControlPanel = MetaConfidencePanel  # The control panel with meta_threshold slider
+ChartWidget = CandlestickChart      # The chart widget

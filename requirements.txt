@@ -22,4 +22,7 @@ statsmodels
 gymnasium
 stable-baselines3
 river
-ccxt 
+ccxt
+PyQt6
+pyqtgraph
+pyyaml 
