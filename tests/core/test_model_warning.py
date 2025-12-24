@@ -87,7 +87,7 @@ class TestModelWarning:
         
         # Ensure model is not loaded
         assert engine.ml_model is None
-        assert engine.model_warning_logged is False
+        assert engine.ml_warning_logged is False
         
         # Get mock market data
         market_data = mock_mt5_client.get_ohlcv("BTCUSD", limit=50)
@@ -107,8 +107,8 @@ class TestModelWarning:
         # Should only be logged once
         assert warning_count == 1, f"Expected 1 warning, got {warning_count}"
         
-        # Verify the flag is set
-        assert engine.model_warning_logged is True
+        # Verify the ML flag is set
+        assert engine.ml_warning_logged is True
         
         # All results should have no signal
         assert result1['signal'] is None
@@ -129,7 +129,7 @@ class TestModelWarning:
         
         # Ensure agent is not loaded
         assert engine.rl_agent is None
-        assert engine.model_warning_logged is False
+        assert engine.rl_warning_logged is False
         
         # Get mock market data
         market_data = mock_mt5_client.get_ohlcv("BTCUSD", limit=50)
@@ -149,8 +149,8 @@ class TestModelWarning:
         # Should only be logged once
         assert warning_count == 1, f"Expected 1 warning, got {warning_count}"
         
-        # Verify the flag is set
-        assert engine.model_warning_logged is True
+        # Verify the RL flag is set
+        assert engine.rl_warning_logged is True
     
     def test_model_loaded_no_warning(self, mock_mt5_client, tmp_path, caplog):
         """Test that no warning is shown when model is loaded."""
@@ -190,8 +190,9 @@ class TestModelWarning:
         # Should be 0 warnings
         assert warning_count == 0, f"Expected no warnings, got {warning_count}"
         
-        # Flag should still be False since warning was never needed
-        assert engine.model_warning_logged is False
+        # Flags should still be False since warning was never needed
+        assert engine.ml_warning_logged is False
+        assert engine.rl_warning_logged is False
 
 
 if __name__ == "__main__":
