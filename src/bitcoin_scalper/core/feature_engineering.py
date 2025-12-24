@@ -242,11 +242,42 @@ class FeatureEngineering:
             
             logger.info(f"📊 After NaN handling: {len(df)} rows remaining")
             
+                        # Drop remaining rows — only require essential columns (price) to be non-NaN.
+            # Rationale: many indicators have warm-up NaNs; dropping rows on ANY NaN removes
+            # too much data for short series (e.g., resampled 5min). We keep rows that have
+            # a valid price and remove rows where price is missing.
+            rows_before = len(df)
+
+            # Determine essential price column (prioritize prefixed price if prefix used)
+            essential_cols = []
+            pref_price_col = f"{prefix}{price_col}" if prefix else price_col
+            if pref_price_col in df.columns:
+                essential_cols.append(pref_price_col)
+            elif price_col in df.columns:
+                essential_cols.append(price_col)
+            elif '<CLOSE>' in df.columns:
+                essential_cols.append('<CLOSE>')
+            elif 'close' in df.columns:
+                essential_cols.append('close')
+
+            if essential_cols:
+                # Only drop rows missing the essential price(s)
+                df = df.dropna(subset=essential_cols)
+            else:
+                # Fallback: if we couldn't identify a price column, keep original conservative behavior
+                df = df.dropna()
+
+            rows_dropped = rows_before - len(df)
+            if rows_dropped > 0:
+                logger.info(f"📉 Dropped {rows_dropped} rows with missing PRICE (of {rows_before} total rows)")
+
+            logger.info(f"📊 After NaN handling: {len(df)} rows remaining")
+
             # ✅ CRITICAL: Check if we have sufficient data remaining after NaN removal
             valid, error_msg = validate_data_requirements(len(df), "post_processing")
             if not valid:
                 logger.error(f"❌ {error_msg}")
-                logger.error(f"   Original rows: {total_rows}, dropped: {rows_dropped} ({rows_dropped/total_rows*100:.1f}%)")
+                logger.error(f"   Original rows: {total_rows}, dropped: {rows_dropped} ({(rows_dropped/total_rows*100) if total_rows>0 else 0:.1f}%)")
                 logger.error(f"   Columns remaining: {len(df.columns)}")
                 logger.error(
                     f"   💡 SOLUTION: Increase fetch limit to at least {SAFE_MIN_ROWS} candles. "
