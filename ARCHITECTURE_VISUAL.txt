@@ -1,0 +1,248 @@
+╔══════════════════════════════════════════════════════════════════════╗
+║              BITCOIN SCALPER DASHBOARD ARCHITECTURE                  ║
+║                    (MVC Pattern - 5 Files)                           ║
+╚══════════════════════════════════════════════════════════════════════╝
+
+┌──────────────────────────────────────────────────────────────────────┐
+│                        ENTRY POINT                                   │
+│  run_dashboard.py                                                    │
+│  • Charge config (TradingConfig.from_yaml)                           │
+│  • Crée QApplication                                                 │
+│  • Lance MainWindow                                                  │
+│  • Applique le thème dark                                            │
+└────────────────────────────┬─────────────────────────────────────────┘
+                             │
+                             ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│                          VIEW LAYER                                  │
+│                                                                      │
+│  ┌─────────────────────────────────────────────────────────────┐   │
+│  │ styles.py                                                    │   │
+│  │ • BACKGROUND_DARK = '#121212'                                │   │
+│  │ • TEXT_WHITE = '#e0e0e0'                                     │   │
+│  │ • ACCENT_GREEN = '#00ff00'                                   │   │
+│  │ • ACCENT_RED = '#ff0044'                                     │   │
+│  │ • COLORS dict (19 entries)                                   │   │
+│  │ • DARK_THEME_QSS (4984 chars CSS)                            │   │
+│  └─────────────────────────────────────────────────────────────┘   │
+│                                                                      │
+│  ┌─────────────────────────────────────────────────────────────┐   │
+│  │ main_window.py                                               │   │
+│  │ • MainWindow(QMainWindow) - Assemble tout                    │   │
+│  │ • Panel gauche: Metrics + START/STOP                         │   │
+│  │ • Panel centre: Chart + Logs                                 │   │
+│  │ • Panel droit: ControlPanel (slider)                         │   │
+│  │ • Connexions signaux: worker ↔ widgets                       │   │
+│  └─────────────────────────────────────────────────────────────┘   │
+│                                                                      │
+│  ┌─────────────────────────────────────────────────────────────┐   │
+│  │ widgets.py                                                   │   │
+│  │ ┌─────────────────────────────────────────────────────────┐ │   │
+│  │ │ ChartWidget (CandlestickChart)                          │ │   │
+│  │ │ • pyqtgraph OHLC chart                                  │ │   │
+│  │ │ • Buy/Sell markers                                      │ │   │
+│  │ │ • 200 candles max                                       │ │   │
+│  │ └─────────────────────────────────────────────────────────┘ │   │
+│  │ ┌─────────────────────────────────────────────────────────┐ │   │
+│  │ │ ControlPanel (MetaConfidencePanel) ★ CRITIQUE           │ │   │
+│  │ │ • Slider: 0 to 100 (0.00 to 1.00)                       │ │   │
+│  │ │ • QDoubleSpinBox pour précision                         │ │   │
+│  │ │ • Confidence bar + Signal indicator                     │ │   │
+│  │ │ • → valueChanged signal                                 │ │   │
+│  │ └─────────────────────────────────────────────────────────┘ │   │
+│  │ ┌─────────────────────────────────────────────────────────┐ │   │
+│  │ │ LogConsole (QPlainTextEdit)                             │ │   │
+│  │ │ • Read-only log display                                 │ │   │
+│  │ │ • Auto-scroll + timestamps                              │ │   │
+│  │ │ • 1000 lines max                                        │ │   │
+│  │ └─────────────────────────────────────────────────────────┘ │   │
+│  │ ┌─────────────────────────────────────────────────────────┐ │   │
+│  │ │ StatCard (QFrame)                                       │ │   │
+│  │ │ • Balance, P&L, Trades, Win Rate                        │ │   │
+│  │ │ • Color-coded (profit/loss)                             │ │   │
+│  │ └─────────────────────────────────────────────────────────┘ │   │
+│  └─────────────────────────────────────────────────────────────┘   │
+└───────────────────────────────┬──────────────────────────────────────┘
+                                │
+                ┌───────────────┴───────────────┐
+                │     pyqtSignal / pyqtSlot     │
+                │      (Thread-Safe Bridge)     │
+                └───────────────┬───────────────┘
+                                │
+                                ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│                       CONTROLLER LAYER                               │
+│                                                                      │
+│  ┌─────────────────────────────────────────────────────────────┐   │
+│  │ worker.py                                                    │   │
+│  │                                                              │   │
+│  │  class TradingWorker(QThread):                               │   │
+│  │                                                              │   │
+│  │    def run(self):  ← Main Thread Loop                        │   │
+│  │      while self._running:                                    │   │
+│  │        market_data = fetch_market_data()                     │   │
+│  │        result = self.engine.process_tick(market_data)  ★     │   │
+│  │        emit signals to UI                                    │   │
+│  │        time.sleep(1)                                         │   │
+│  │                                                              │   │
+│  │    @pyqtSlot(float)                                          │   │
+│  │    def update_meta_threshold(self, threshold):  ★ CRITIQUE   │   │
+│  │      self.engine.meta_threshold = threshold  ← Direct Update │   │
+│  │      self.engine.ml_model.meta_threshold = threshold         │   │
+│  │                                                              │   │
+│  │  Signals Emitted:                                            │   │
+│  │    • log_message(str)                                        │   │
+│  │    • price_update(float×6)                                   │   │
+│  │    • signal_generated(str, float)                            │   │
+│  │    • trade_executed(str, float, float)                       │   │
+│  │    • metric_update(str, object)                              │   │
+│  └─────────────────────────────────────────────────────────────┘   │
+└───────────────────────────────┬──────────────────────────────────────┘
+                                │
+                                ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│                          MODEL LAYER                                 │
+│                                                                      │
+│  ┌─────────────────────────────────────────────────────────────┐   │
+│  │ TradingEngine (bitcoin_scalper.core.engine)                  │   │
+│  │                                                              │   │
+│  │  • process_tick(market_data) → Dict                          │   │
+│  │    1. Clean data                                             │   │
+│  │    2. Generate features (1min + 5min)                        │   │
+│  │    3. Check drift                                            │   │
+│  │    4. Get ML signal                                          │   │
+│  │    5. Apply risk management                                  │   │
+│  │    6. Calculate position size                                │   │
+│  │                                                              │   │
+│  │  • meta_threshold: float  ← Updated by slider                │   │
+│  │  • ml_model: MetaModel                                       │   │
+│  │  • connector: PaperMT5Client                                 │   │
+│  └─────────────────────────────────────────────────────────────┘   │
+│                                                                      │
+│  ┌─────────────────────────────────────────────────────────────┐   │
+│  │ PaperMT5Client (bitcoin_scalper.connectors.paper)            │   │
+│  │ • Simulated trading for testing                              │   │
+│  │ • get_ohlcv() → List[Dict]                                   │   │
+│  │ • send_order() → execution result                            │   │
+│  └─────────────────────────────────────────────────────────────┘   │
+└──────────────────────────────────────────────────────────────────────┘
+
+
+╔══════════════════════════════════════════════════════════════════════╗
+║                      SIGNAL FLOW DIAGRAM                             ║
+╚══════════════════════════════════════════════════════════════════════╝
+
+┌─────────────┐
+│ User moves  │
+│   slider    │
+└──────┬──────┘
+       │
+       ▼
+┌──────────────────────────────┐
+│ ControlPanel.slider          │
+│   valueChanged(int) signal   │
+└──────────┬───────────────────┘
+           │
+           ▼
+┌──────────────────────────────────────────┐
+│ MainWindow connection:                   │
+│ lambda v: worker.update_meta_threshold   │
+│           (v / 100.0)                    │
+└──────────┬───────────────────────────────┘
+           │
+           ▼
+┌──────────────────────────────────────────┐
+│ TradingWorker.update_meta_threshold()    │
+│ @pyqtSlot(float)                         │
+└──────────┬───────────────────────────────┘
+           │
+           ▼
+┌──────────────────────────────────────────┐
+│ engine.meta_threshold = threshold        │
+│ engine.ml_model.meta_threshold = thresh  │
+└──────────┬───────────────────────────────┘
+           │
+           ▼
+┌──────────────────────────────────────────┐
+│ Next process_tick() call uses new value │
+└──────────────────────────────────────────┘
+
+
+╔══════════════════════════════════════════════════════════════════════╗
+║                    BUTTON CONTROL FLOW                               ║
+╚══════════════════════════════════════════════════════════════════════╝
+
+START BUTTON:                         STOP BUTTON:
+┌────────────┐                        ┌───────────┐
+│ User click │                        │ User click│
+└──────┬─────┘                        └──────┬────┘
+       │                                     │
+       ▼                                     ▼
+┌──────────────────────┐            ┌────────────────────┐
+│ _on_start_clicked()  │            │ _on_stop_clicked() │
+└──────┬───────────────┘            └──────┬─────────────┘
+       │                                   │
+       ▼                                   ▼
+┌──────────────────────┐            ┌────────────────────┐
+│ worker = TradingWorker│            │ worker.stop()      │
+│ Connect signals       │            │ worker.wait()      │
+└──────┬───────────────┘            └──────┬─────────────┘
+       │                                   │
+       ▼                                   ▼
+┌──────────────────────┐            ┌────────────────────┐
+│ worker.start()       │            │ self._running=False│
+└──────┬───────────────┘            └──────┬─────────────┘
+       │                                   │
+       ▼                                   ▼
+┌──────────────────────┐            ┌────────────────────┐
+│ run() loop starts    │            │ run() loop exits   │
+│ while self._running: │            └────────────────────┘
+│   process_tick()     │
+└──────────────────────┘
+
+
+╔══════════════════════════════════════════════════════════════════════╗
+║                      FILE DEPENDENCIES                               ║
+╚══════════════════════════════════════════════════════════════════════╝
+
+run_dashboard.py
+    ├── imports → main_window.MainWindow
+    ├── imports → core.config.TradingConfig
+    └── creates → QApplication
+
+main_window.py
+    ├── imports → styles.get_main_stylesheet
+    ├── imports → widgets.CandlestickChart
+    ├── imports → widgets.LogConsole
+    ├── imports → widgets.MetaConfidencePanel
+    ├── imports → worker.TradingWorker
+    └── imports → core.config.TradingConfig
+
+worker.py
+    ├── imports → core.engine.TradingEngine
+    ├── imports → core.config.TradingConfig
+    └── imports → connectors.paper.PaperMT5Client
+
+widgets.py
+    ├── imports → PyQt6.QtWidgets
+    ├── imports → pyqtgraph
+    └── imports → styles.COLORS
+
+styles.py
+    └── No external dependencies (pure constants + CSS)
+
+
+╔══════════════════════════════════════════════════════════════════════╗
+║                      KEY FEATURES SUMMARY                            ║
+╚══════════════════════════════════════════════════════════════════════╝
+
+✅ MVC Architecture (5 files)
+✅ Thread-Safe Communication (pyqtSignal/Slot)
+✅ Real-Time Updates (process_tick loop)
+✅ Critical Slider Control (meta_threshold 0.00-1.00)
+✅ START/STOP Bot Control
+✅ Dark Cyberpunk Theme
+✅ Production Ready Code
+✅ Comprehensive Tests
+✅ Full Documentation
+
