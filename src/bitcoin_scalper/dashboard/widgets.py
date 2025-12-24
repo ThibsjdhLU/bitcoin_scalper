@@ -249,7 +249,7 @@ class LogConsole(QPlainTextEdit):
         formatted = f"[{timestamp}] {message}"
         
         # Append and auto-scroll
-        self.append(formatted)
+        self.appendPlainText(formatted)
         self.verticalScrollBar().setValue(
             self.verticalScrollBar().maximum()
         )
