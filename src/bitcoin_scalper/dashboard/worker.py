@@ -210,7 +210,7 @@ class TradingWorker(QThread):
                     self.log_message.emit(f"⚠️  Warning: Only {len(data)} candles fetched (need ≥500 for features)")
                 return data
         
-        return None
+            return None
     
     def _process_tick_result(self, result: Dict[str, Any], market_data: List[Dict[str, Any]]):
         """
