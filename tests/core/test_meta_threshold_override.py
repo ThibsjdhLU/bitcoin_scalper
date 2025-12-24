@@ -6,7 +6,11 @@ properly overrides the threshold stored in a pickled MetaModel.
 """
 
 import sys
-sys.path.insert(0, '/home/runner/work/bitcoin_scalper/bitcoin_scalper/src')
+from pathlib import Path
+
+# Add project src to path
+project_root = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(project_root / 'src'))
 
 import numpy as np
 import pandas as pd

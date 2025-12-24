@@ -7,7 +7,12 @@ verifying that the meta_threshold from engine_config.yaml is properly used.
 """
 
 import sys
-sys.path.insert(0, '/home/runner/work/bitcoin_scalper/bitcoin_scalper/src')
+from pathlib import Path
+
+# Add project src to path
+script_dir = Path(__file__).parent
+project_root = script_dir.parent
+sys.path.insert(0, str(project_root / 'src'))
 
 import numpy as np
 import pandas as pd
@@ -62,7 +67,11 @@ def main():
     
     # Step 1: Verify config loads correctly
     print("\n[STEP 1] Loading configuration from engine_config.yaml...")
-    config_path = Path('/home/runner/work/bitcoin_scalper/bitcoin_scalper/config/engine_config.yaml')
+    
+    # Use relative path from script location
+    script_dir = Path(__file__).parent
+    project_root = script_dir.parent
+    config_path = project_root / 'config' / 'engine_config.yaml'
     
     if not config_path.exists():
         print(f"❌ Config file not found: {config_path}")
