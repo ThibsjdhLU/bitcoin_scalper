@@ -207,115 +207,119 @@ class BinanceConnector:
             logger.error(f"Failed to fetch OHLCV data: {e}")
             raise
     
-    def fetch_ohlcv_historical(
-        self,
-        symbol: str,
-        timeframe: str = "1m",
-        limit: int = 5000
-    ) -> pd.DataFrame:
+    def fetch_ohlcv_historical( self, symbol: str, timeframe: str = "1m", limit: int = 5000) -> pd.DataFrame:
         """
-        Fetch large amounts of historical OHLCV data by making multiple requests.
-        
-        Binance limits single requests to ~1000-1500 candles. This method
-        makes multiple requests and concatenates them to get more history.
-        
-        Args:
-            symbol: Trading pair symbol (e.g., "BTC/USDT")
-            timeframe: Candle timeframe (e.g., "1m", "5m", "1h")
-            limit: Total number of candles desired (will fetch in batches)
-        
-        Returns:
-            DataFrame with historical OHLCV data
+        Robust paginated fetch for historical OHLCV.
+    
+        Fetches in batches (max_per_request) and pages backward in time until
+        `limit` rows are collected or no more history is available.
+    
+        Returns a DataFrame indexed by datetime (date) with columns:
+        ['open','high','low','close','volume']
         """
         try:
-            # Binance typical max limit per request
-            max_per_request = 1000
-            
-            if limit <= max_per_request:
-                # Single request is sufficient
-                return self.fetch_ohlcv(symbol, timeframe, limit)
-            
-            # Calculate number of batches needed
-            num_batches = (limit + max_per_request - 1) // max_per_request
-            
-            all_data = []
-            since = None  # Start from most recent
-            
-            logger.info(f"Fetching {limit} candles in {num_batches} batches...")
-            
-            for batch in range(num_batches):
-                # Fetch batch
-                batch_limit = min(max_per_request, limit - len(all_data))
-                
-                ohlcv = self.exchange.fetch_ohlcv(
-                    symbol=symbol,
-                    timeframe=timeframe,
-                    limit=batch_limit,
-                    since=since
-                )
-                
-                if not ohlcv:
+            max_per_request = 1000  # Binance typical per-request cap
+            limit = int(limit or max_per_request)
+    
+            # Convert timeframe to milliseconds
+            try:
+                timeframe_ms = int(self.exchange.parse_timeframe(timeframe) * 1000)
+            except Exception:
+                # Fallback (1m)
+                timeframe_ms = 60 * 1000
+    
+            all_rows = []
+            requests = 0
+    
+            logger.info(f"Starting paginated fetch for {symbol} {timeframe} (target={limit})")
+    
+            # We start by fetching the most recent batch, then page older batches
+            since = None  # None -> most recent
+            while len(all_rows) < limit:
+                batch_limit = min(max_per_request, limit - len(all_rows))
+                requests += 1
+                logger.debug(f"Paginated fetch: request #{requests}, batch_limit={batch_limit}, since={since}")
+    
+                try:
+                    batch = self.exchange.fetch_ohlcv(
+                        symbol=symbol,
+                        timeframe=timeframe,
+                        since=since,
+                        limit=batch_limit
+                    )
+                except Exception as e:
+                    logger.error(f"fetch_ohlcv failed on batch #{requests}: {e}")
+                    raise
+    
+                if not batch:
+                    logger.info("No more data returned by exchange during pagination.")
                     break
-                
-                # Collect data (will reverse at the end for chronological order)
-                all_data.append(ohlcv)
-                
-                # Set 'since' to the timestamp of the first candle (oldest)
-                # for the next batch to fetch older data
-                since = ohlcv[0][0] - 1
-                
-                # Stop if we got less than requested (no more history available)
-                if len(ohlcv) < batch_limit:
+    
+                # batch is typically ordered oldest -> newest
+                logger.info(f"Batch #{requests}: received {len(batch)} candles (ts range: {batch[0][0]} -> {batch[-1][0]})")
+                all_rows.extend(batch)
+    
+                # If returned less than requested, likely no more history.
+                if len(batch) < batch_limit:
+                    logger.info("Received fewer candles than requested for this batch; stopping pagination.")
                     break
-                
-                logger.debug(f"Batch {batch + 1}/{num_batches}: Fetched {len(ohlcv)} candles")
-                
-                # Add small delay between batches to avoid rate limiting
-                if batch < num_batches - 1:  # Don't delay after last batch
-                    import time
-                    time.sleep(0.1)
-            
-            if not all_data:
+    
+                # Prepare since for next batch to fetch older candles:
+                # Use oldest timestamp in current batch and shift backwards by batch_limit * timeframe_ms
+                oldest_ts = int(batch[0][0])
+                next_since = oldest_ts - (batch_limit * timeframe_ms)
+                # Avoid negative since
+                if next_since < 0:
+                    logger.info("Reached beginning of epoch; stopping pagination.")
+                    break
+                since = next_since
+    
+                # Respect exchange rateLimit (ccxt exposes in ms)
+                sleep_ms = getattr(self.exchange, "rateLimit", 200)
+                time_sleep = max(0.05, sleep_ms / 1000.0)
+                logger.debug(f"Sleeping {time_sleep:.3f}s to respect rateLimit")
+                import time
+                time.sleep(time_sleep)
+    
+            if not all_rows:
                 logger.warning(f"No historical OHLCV data returned for {symbol}")
                 return pd.DataFrame()
-            
-            # Flatten and reverse to get chronological order (oldest first)
-            # We fetched newest first, then went backwards in time
-            flat_data = []
-            for batch_data in reversed(all_data):
-                flat_data.extend(batch_data)
-            
-            # Convert to DataFrame
-            df = pd.DataFrame(
-                flat_data,
-                columns=['timestamp', 'open', 'high', 'low', 'close', 'volume']
-            )
-            
-            # Convert timestamp to datetime
-            df['date'] = pd.to_datetime(df['timestamp'], unit='ms')
+    
+            # Deduplicate by timestamp and sort ascending (oldest first)
+            # Flattened rows may already be chronological, but ensure correctness
+            # Convert to dict keyed by timestamp to dedupe
+            unique_map = {}
+            for row in all_rows:
+                ts = int(row[0])
+                unique_map[ts] = row  # last assignment keeps latest occurrence (shouldn't duplicate)
+            unique_rows = [unique_map[k] for k in sorted(unique_map.keys())]
+    
+            # If we collected more than needed, take the most recent `limit` rows
+            if len(unique_rows) > limit:
+                unique_rows = unique_rows[-limit:]
+    
+            # Build DataFrame
+            df = pd.DataFrame(unique_rows, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
+            df['date'] = pd.to_datetime(df['timestamp'], unit='ms', errors='coerce')
             df = df.drop(columns=['timestamp'])
             df = df.set_index('date')
-            
+    
             # Ensure numeric types
             for col in ['open', 'high', 'low', 'close', 'volume']:
-                df[col] = df[col].astype(float)
-            
-            # Remove duplicates (keep first occurrence) - data should already be mostly sorted
-            # but duplicates may occur at batch boundaries
+                df[col] = pd.to_numeric(df[col], errors='coerce')
+    
+            # Final dedupe & sorting just in case
             df = df[~df.index.duplicated(keep='first')]
-            
-            # Ensure chronological order
             if not df.index.is_monotonic_increasing:
                 df = df.sort_index()
-            
-            logger.info(f"Fetched total of {len(df)} historical candles for {symbol}")
-            
+    
+            logger.info(f"Fetched total of {len(df)} historical candles for {symbol} (requested {limit})")
             return df
-            
+    
         except Exception as e:
             logger.error(f"Failed to fetch historical OHLCV data: {e}")
             raise
-    
+        
     def execute_order(
         self,
         symbol: str,
