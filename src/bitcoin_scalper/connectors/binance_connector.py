@@ -488,30 +488,48 @@ class BinanceConnector:
     def get_ohlcv(self, symbol: str, timeframe: str = "1m", limit: int = DEFAULT_FETCH_LIMIT) -> List[Dict[str, Any]]:
         """
         Fetch OHLCV data and return as list of dicts for compatibility with MT5RestClient.
-        
-        This is a compatibility wrapper that intelligently handles large requests
-        by using fetch_ohlcv_historical when needed.
-        
-        Args:
-            symbol: Trading pair symbol (e.g., "BTC/USDT")
-            timeframe: Candle timeframe (e.g., "1m", "5m", "1h")
-            limit: Number of candles to fetch (default: 1500 for proper feature engineering)
-            
-        Returns:
-            List of dicts with OHLCV data
+
+        This wrapper will automatically use the paginated historical fetcher when the
+        requested `limit` exceeds the typical per-request cap for Binance (~1000).
         """
-        # Use historical fetcher for large requests (>1000 candles)
-        if limit > 1000:
-            df = self.fetch_ohlcv_historical(symbol, timeframe, limit)
-        else:
-            df = self.fetch_ohlcv(symbol, timeframe, limit)
-        
-        if df.empty:
-            return []
-        
-        # Convert DataFrame to list of dicts
-        df_reset = df.reset_index()
-        return df_reset.to_dict('records')
+        try:
+            # Normalize limit
+            limit = int(limit or DEFAULT_FETCH_LIMIT)
+
+            # Typical per-request cap on Binance/CCXT
+            max_per_request = 1000
+
+            # Debug/logging
+            logger.debug(f"get_ohlcv called: symbol={symbol}, timeframe={timeframe}, limit={limit}")
+
+            # Use historical fetcher for large requests (> max_per_request)
+            if limit > max_per_request:
+                logger.info(
+                    f"Requested limit ({limit}) > per-request cap ({max_per_request}), "
+                    "delegating to fetch_ohlcv_historical() to page through history."
+                )
+                df = self.fetch_ohlcv_historical(symbol, timeframe, limit)
+            else:
+                df = self.fetch_ohlcv(symbol, timeframe, limit)
+
+            # Ensure a DataFrame was returned and convert to list of dicts
+            if df is None:
+                logger.warning("get_ohlcv: underlying fetch returned None")
+                return []
+            if getattr(df, "empty", False):
+                logger.warning("get_ohlcv: underlying fetch returned an empty DataFrame")
+                return []
+
+            # Convert DataFrame to list of dicts (compatibility format)
+            df_reset = df.reset_index()
+
+            # Ensure 'date' column is present and serializable (if index name different, leave as-is)
+            # Return as list[dict]
+            return df_reset.to_dict("records")
+
+        except Exception as e:
+            logger.error(f"Failed to get OHLCV in get_ohlcv(): {e}")
+            raise
     
     def send_order(self, symbol: str, action: str, volume: float, 
                    price: Optional[float] = None, order_type: str = "market", **kwargs) -> Dict[str, Any]:
