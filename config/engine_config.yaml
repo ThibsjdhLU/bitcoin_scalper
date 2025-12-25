@@ -9,16 +9,11 @@ testnet: true
 trading:
   mode: ml
   model_type: catboost
-  model_path: models/meta_model_production.pkl
+  model_path: /Users/thibault/bitcoin_scalper/models/meta_model_production.pkl
   symbol: BTC/USDT
   timeframe: 1m
   meta_threshold: 0.53
 
-# Data Requirements
-# ⚠️ IMPORTANT: Feature engineering requires at least 1500 historical candles
-# for multi-timeframe analysis (1min + 5min). The system will automatically
-# fetch this amount, but you can override in code if needed.
-# See: src/bitcoin_scalper/core/data_requirements.py for details
 
 # 👇 AJOUTE CETTE SECTION (L'ADN du Trial 16 à 62% de précision)
 model_params:
