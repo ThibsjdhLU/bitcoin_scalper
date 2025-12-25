@@ -215,6 +215,20 @@ class FeatureEngineering:
         # Note: close_frac is excluded as FracDiff naturally produces NaN for warm-up period
         total_rows = len(df)
         logger.info(f"📊 Before NaN handling: {total_rows} rows, {len(df.columns)} columns")
+        # DEBUG: journalisation détaillée des NaN avant suppression (temporire)
+        try:
+            # Compte de NaN par colonne (les plus problématiques en tête)
+            nan_counts = df.isna().sum().sort_values(ascending=False)
+            logger.info(f"🐞 NaN counts (top 20): {nan_counts.head(20).to_dict()}")
+
+            # Pour comprendre si la colonne de prix est présente et ses valeurs
+            pref_price_col = f"{prefix}{price_col}" if prefix else price_col
+            price_cols_to_check = [c for c in [pref_price_col, price_col, '<CLOSE>', 'close'] if c in df.columns]
+            for c in price_cols_to_check:
+                n_missing = int(df[c].isna().sum())
+                logger.info(f"🐞 Column '{c}': missing {n_missing}/{len(df)} values; sample head: {df[c].head(5).tolist()}")
+        except Exception as _dbg:
+            logger.debug(f"Debug NaN inspection failed: {_dbg}")
         
         if total_rows > 0:
             nan_threshold = 0.10  # 10% seuil
