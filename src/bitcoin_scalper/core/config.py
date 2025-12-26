@@ -9,6 +9,18 @@ from cryptography.hazmat.backends import default_backend
 from base64 import b64decode, b64encode
 from cryptography.hazmat.primitives import padding
 
+# Standardized Training Constants
+DEFAULT_TRAIN_RATIO = 0.8
+DEFAULT_VAL_RATIO = 0.1
+DEFAULT_TEST_RATIO = 0.1
+DEFAULT_WARMUP_ROWS = 500
+MIN_DATA_ROWS = 2000
+DEFAULT_HORIZON = 30
+DEFAULT_N_TRIALS_PRIMARY = 50
+DEFAULT_N_TRIALS_META = 30
+DEFAULT_PT_SL_MULTIPLIER = 1.5
+DEFAULT_META_THRESHOLD = 0.55
+
 class ConfigError(Exception):
     """Exception personnalisée pour la configuration."""
     pass
