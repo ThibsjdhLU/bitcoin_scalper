@@ -55,6 +55,7 @@ from bitcoin_scalper.core.feature_engineering import FeatureEngineering
 from bitcoin_scalper.core.modeling import ModelTrainer
 from bitcoin_scalper.models.meta_model import MetaModel
 from bitcoin_scalper.core.engine import TradingEngine
+from bitcoin_scalper.core.label_utils import encode_primary, decode_primary
 
 # Suppress warnings for cleaner logs
 warnings.filterwarnings("ignore", category=UserWarning)
@@ -416,25 +417,6 @@ def optimize_catboost_params_optuna(
     logger.info(f"Best params for {study_name}: {study.best_params}")
     return study.best_params
 
-def map_labels_to_int(y: pd.Series) -> pd.Series:
-    """Map -1, 0, 1 to 0, 1, 2 for Primary MultiClass.
-
-    CRITICAL: Maps 0 (Neutral) to 0.
-    This ensures that when MetaModel filters low-confidence trades by setting prediction to 0,
-    it correctly maps to 'Neutral' and not 'Sell'.
-
-    Mapping:
-        0  -> 0 (Neutral)
-        1  -> 1 (Buy)
-        -1 -> 2 (Sell)
-    """
-    mapping = {0: 0, 1: 1, -1: 2}
-
-    # Check if we need mapping (if -1 is present or dtype is object)
-    if y.dtype == object or y.min() < 0:
-        return y.map(mapping).fillna(0).astype(int)
-    return y
-
 def train_primary_oof_probas(
     X_train: pd.DataFrame,
     y_train: pd.Series,
@@ -564,8 +546,7 @@ def main():
     )
 
     # Map Primary Labels to 0,1,2 for CatBoost MultiClass
-    # -1 -> 0, 0 -> 1, 1 -> 2
-    y_primary_mapped = map_labels_to_int(y_primary)
+    y_primary_mapped = encode_primary(y_primary)
 
     logger.info(f"Primary distribution: {y_primary_mapped.value_counts().to_dict()}")
     logger.info(f"Meta distribution: {y_meta.value_counts().to_dict()}")
@@ -594,6 +575,8 @@ def main():
     y_p_train = y_primary_mapped.iloc[:train_len]
     y_p_val = y_primary_mapped.iloc[train_len:train_len+val_len]
     y_p_test = y_primary_mapped.iloc[train_len+val_len:]
+    # Save raw (decoded) test labels for final evaluation clarity
+    y_p_test_decoded = y_primary.iloc[train_len+val_len:]
 
     y_m_train = y_meta.iloc[:train_len]
     y_m_val = y_meta.iloc[train_len:train_len+val_len]
@@ -629,8 +612,7 @@ def main():
         'verbose': False,
         'allow_writing_files': False,
         'thread_count': 1,
-        'loss_function': 'MultiClass',
-        'iterations': 1000 # Boost iterations for final model
+        'loss_function': 'MultiClass'
     })
 
     cat_primary = CatBoostClassifier(**final_primary_params)
@@ -713,8 +695,8 @@ def main():
         logger.error(f"predict_meta returned unexpected keys: {list(results.keys())}")
         raise RuntimeError("MetaModel.predict_meta API mismatch")
 
-    final_signal = results['final_signal']
-    raw_signal = results['raw_signal']
+    final_signal = results['final_signal'] # Already DECODED to {-1, 0, 1}
+    raw_signal = results['raw_signal']     # Already DECODED to {-1, 0, 1}
     meta_conf = results['meta_conf']
 
     # Normalize raw_signal if needed (metric fix logic)
@@ -725,9 +707,10 @@ def main():
          # Vectorize lookup
          raw_signal_mapped = np.vectorize(lambda x: mapper.get(x, 0))(raw_signal)
 
-    # Metrics
-    acc_primary = accuracy_score(y_p_test, raw_signal_mapped)
-    bal_acc_primary = balanced_accuracy_score(y_p_test, raw_signal_mapped)
+    # Metrics - Compare Decoded Signals with Decoded (Original) Labels
+    # y_p_test_decoded is {-1, 0, 1}. raw_signal is {-1, 0, 1}.
+    acc_primary = accuracy_score(y_p_test_decoded, raw_signal)
+    bal_acc_primary = balanced_accuracy_score(y_p_test_decoded, raw_signal)
 
     # Meta Metrics
     meta_preds = (meta_conf > args.meta_threshold).astype(int)
@@ -736,16 +719,16 @@ def main():
     roc_meta = roc_auc_score(y_m_test, meta_conf)
 
     # Filtered Profitability (Trade Counting)
-    # 0 is Neutral/NoTrade in both mappings.
+    # 0 is Neutral/NoTrade in {-1, 0, 1} schema
     n_trades_filtered = int(np.sum(final_signal != 0))
-    n_trades_raw = int(np.sum(raw_signal_mapped != 0))
+    n_trades_raw = int(np.sum(raw_signal != 0))
 
     # Save Report
     report_dir = f"models/reports_{timestamp}"
     os.makedirs(report_dir, exist_ok=True)
 
     # Confusion Matrices
-    cm_primary = confusion_matrix(y_p_test, raw_signal_mapped)
+    cm_primary = confusion_matrix(y_p_test_decoded, raw_signal)
     pd.DataFrame(cm_primary).to_csv(f"{report_dir}/confusion_primary.csv")
 
     cm_meta = confusion_matrix(y_m_test, meta_preds)
