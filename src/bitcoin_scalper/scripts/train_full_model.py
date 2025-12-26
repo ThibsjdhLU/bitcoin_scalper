@@ -76,6 +76,17 @@ def fetch_full_history(symbol: str, start_date: str, api_key: str, api_secret: s
                 logger.info("Plus de données disponibles.")
                 break
 
+            # Check for data gap on first fetch
+            if len(all_candles) == 0:
+                first_candle_ts = ohlcv[0][0]
+                # Compare against the initial requested start timestamp (since_ts)
+                if first_candle_ts > since_ts + 86400000: # > 1 day gap
+                    diff_days = (first_candle_ts - since_ts) / 86400000
+                    logger.warning(f"⚠️ Gap de données détecté : {diff_days:.1f} jours manquants au début.")
+                    logger.warning(f"   Demandé : {pd.to_datetime(since_ts, unit='ms')}")
+                    logger.warning(f"   Disponible : {pd.to_datetime(first_candle_ts, unit='ms')}")
+                    logger.warning("   (Ceci est normal sur le Testnet qui a un historique limité)")
+
             all_candles.extend(ohlcv)
             last_ts = ohlcv[-1][0]
 
