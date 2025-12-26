@@ -358,14 +358,18 @@ def train_primary_oof_probas(
 ) -> pd.DataFrame:
     """
     Generate Out-Of-Fold probabilities for the training set using TimeSeriesSplit.
+
+    Explicitly uses model.classes_ to name columns to ensure robustness
+    against non-contiguous or missing classes in y_train.
     """
     logger.info("Generating OOF probabilities for Primary model...")
     tscv = TimeSeriesSplit(n_splits=5)
 
-    # Ensure y_train is int for consistent class counting
-    y_train = y_train.astype(int)
-    classes = np.sort(y_train.unique())
-    n_classes = len(classes)
+    # Initialize with NaNs
+    # We don't know classes until we fit at least once, or we scan y_train.
+    # We scan y_train for the full set of expected classes.
+    unique_classes = np.sort(y_train.unique())
+    n_classes = len(unique_classes)
 
     oof_probas = np.zeros((len(X_train), n_classes))
     oof_probas[:] = np.nan
@@ -375,6 +379,9 @@ def train_primary_oof_probas(
     params['verbose'] = False
     params['allow_writing_files'] = False
     params['thread_count'] = 1
+
+    # Column names based on actual classes found in full training set
+    cols = [f'primary_proba_class_{c}' for c in unique_classes]
 
     for fold, (train_idx, val_idx) in enumerate(tscv.split(X_train)):
         logger.debug(f"OOF Fold {fold+1}/5")
@@ -389,10 +396,22 @@ def train_primary_oof_probas(
         model = CatBoostClassifier(**params)
         model.fit(X_t, y_t, **fit_params)
 
+        # Handle cases where fold might miss a class (rare with TimeSeriesSplit on large data but possible)
         preds_proba = model.predict_proba(X_v)
-        oof_probas[val_idx] = preds_proba
 
-    cols = [f'primary_proba_{c}' for c in range(n_classes)]
+        if preds_proba.shape[1] != n_classes:
+            # Re-align probabilities to the global class list
+            full_proba = np.zeros((len(X_v), n_classes))
+            model_classes = model.classes_
+            for i, cls in enumerate(model_classes):
+                # Find index in global classes
+                if cls in unique_classes:
+                    global_idx = np.where(unique_classes == cls)[0][0]
+                    full_proba[:, global_idx] = preds_proba[:, i]
+            oof_probas[val_idx] = full_proba
+        else:
+            oof_probas[val_idx] = preds_proba
+
     return pd.DataFrame(oof_probas, index=X_train.index, columns=cols)
 
 def run_smoke_test(df_raw: pd.DataFrame):
@@ -565,12 +584,36 @@ def main():
     model_for_val = CatBoostClassifier(**final_primary_params)
     model_for_val.fit(X_train, y_p_train, sample_weight=w_train, verbose=False)
 
+    # Predict Val using Val Model
     val_probas = model_for_val.predict_proba(X_val)
-    df_val_probas = pd.DataFrame(val_probas, index=X_val.index, columns=df_oof.columns)
+
+    # Align Val Columns using global classes
+    unique_classes = np.sort(y_p_train.unique())
+    # Ensure DataFrame columns match OOF columns
+    oof_cols = df_oof.columns
+
+    # Realign val_probas to match OOF structure if needed (robustness)
+    val_probas_aligned = np.zeros((len(X_val), len(unique_classes)))
+    model_classes = model_for_val.classes_
+    for i, cls in enumerate(model_classes):
+        if cls in unique_classes:
+            idx = np.where(unique_classes == cls)[0][0]
+            val_probas_aligned[:, idx] = val_probas[:, i]
+
+    df_val_probas = pd.DataFrame(val_probas_aligned, index=X_val.index, columns=oof_cols)
 
     # For X_test, use the FINAL primary model (trained on Train+Val)
     test_probas = cat_primary.predict_proba(X_test)
-    df_test_probas = pd.DataFrame(test_probas, index=X_test.index, columns=df_oof.columns)
+
+    # Align Test Columns
+    test_probas_aligned = np.zeros((len(X_test), len(unique_classes)))
+    final_model_classes = cat_primary.classes_
+    for i, cls in enumerate(final_model_classes):
+        if cls in unique_classes:
+            idx = np.where(unique_classes == cls)[0][0]
+            test_probas_aligned[:, idx] = test_probas[:, i]
+
+    df_test_probas = pd.DataFrame(test_probas_aligned, index=X_test.index, columns=oof_cols)
 
     # Construct Meta Datasets
     # Concatenate features and probabilities
