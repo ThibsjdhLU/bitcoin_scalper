@@ -122,7 +122,7 @@ class FeatureEngineering:
                     df[f"{prefix}{feature}_lag_{lag}"] = df[feature].shift(lag)
         return df
 
-    def add_indicators(self, df: pd.DataFrame, price_col: str = "close", high_col: str = "high", low_col: str = "low", volume_col: str = "volume", prefix: str = "") -> pd.DataFrame:
+    def add_indicators(self, df: pd.DataFrame, price_col: str = "close", high_col: str = "high", low_col: str = "low", volume_col: str = "volume", prefix: str = "", drop_rows: bool = True) -> pd.DataFrame:
         """
         Ajoute les indicateurs techniques principaux et avancés au DataFrame OHLCV.
         Sécurité :
@@ -247,45 +247,46 @@ class FeatureEngineering:
                 df = df.drop(columns=cols_to_drop)
                 logger.info(f"📉 Dropped {len(cols_to_drop)} columns with >10% NaN")
             
-            # Drop remaining rows with ANY NaN
-            rows_before = len(df)
-            df = df.dropna()
-            rows_dropped = rows_before - len(df)
-            if rows_dropped > 0:
-                logger.info(f"📉 Dropped {rows_dropped} rows with remaining NaN values")
-            
-            logger.info(f"📊 After NaN handling: {len(df)} rows remaining")
-            
-                        # Drop remaining rows — only require essential columns (price) to be non-NaN.
-            # Rationale: many indicators have warm-up NaNs; dropping rows on ANY NaN removes
-            # too much data for short series (e.g., resampled 5min). We keep rows that have
-            # a valid price and remove rows where price is missing.
-            rows_before = len(df)
-
-            # Determine essential price column (prioritize prefixed price if prefix used)
-            essential_cols = []
-            pref_price_col = f"{prefix}{price_col}" if prefix else price_col
-            if pref_price_col in df.columns:
-                essential_cols.append(pref_price_col)
-            elif price_col in df.columns:
-                essential_cols.append(price_col)
-            elif '<CLOSE>' in df.columns:
-                essential_cols.append('<CLOSE>')
-            elif 'close' in df.columns:
-                essential_cols.append('close')
-
-            if essential_cols:
-                # Only drop rows missing the essential price(s)
-                df = df.dropna(subset=essential_cols)
-            else:
-                # Fallback: if we couldn't identify a price column, keep original conservative behavior
+            # Logic de drop conditionnel (pour éviter de casser le pipeline temps réel)
+            if drop_rows:
+                # Drop remaining rows with ANY NaN
+                rows_before = len(df)
                 df = df.dropna()
+                rows_dropped = rows_before - len(df)
+                if rows_dropped > 0:
+                    logger.info(f"📉 Dropped {rows_dropped} rows with remaining NaN values")
 
-            rows_dropped = rows_before - len(df)
-            if rows_dropped > 0:
-                logger.info(f"📉 Dropped {rows_dropped} rows with missing PRICE (of {rows_before} total rows)")
+                logger.info(f"📊 After NaN handling: {len(df)} rows remaining")
 
-            logger.info(f"📊 After NaN handling: {len(df)} rows remaining")
+                # Drop remaining rows — only require essential columns (price) to be non-NaN.
+                rows_before = len(df)
+
+                # Determine essential price column (prioritize prefixed price if prefix used)
+                essential_cols = []
+                pref_price_col = f"{prefix}{price_col}" if prefix else price_col
+                if pref_price_col in df.columns:
+                    essential_cols.append(pref_price_col)
+                elif price_col in df.columns:
+                    essential_cols.append(price_col)
+                elif '<CLOSE>' in df.columns:
+                    essential_cols.append('<CLOSE>')
+                elif 'close' in df.columns:
+                    essential_cols.append('close')
+
+                if essential_cols:
+                    # Only drop rows missing the essential price(s)
+                    df = df.dropna(subset=essential_cols)
+                else:
+                    # Fallback
+                    df = df.dropna()
+
+                rows_dropped = rows_before - len(df)
+                if rows_dropped > 0:
+                    logger.info(f"📉 Dropped {rows_dropped} rows with missing PRICE (of {rows_before} total rows)")
+
+                logger.info(f"📊 After NaN handling: {len(df)} rows remaining")
+            else:
+                logger.info("ℹ️  Skipping NaN row dropping (drop_rows=False)")
 
             # ✅ CRITICAL: Check if we have sufficient data remaining after NaN removal
             valid, error_msg = validate_data_requirements(len(df), "post_processing")

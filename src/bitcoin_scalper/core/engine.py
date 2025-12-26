@@ -659,14 +659,23 @@ class TradingEngine:
                     df_5m[f'{prefix_5m}minute_cos'] = np.cos(2 * np.pi * df_5m.index.minute / 60)
 
                     # B.4: Technical Indicators for 5-minute timeframe
+                    # CRITICAL: Do not drop rows (drop_rows=False) to preserve the last partial candle
+                    # even if some indicators (like FracDiff at start) are NaN.
                     df_5m = self.feature_eng.add_indicators(
                         df_5m,
                         price_col='<CLOSE>',
                         high_col='<HIGH>',
                         low_col='<LOW>',
                         volume_col='<TICKVOL>',
-                        prefix=prefix_5m
+                        prefix=prefix_5m,
+                        drop_rows=False
                     )
+
+                    # Manually drop the warmup period (start) but preserve the end
+                    # FracDiff usually needs ~300 points. We drop the first 300 rows safely.
+                    if len(df_5m) > 300:
+                         df_5m = df_5m.iloc[300:]
+
                 else:
                     # Keep behaviour consistent: empty df_5m will be handled below
                     self.logger.warning("No 5-minute candles produced after resampling (df_5m is empty)")

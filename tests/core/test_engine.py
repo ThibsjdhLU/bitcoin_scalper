@@ -351,10 +351,10 @@ class TestTradingEngine:
         original_add_indicators = engine.feature_eng.add_indicators
         original_add_features = engine.feature_eng.add_features
         
-        def mock_add_indicators(df):
+        def mock_add_indicators(df, **kwargs):
             return df
         
-        def mock_add_features(df):
+        def mock_add_features(df, **kwargs):
             return df
         
         engine.feature_eng.add_indicators = mock_add_indicators
