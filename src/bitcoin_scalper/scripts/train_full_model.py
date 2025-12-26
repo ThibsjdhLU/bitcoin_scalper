@@ -26,7 +26,6 @@ sys.path.append(os.path.join(os.getcwd(), 'src'))
 
 from bitcoin_scalper.connectors.binance_connector import BinanceConnector
 from bitcoin_scalper.core.feature_engineering import FeatureEngineering
-from bitcoin_scalper.core.labeling import TripleBarrierLabeling
 from bitcoin_scalper.core.modeling import ModelTrainer
 from bitcoin_scalper.models.meta_model import MetaModel
 from bitcoin_scalper.core.engine import TradingEngine # Pour les utilitaires
