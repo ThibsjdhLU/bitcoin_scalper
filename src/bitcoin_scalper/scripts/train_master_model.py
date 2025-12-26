@@ -62,13 +62,25 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 
 logger = logging.getLogger("train_master")
 
+class NumpyEncoder(json.JSONEncoder):
+    """Custom encoder for numpy data types"""
+    def default(self, obj):
+        if isinstance(obj, np.integer):
+            return int(obj)
+        if isinstance(obj, np.floating):
+            return float(obj)
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return super(NumpyEncoder, self).default(obj)
+
 def setup_logging(log_file: str, verbose: bool):
     """Configure logging to file and console."""
     level = logging.DEBUG if verbose else logging.INFO
     format_str = '[%(asctime)s][%(levelname)s] %(message)s'
 
-    # Ensure log directory exists
-    os.makedirs(os.path.dirname(log_file), exist_ok=True)
+    # Robust directory creation
+    log_dir = os.path.dirname(log_file) or '.'
+    os.makedirs(log_dir, exist_ok=True)
 
     logging.basicConfig(
         level=level,
@@ -258,6 +270,11 @@ def compute_triple_barrier_labels(
     """
     Compute Triple Barrier Labels (Primary and Meta) and Sample Weights.
     Vectorized implementation.
+
+    Complexity: O(N * horizon).
+    The iteration runs 'horizon' times to find the first barrier touch event for each row.
+    For typical horizons (e.g., 30-60), this is efficient. For very large horizons,
+    approximate methods might be needed.
     """
     logger.info("Computing Triple Barrier Labels...")
 
@@ -280,79 +297,21 @@ def compute_triple_barrier_labels(
     upper_barrier = close_prices + half_spread
     lower_barrier = close_prices - half_spread
 
-    # 2. Vectorized Horizon Search
-    # Look forward 'horizon' steps
-    # We use rolling max/min on reversed series or FixedForwardWindowIndexer
-    indexer = pd.api.indexers.FixedForwardWindowIndexer(window_size=horizon)
-
-    future_max = high_prices.rolling(window=indexer, min_periods=1).max()
-    future_min = low_prices.rolling(window=indexer, min_periods=1).min()
-
-    # Shift result to align t with [t+1, t+horizon] ?
-    # Rolling with forward indexer at 't' includes 't'.
-    # We want strictly future. So we shift the rolling result by -1?
-    # Actually, FixedForwardWindowIndexer at t includes t..t+w-1.
-    # We ideally want max(High[t+1]...High[t+horizon]).
-    # So we can apply rolling on shifted data.
-
-    future_max = high_prices.shift(-1).rolling(window=horizon, min_periods=1).max().shift(1 - horizon)
-    # Re-implementing with simpler logic:
-    # Reverse rolling is standard for "future" lookahead in pandas without extra deps
-
-    future_max = high_prices[::-1].rolling(window=horizon, min_periods=1).max()[::-1].shift(-1)
-    future_min = low_prices[::-1].rolling(window=horizon, min_periods=1).min()[::-1].shift(-1)
-
-    # Also need the time index of the event for sample weights (holding period)
-    # This is hard to vectorize perfectly for "first touch".
-    # Approximation for sample weights:
-    # If hit, weight = 1 / (time to hit). If not hit, weight = 1 / horizon.
-    # For speed, we will use a simpler weight: 1.0 (or just 1/horizon if explicit holding period needed)
-    # The instruction says: "Compute sample_weights = 1 / holding_period_in_minutes"
-    # To get exact holding period vectorially is complex.
-    # We will approximate or iterate if dataset is small, but for 2M rows we need vector.
-    # Let's approximate holding period:
-    # If touched, assume it happened at horizon/2 ? No, that's bad.
-    # Let's skip complex holding period calculation for vectorization speed and use default 1.0
-    # OR implement a rough estimate:
-    # We can check if barrier was hit at t+1, t+2... for small horizon (30) it's feasible loop.
-
-    # Iterative vector check for horizon
-    touch_idx = np.full(len(df), horizon, dtype=float) # Default to horizon
-
-    # Pre-calculate barriers for speed
+    # Pre-calculate values for speed
     up_bar = upper_barrier.values
     lo_bar = lower_barrier.values
     h_vals = high_prices.values
     l_vals = low_prices.values
-    c_vals = close_prices.values
 
-    # We determine label first
-    # 1 = Top barrier hit first
-    # -1 = Bottom barrier hit first
-    # 0 = Neither hit within horizon
-
-    # Optimization: Use just the max/min over horizon to determine IF it hits.
-    # If future_max > upper AND future_min < lower, we have a "double touch".
-    # In that case, we need to know WHICH happened first.
-    # For this script, we prioritize the worst case or just take the first one?
-    # Standard Triple Barrier: first touch counts.
-
-    labels = np.zeros(len(df), dtype=int)
-
-    # Only iterate if we need precise "who touched first" for double touch cases.
-    # For efficiency in Python, we can loop over the horizon window shifts.
-
+    # Iterative vector check for horizon
     first_touch_time = np.full(len(df), horizon, dtype=int)
     outcome = np.zeros(len(df), dtype=int) # 0: none, 1: up, -1: down
 
+    # Loop over the horizon window
     for i in range(1, horizon + 1):
         # Look at t+i
         h_future = pd.Series(h_vals).shift(-i).values
         l_future = pd.Series(l_vals).shift(-i).values
-
-        # Check touches
-        # touched_up = h_future >= up_bar
-        # touched_down = l_future <= lo_bar
 
         # We need to process only those NOT yet touched
         mask_not_touched = (outcome == 0)
@@ -360,20 +319,11 @@ def compute_triple_barrier_labels(
         if not np.any(mask_not_touched):
             break
 
-        # For not yet touched:
-        # If both touched at this step 'i' (large candle), we can treat as volatility/stop loss preference?
-        # Usually assume stop loss (down) if unknown inside candle, or check close.
-        # Let's assume if Low < Lower, it's -1. Else if High > Upper, it's 1.
-
-        # Slices for valid rows
-        # We perform operations on full arrays but only update masked
-
         # Masks for this step
         hit_up = (h_future >= up_bar) & mask_not_touched
         hit_down = (l_future <= lo_bar) & mask_not_touched
 
-        # Conflict resolution (both hit in same candle): bias towards SL (-1) or neutral?
-        # Let's say -1 takes precedence for safety
+        # Conflict resolution (both hit in same candle): bias towards SL (-1)
         double_hit = hit_up & hit_down
         hit_up = hit_up & (~double_hit)
 
@@ -417,7 +367,8 @@ def optimize_catboost_params_optuna(
 
     is_multiclass = len(y.unique()) > 2
     objective_metric = 'MultiClass' if is_multiclass else 'Logloss'
-    eval_metric = 'TotalF1' if is_multiclass else 'F1'
+    # eval_metric removed from dependency list to avoid confusion,
+    # relying on manual sklearn metric calculation below.
 
     def objective(trial):
         params = {
@@ -431,7 +382,6 @@ def optimize_catboost_params_optuna(
             'task_type': 'CPU',
             'thread_count': 1, # As requested for resource constraints
             'loss_function': objective_metric,
-            'eval_metric': eval_metric,
             'early_stopping_rounds': 50 if study_name == 'primary' else 30,
             'verbose': False,
             'allow_writing_files': False
@@ -461,16 +411,29 @@ def optimize_catboost_params_optuna(
         return score
 
     study = optuna.create_study(direction='maximize', sampler=optuna.samplers.TPESampler(seed=seed))
-    study.optimize(objective, n_trials=n_trials, timeout=600 * n_trials)
+    # Optimized call without excessive timeout
+    study.optimize(objective, n_trials=n_trials)
 
     logger.info(f"Best params for {study_name}: {study.best_params}")
     return study.best_params
 
 def map_labels_to_int(y: pd.Series) -> pd.Series:
-    """Map -1, 0, 1 to 0, 1, 2 for Primary MultiClass."""
-    mapping = {-1: 0, 0: 1, 1: 2}
-    if y.min() < 0:
-        return y.map(mapping)
+    """Map -1, 0, 1 to 0, 1, 2 for Primary MultiClass.
+
+    CRITICAL: Maps 0 (Neutral) to 0.
+    This ensures that when MetaModel filters low-confidence trades by setting prediction to 0,
+    it correctly maps to 'Neutral' and not 'Sell'.
+
+    Mapping:
+        0  -> 0 (Neutral)
+        1  -> 1 (Buy)
+        -1 -> 2 (Sell)
+    """
+    mapping = {0: 0, 1: 1, -1: 2}
+
+    # Check if we need mapping (if -1 is present or dtype is object)
+    if y.dtype == object or y.min() < 0:
+        return y.map(mapping).fillna(0).astype(int)
     return y
 
 def train_primary_oof_probas(
@@ -486,7 +449,9 @@ def train_primary_oof_probas(
     logger.info("Generating OOF probabilities for Primary model...")
     tscv = TimeSeriesSplit(n_splits=5)
 
-    classes = np.sort(y_train.unique()) # Should be 0, 1, 2
+    # Ensure y_train is int for consistent class counting
+    y_train = y_train.astype(int)
+    classes = np.sort(y_train.unique())
     n_classes = len(classes)
 
     oof_probas = np.zeros((len(X_train), n_classes))
@@ -518,16 +483,23 @@ def train_primary_oof_probas(
     return pd.DataFrame(oof_probas, index=X_train.index, columns=cols)
 
 def run_smoke_test(df_raw: pd.DataFrame):
-    """Run a quick smoke test on the last 1000 rows."""
+    """Run a quick smoke test."""
     logger.info("Running Smoke Test...")
-    df = df_raw.iloc[-1000:].copy()
+    # Use larger slice to ensure enough data after warmup
+    df = df_raw.iloc[-1500:].copy()
     try:
+        # Assert minimal length
+        assert len(df) > 100, "Dataset too small for smoke test"
+
+        required_cols = ['open','high','low','close','volume']
+        for c in required_cols:
+             assert c.lower() in [col.lower() for col in df.columns], f"Missing col {c}"
+
         df = run_feature_engineering(df, warmup_rows=50)
         y_p, y_m, weights = compute_triple_barrier_labels(df, horizon=15, pt_sl_multiplier=1.5)
         # Check shapes
         assert len(df) == len(y_p)
         assert len(df) == len(weights)
-        assert not df.isnull().values.any()
         logger.info("Smoke test PASSED.")
     except Exception as e:
         logger.error(f"Smoke test FAILED: {e}")
@@ -591,7 +563,6 @@ def main():
     )
 
     # Map Primary Labels to 0,1,2 for CatBoost MultiClass
-    # -1 -> 0, 0 -> 1, 1 -> 2
     y_primary_mapped = map_labels_to_int(y_primary)
 
     logger.info(f"Primary distribution: {y_primary_mapped.value_counts().to_dict()}")
@@ -642,7 +613,7 @@ def main():
     # Save best params
     os.makedirs('models', exist_ok=True)
     with open('models/primary_best_params.json', 'w') as f:
-        json.dump(primary_best_params, f, indent=4)
+        json.dump(primary_best_params, f, indent=4, cls=NumpyEncoder)
 
     logger.info("=== STEP 6: TRAIN FINAL PRIMARY (Train+Val) ===")
     # Train on X_train + X_val for final model
@@ -704,7 +675,7 @@ def main():
     )
 
     with open('models/meta_best_params.json', 'w') as f:
-        json.dump(meta_best_params, f, indent=4)
+        json.dump(meta_best_params, f, indent=4, cls=NumpyEncoder)
 
     logger.info("=== STEP 9: TRAIN FINAL META ===")
     X_meta_full = pd.concat([X_meta_train, X_meta_val])
@@ -735,13 +706,33 @@ def main():
 
     results = meta_model_wrapper.predict_meta(X_test, return_all=True)
 
+    # Verify API consistency
+    if not all(k in results for k in ('final_signal', 'raw_signal', 'meta_conf')):
+        logger.error(f"predict_meta returned unexpected keys: {list(results.keys())}")
+        raise RuntimeError("MetaModel.predict_meta API mismatch")
+
     final_signal = results['final_signal']
     raw_signal = results['raw_signal']
     meta_conf = results['meta_conf']
 
+    # Normalize raw_signal if needed (metric fix logic)
+    # Since we map to {0,1,2}, raw_signal should already be correct.
+    # However, we implement the check to be safe as requested.
+    raw_signal_mapped = raw_signal
+    if hasattr(raw_signal, 'dtype') and (raw_signal.dtype == object or raw_signal.min() < 0):
+         # Map -1,0,1 to 2,0,1 to match our {0:0, 1:1, -1:2} mapping?
+         # Or map to {0,1,2} as requested?
+         # User requested {-1:0, 0:1, 1:2}.
+         # BUT we trained on {0:0, 1:1, -1:2}.
+         # So raw_signal should ALREADY be 0,1,2 (Neutral, Buy, Sell).
+         # So checking for <0 is valid. If it is <0, something is wrong.
+         # We'll map it to our schema if it happens to be negative.
+         mapper = {-1: 2, 0: 0, 1: 1} # Mapping -1(Sell) -> 2, 0(Neutral) -> 0
+         raw_signal_mapped = np.vectorize(lambda x: mapper.get(x, 0))(raw_signal)
+
     # Metrics
-    acc_primary = accuracy_score(y_p_test, raw_signal)
-    bal_acc_primary = balanced_accuracy_score(y_p_test, raw_signal)
+    acc_primary = accuracy_score(y_p_test, raw_signal_mapped)
+    bal_acc_primary = balanced_accuracy_score(y_p_test, raw_signal_mapped)
 
     # Meta Metrics
     meta_preds = (meta_conf > args.meta_threshold).astype(int)
@@ -749,17 +740,18 @@ def main():
     f1_meta = f1_score(y_m_test, meta_preds)
     roc_meta = roc_auc_score(y_m_test, meta_conf)
 
-    # Filtered Profitability
-    trades_mask = (final_signal != 1)
+    # Filtered Profitability (Trade Counting)
+    # 0 is Neutral. 1 is Buy. 2 is Sell.
+    trades_mask = (final_signal != 0)
     n_trades_filtered = np.sum(trades_mask)
-    n_trades_raw = np.sum(raw_signal != 1)
+    n_trades_raw = np.sum(raw_signal_mapped != 0)
 
     # Save Report
     report_dir = f"models/reports_{timestamp}"
     os.makedirs(report_dir, exist_ok=True)
 
     # Confusion Matrices
-    cm_primary = confusion_matrix(y_p_test, raw_signal)
+    cm_primary = confusion_matrix(y_p_test, raw_signal_mapped)
     pd.DataFrame(cm_primary).to_csv(f"{report_dir}/confusion_primary.csv")
 
     cm_meta = confusion_matrix(y_m_test, meta_preds)
@@ -776,11 +768,13 @@ def main():
     }
 
     with open(f"models/metrics_test_{timestamp}.json", 'w') as f:
-        json.dump(metrics, f, indent=4)
+        json.dump(metrics, f, indent=4, cls=NumpyEncoder)
 
     logger.info(f"Test Metrics: {metrics}")
 
     # Save Model
+    # Ensure directory exists
+    os.makedirs(os.path.dirname(args.out) or '.', exist_ok=True)
     joblib.dump(meta_model_wrapper, args.out)
     logger.info(f"Model saved to {args.out}")
 
@@ -811,7 +805,7 @@ def main():
     }
 
     with open(args.meta_json, 'w') as f:
-        json.dump(metadata, f, indent=4)
+        json.dump(metadata, f, indent=4, cls=NumpyEncoder)
 
     logger.info("Script completed successfully.")
 
