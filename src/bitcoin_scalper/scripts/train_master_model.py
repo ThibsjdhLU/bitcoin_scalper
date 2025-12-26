@@ -78,7 +78,7 @@ def setup_logging(log_file: str, verbose: bool):
     level = logging.DEBUG if verbose else logging.INFO
     format_str = '[%(asctime)s][%(levelname)s] %(message)s'
 
-    # Robust directory creation
+    # Robust directory creation (handle log_file without dir component)
     log_dir = os.path.dirname(log_file) or '.'
     os.makedirs(log_dir, exist_ok=True)
 
@@ -273,8 +273,7 @@ def compute_triple_barrier_labels(
 
     Complexity: O(N * horizon).
     The iteration runs 'horizon' times to find the first barrier touch event for each row.
-    For typical horizons (e.g., 30-60), this is efficient. For very large horizons,
-    approximate methods might be needed.
+    This is efficient for typical trading horizons (e.g., 30-60 min).
     """
     logger.info("Computing Triple Barrier Labels...")
 
@@ -411,7 +410,7 @@ def optimize_catboost_params_optuna(
         return score
 
     study = optuna.create_study(direction='maximize', sampler=optuna.samplers.TPESampler(seed=seed))
-    # Optimized call without excessive timeout
+    # Remove timeout, use only n_trials
     study.optimize(objective, n_trials=n_trials)
 
     logger.info(f"Best params for {study_name}: {study.best_params}")
@@ -492,8 +491,10 @@ def run_smoke_test(df_raw: pd.DataFrame):
         assert len(df) > 100, "Dataset too small for smoke test"
 
         required_cols = ['open','high','low','close','volume']
+        # Relaxed column check (case insensitive)
+        existing_cols = [col.lower() for col in df.columns]
         for c in required_cols:
-             assert c.lower() in [col.lower() for col in df.columns], f"Missing col {c}"
+             assert c.lower() in existing_cols, f"Missing col {c}"
 
         df = run_feature_engineering(df, warmup_rows=50)
         y_p, y_m, weights = compute_triple_barrier_labels(df, horizon=15, pt_sl_multiplier=1.5)
@@ -563,6 +564,7 @@ def main():
     )
 
     # Map Primary Labels to 0,1,2 for CatBoost MultiClass
+    # -1 -> 0, 0 -> 1, 1 -> 2
     y_primary_mapped = map_labels_to_int(y_primary)
 
     logger.info(f"Primary distribution: {y_primary_mapped.value_counts().to_dict()}")
@@ -716,18 +718,11 @@ def main():
     meta_conf = results['meta_conf']
 
     # Normalize raw_signal if needed (metric fix logic)
-    # Since we map to {0,1,2}, raw_signal should already be correct.
-    # However, we implement the check to be safe as requested.
+    # We normalized targets to {0,1,2}, so if raw_signal has -1, map it.
     raw_signal_mapped = raw_signal
-    if hasattr(raw_signal, 'dtype') and (raw_signal.dtype == object or raw_signal.min() < 0):
-         # Map -1,0,1 to 2,0,1 to match our {0:0, 1:1, -1:2} mapping?
-         # Or map to {0,1,2} as requested?
-         # User requested {-1:0, 0:1, 1:2}.
-         # BUT we trained on {0:0, 1:1, -1:2}.
-         # So raw_signal should ALREADY be 0,1,2 (Neutral, Buy, Sell).
-         # So checking for <0 is valid. If it is <0, something is wrong.
-         # We'll map it to our schema if it happens to be negative.
+    if hasattr(raw_signal, 'dtype') and (raw_signal.dtype == object or np.min(raw_signal) < 0):
          mapper = {-1: 2, 0: 0, 1: 1} # Mapping -1(Sell) -> 2, 0(Neutral) -> 0
+         # Vectorize lookup
          raw_signal_mapped = np.vectorize(lambda x: mapper.get(x, 0))(raw_signal)
 
     # Metrics
@@ -741,10 +736,9 @@ def main():
     roc_meta = roc_auc_score(y_m_test, meta_conf)
 
     # Filtered Profitability (Trade Counting)
-    # 0 is Neutral. 1 is Buy. 2 is Sell.
-    trades_mask = (final_signal != 0)
-    n_trades_filtered = np.sum(trades_mask)
-    n_trades_raw = np.sum(raw_signal_mapped != 0)
+    # 0 is Neutral/NoTrade in both mappings.
+    n_trades_filtered = int(np.sum(final_signal != 0))
+    n_trades_raw = int(np.sum(raw_signal_mapped != 0))
 
     # Save Report
     report_dir = f"models/reports_{timestamp}"
@@ -763,8 +757,8 @@ def main():
         'meta_accuracy': acc_meta,
         'meta_f1': f1_meta,
         'meta_roc_auc': roc_meta,
-        'n_trades_raw': int(n_trades_raw),
-        'n_trades_filtered': int(n_trades_filtered)
+        'n_trades_raw': n_trades_raw,
+        'n_trades_filtered': n_trades_filtered
     }
 
     with open(f"models/metrics_test_{timestamp}.json", 'w') as f:
@@ -804,6 +798,7 @@ def main():
         "metrics_test": metrics
     }
 
+    os.makedirs(os.path.dirname(args.meta_json) or '.', exist_ok=True)
     with open(args.meta_json, 'w') as f:
         json.dump(metadata, f, indent=4, cls=NumpyEncoder)
 
