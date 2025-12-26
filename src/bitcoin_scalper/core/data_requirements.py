@@ -43,7 +43,7 @@ MIN_ROWS_MULTI_TIMEFRAME = MAX_LOOKBACK_WINDOW * RESAMPLING_MULTIPLIER + 100  # 
 SAFE_MIN_ROWS = 1500
 
 # Default fetch limit for connectors
-DEFAULT_FETCH_LIMIT = 1500
+DEFAULT_FETCH_LIMIT = 3000
 
 # Minimum rows after feature engineering (post-NaN removal)
 MIN_ROWS_AFTER_FEATURE_ENG = 300
