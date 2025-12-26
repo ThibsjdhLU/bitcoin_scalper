@@ -349,74 +349,6 @@ def compute_triple_barrier_labels(
 
     return y_primary, y_meta, sample_weights
 
-
-def optimize_catboost_params_optuna(
-    X: pd.DataFrame,
-    y: pd.Series,
-    X_val: pd.DataFrame,
-    y_val: pd.Series,
-    study_name: str,
-    n_trials: int,
-    seed: int,
-    sample_weights: Optional[pd.Series] = None
-) -> Dict[str, Any]:
-    """
-    Run Optuna optimization for CatBoost.
-    """
-    logger.info(f"Starting Optuna optimization for {study_name} ({n_trials} trials)...")
-
-    is_multiclass = len(y.unique()) > 2
-    objective_metric = 'MultiClass' if is_multiclass else 'Logloss'
-    # eval_metric removed from dependency list to avoid confusion,
-    # relying on manual sklearn metric calculation below.
-
-    def objective(trial):
-        params = {
-            'iterations': trial.suggest_int('iterations', 200, 2000) if study_name == 'primary' else trial.suggest_int('iterations', 100, 1000),
-            'depth': trial.suggest_int('depth', 4, 10) if study_name == 'primary' else trial.suggest_int('depth', 3, 8),
-            'learning_rate': trial.suggest_float('learning_rate', 0.01, 0.3, log=True),
-            'l2_leaf_reg': trial.suggest_float('l2_leaf_reg', 1.0, 20.0, log=True),
-            'border_count': trial.suggest_int('border_count', 32, 255),
-            'random_strength': trial.suggest_float('random_strength', 0.0, 2.0) if study_name == 'primary' else 1.0, # Default for meta
-            'random_seed': seed,
-            'task_type': 'CPU',
-            'thread_count': 1, # As requested for resource constraints
-            'loss_function': objective_metric,
-            'early_stopping_rounds': 50 if study_name == 'primary' else 30,
-            'verbose': False,
-            'allow_writing_files': False
-        }
-
-        model = CatBoostClassifier(**params)
-
-        # Use sample_weights if provided
-        fit_params = {
-            'eval_set': (X_val, y_val),
-            'verbose': False
-        }
-        if sample_weights is not None:
-            fit_params['sample_weight'] = sample_weights
-
-        model.fit(X, y, **fit_params)
-
-        preds = model.predict(X_val)
-
-        if study_name == 'primary':
-            # Maximize Balanced Accuracy or F1 Macro
-            score = balanced_accuracy_score(y_val, preds)
-        else:
-            # Maximize F1 (Binary)
-            score = f1_score(y_val, preds)
-
-        return score
-
-    study = optuna.create_study(direction='maximize', sampler=optuna.samplers.TPESampler(seed=seed))
-    # Remove timeout, use only n_trials
-    study.optimize(objective, n_trials=n_trials)
-
-    logger.info(f"Best params for {study_name}: {study.best_params}")
-    return study.best_params
-
 def train_primary_oof_probas(
     X_train: pd.DataFrame,
     y_train: pd.Series,
@@ -589,10 +521,13 @@ def main():
     logger.info(f"Train: {len(X_train)}, Val: {len(X_val)}, Test: {len(X_test)}")
 
     logger.info("=== STEP 5: OPTIMIZE PRIMARY ===")
-    primary_best_params = optimize_catboost_params_optuna(
-        X_train, y_p_train, X_val, y_p_val, 'primary',
-        args.n_trials_primary, args.random_state,
-        sample_weights=w_train
+    # Using ModelTrainer centralized optimization
+    primary_best_params = ModelTrainer.optimize_catboost(
+        X_train, y_p_train, X_val, y_p_val,
+        n_trials=args.n_trials_primary,
+        seed=args.random_state,
+        sample_weights=w_train,
+        loss_function='MultiClass'
     )
 
     # Save best params
@@ -652,10 +587,12 @@ def main():
     logger.info(f"Meta Train size after OOF drop: {len(X_meta_train)}")
 
     logger.info("=== STEP 8: OPTIMIZE META ===")
-    meta_best_params = optimize_catboost_params_optuna(
-        X_meta_train, y_m_train, X_meta_val, y_m_val, 'meta',
-        args.n_trials_meta, args.random_state,
-        sample_weights=w_meta_train
+    meta_best_params = ModelTrainer.optimize_catboost(
+        X_meta_train, y_m_train, X_meta_val, y_m_val,
+        n_trials=args.n_trials_meta,
+        seed=args.random_state,
+        sample_weights=w_meta_train,
+        loss_function='Logloss'
     )
 
     with open('models/meta_best_params.json', 'w') as f:
