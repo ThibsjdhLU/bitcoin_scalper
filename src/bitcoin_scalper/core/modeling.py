@@ -15,7 +15,7 @@ if not logger.hasHandlers():
 
 from catboost import CatBoostClassifier, CatBoostRegressor, Pool
 from sklearn.model_selection import GridSearchCV, TimeSeriesSplit
-from sklearn.metrics import f1_score, accuracy_score, classification_report
+from sklearn.metrics import f1_score, accuracy_score, classification_report, balanced_accuracy_score
 from sklearn.base import BaseEstimator, TransformerMixin, ClassifierMixin
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler, LabelEncoder, RobustScaler
@@ -68,6 +68,82 @@ class ModelTrainer:
         self.label_encoder = None
         self.model = None # Legacy support
 
+    @staticmethod
+    def optimize_catboost(
+        X_train: pd.DataFrame,
+        y_train: pd.Series,
+        X_val: pd.DataFrame,
+        y_val: pd.Series,
+        n_trials: int = 20,
+        seed: int = 42,
+        sample_weights: Optional[pd.Series] = None,
+        loss_function: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Static method to optimize CatBoost parameters using Optuna.
+        Returns the best parameters dictionary.
+        """
+        if not _HAS_OPTUNA:
+            logger.warning("Optuna not available, returning default parameters.")
+            return {
+                'iterations': 500,
+                'depth': 6,
+                'learning_rate': 0.05,
+                'l2_leaf_reg': 3,
+                'border_count': 128
+            }
+
+        # Auto-detect loss function if not provided
+        if loss_function is None:
+            is_multiclass = len(y_train.unique()) > 2
+            loss_function = 'MultiClass' if is_multiclass else 'Logloss'
+
+        def objective(trial):
+            params = {
+                'iterations': trial.suggest_int('iterations', 100, 1000),
+                'depth': trial.suggest_int('depth', 3, 10),
+                'learning_rate': trial.suggest_float('learning_rate', 0.01, 0.3, log=True),
+                'l2_leaf_reg': trial.suggest_float('l2_leaf_reg', 1.0, 20.0, log=True),
+                'border_count': trial.suggest_int('border_count', 32, 255),
+                'random_strength': trial.suggest_float('random_strength', 1e-9, 2.0, log=True),
+                # Fixed params
+                'random_seed': seed,
+                'task_type': 'CPU',
+                'thread_count': 1,
+                'loss_function': loss_function,
+                'early_stopping_rounds': 50,
+                'verbose': False,
+                'allow_writing_files': False
+            }
+
+            # Additional params for imbalanced binary classification
+            if loss_function == 'Logloss':
+                 params['scale_pos_weight'] = trial.suggest_float('scale_pos_weight', 0.1, 10.0, log=True)
+
+            model = CatBoostClassifier(**params)
+
+            fit_params = {
+                'eval_set': (X_val, y_val),
+                'verbose': False
+            }
+            if sample_weights is not None:
+                fit_params['sample_weight'] = sample_weights
+
+            model.fit(X_train, y_train, **fit_params)
+
+            preds = model.predict(X_val)
+
+            if loss_function == 'MultiClass':
+                return balanced_accuracy_score(y_val, preds)
+            else:
+                return f1_score(y_val, preds)
+
+        study = optuna.create_study(direction='maximize', sampler=optuna.samplers.TPESampler(seed=seed))
+        study.optimize(objective, n_trials=n_trials)
+
+        logger.info(f"Optimization finished. Best params: {study.best_params}")
+        return study.best_params
+
     def fit(self, X_train: pd.DataFrame, y_train: pd.Series, X_val: pd.DataFrame, y_val: pd.Series,
             tuning_method: str = 'optuna', n_trials: int = 20, timeout: Optional[int] = None,
             early_stopping_rounds: int = 20, cat_features: Optional[List[str]] = None):
@@ -85,42 +161,12 @@ class ModelTrainer:
             y_val_encoded = y_val
 
         # 2. Hyperparameter Tuning (on raw/scaled data temporarily)
-        # We need to tune the model hyperparameters *before* finalizing the pipeline,
-        # or tune the pipeline itself. For CatBoost/XGBoost with early stopping,
-        # we typically need valid sets.
-        # Strategy:
-        # - Create a temporary Scaler to transform data for tuning (if use_scaler is True).
-        # - Tune the model using the scaled data.
-        # - Construct the final Pipeline with RobustScaler + Best Model.
-        # - Refit the final Pipeline on concatenated Train+Val (or just fit, but Pipeline usually refits).
-
-        # Preparing tuning data
         X_train_tune = X_train
         X_val_tune = X_val
 
         if self.use_scaler:
             logger.info("Applying temporary RobustScaler for tuning phase...")
-            # We scale numeric features only. Assuming X is mostly numeric or handling logic is applied.
-            # CatBoost handles cat features, but Scaler fails on them.
-            # We assume input X_train has numeric features or we need ColumnTransformer.
-            # For simplicity, if cat_features are present, we might need complex handling.
-            # Given instructions, we stick to RobustScaler. If cat_features exist,
-            # we should assume X_train columns are appropriate for scaling OR we're dropping non-numerics earlier.
-            # NOTE: If cat_features are passed, we shouldn't scale them.
-            # But the Orchestrator seems to pass mainly numeric features unless specifically flagged.
-
-            # Simple approach: Scale everything. If it fails, user must ensure numeric.
-            # RobustScaler handles only numeric.
-            # To be safe for Pipeline construction, we will use RobustScaler on all columns
-            # assuming Feature Engineering provided numeric-ready features (except specified cat_features).
-
             scaler_tune = RobustScaler()
-
-            # If cat_features are present, we must selectively scale.
-            # But sklearn Pipeline 'RobustScaler' applies to ALL columns by default.
-            # If we have mixed types, we should use ColumnTransformer.
-            # However, for this task, let's assume all features passed to trainer are numeric
-            # (as ensured by Orchestrator cleaning).
             try:
                 scaler_tune.fit(X_train)
                 X_train_tune = pd.DataFrame(scaler_tune.transform(X_train), index=X_train.index, columns=X_train.columns)
@@ -149,71 +195,31 @@ class ModelTrainer:
         self.model = best_model # Legacy compatibility
 
         # 4. Final Fit on Train + Val (Refit to ensure Pipeline is fully fitted state)
-        # Note: CatBoost/XGBoost models in the pipeline are already fitted from _train_*,
-        # BUT the pipeline 'scaler' is not fitted if we just constructed it.
-        # Also, standard practice is to refit on full data after tuning.
-        # HOWEVER, refitting CatBoost with early_stopping requires a valid set again.
-        # Since we already have a fitted 'best_model', we have two options:
-        # A) Use the fitted model and manually fit the scaler on X_train (or X_train+X_val).
-        # B) Refit the entire pipeline.
-
-        # Option A is safer to preserve the exact Early Stopping result.
         logger.info("Finalizing Pipeline...")
         if self.use_scaler:
-            # Fit the scaler on the concatenated data to matches production expectation
-            # (Scaler learns stats from all available history)
             X_full = pd.concat([X_train, X_val])
             try:
                 self.pipeline.named_steps['scaler'].fit(X_full)
             except ValueError:
-                # If scaling fails (e.g. mix of types), we skip scaler fit but keep it in pipeline (will fail at predict?)
-                # Or we warn.
                 pass
-            # The model is already fitted. We don't call pipeline.fit() because that would re-trigger model training.
-            # We just compose them.
 
-        return self.pipeline # We return the pipeline object directly for orchestrator usage
+        return self.pipeline
 
     def _train_catboost(self, X_train, y_train, X_val, y_val, method, n_trials, timeout, early_stopping, cat_features):
         if method == 'optuna' and _HAS_OPTUNA:
-            def objective(trial):
-                params = {
-                    'depth': trial.suggest_int('depth', 4, 10),
-                    'learning_rate': trial.suggest_float('learning_rate', 0.01, 0.3, log=True),
-                    'iterations': trial.suggest_int('iterations', 100, 1000),
-                    'l2_leaf_reg': trial.suggest_int('l2_leaf_reg', 1, 10),
-                    'border_count': trial.suggest_int('border_count', 32, 255),
-                    'bagging_temperature': trial.suggest_float('bagging_temperature', 0.0, 1.0),
-                    'random_strength': trial.suggest_float('random_strength', 1e-9, 10, log=True),
-                    'scale_pos_weight': trial.suggest_float('scale_pos_weight', 0.1, 10.0, log=True) if len(y_train.unique()) == 2 else None,
-                    'random_seed': self.random_state,
-                    'loss_function': 'MultiClass' if len(y_train.unique()) > 2 else 'Logloss',
-                    'verbose': 0,
-                    'allow_writing_files': False,
-                    'thread_count': self.n_jobs
-                }
-                params = {k: v for k, v in params.items() if v is not None}
-                model = CatBoostClassifier(**params)
-                pruning_callback = CatBoostPruningCallback(trial, "MultiClass" if params.get('loss_function') == 'MultiClass' else "Logloss")
-                try:
-                    model.fit(X_train, y_train, eval_set=(X_val, y_val), cat_features=cat_features, early_stopping_rounds=early_stopping, verbose=False, callbacks=[pruning_callback])
-                except optuna.TrialPruned:
-                    raise
-                except Exception as e:
-                    logger.warning(f"Trial failed: {e}")
-                    raise optuna.TrialPruned()
-                preds = model.predict(X_val)
-                return f1_score(y_val, preds, average='macro')
+            # We can reuse optimize_catboost logic here or call it
+            # But _train_catboost needs to return a fitted model, whereas optimize_catboost returns params.
 
-            study = optuna.create_study(direction='maximize', pruner=optuna.pruners.MedianPruner(n_startup_trials=5, n_warmup_steps=10))
-            study.optimize(objective, n_trials=n_trials, timeout=timeout, show_progress_bar=False)
-            best_params = study.best_params
-            logger.info(f"Best CatBoost Params: {best_params}")
+            # Call static optimization
+            best_params = ModelTrainer.optimize_catboost(
+                X_train, y_train, X_val, y_val, n_trials=n_trials, seed=self.random_state
+            )
 
             final_params = best_params.copy()
             final_params.update({'random_seed': self.random_state, 'verbose': 0, 'allow_writing_files': False, 'thread_count': self.n_jobs})
             if 'loss_function' not in final_params:
-                final_params['loss_function'] = 'MultiClass' if len(y_train.unique()) > 2 else 'Logloss'
+                is_multiclass = len(y_train.unique()) > 2
+                final_params['loss_function'] = 'MultiClass' if is_multiclass else 'Logloss'
 
             # Refit on Train + Val for best performance
             final_model = CatBoostClassifier(**final_params)

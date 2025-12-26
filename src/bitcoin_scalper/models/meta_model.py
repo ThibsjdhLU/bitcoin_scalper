@@ -30,6 +30,9 @@ import pandas as pd
 import logging
 from pathlib import Path
 
+# Import central label utils
+from bitcoin_scalper.core.label_utils import decode_primary, PRIMARY_LABEL_MAPPING
+
 logger = logging.getLogger(__name__)
 
 # Optional CatBoost import
@@ -358,55 +361,27 @@ class MetaModel:
             - If meta_conf >= threshold: final_signal = raw_signal (trade)
             - Neutral signals (raw_signal=0) always result in final_signal=0
         
+        Returns AUTOMATICALLY DECODED labels in {-1, 0, 1} format if input model
+        was trained on encoded labels {0, 1, 2}.
+
         Args:
             X: Features to predict on
             return_all: If True, return additional diagnostic information
             
         Returns:
             Dictionary with:
-                - final_signal: Filtered trading signal after meta filtering
-                  np.ndarray of shape (n_samples,) with values:
-                  * -1: Sell (primary says sell AND meta says high success prob)
-                  *  0: Hold/Pass (low meta confidence OR primary says neutral)
-                  *  1: Buy (primary says buy AND meta says high success prob)
-                  
+                - final_signal: Filtered trading signal (DECODED {-1, 0, 1})
                 - meta_conf: Meta model confidence (success probability)
-                  np.ndarray of shape (n_samples,) with values in [0, 1]
-                  Higher values = meta model is more confident trade will succeed
-                  
-                - raw_signal: Original primary model prediction (unfiltered)
-                  np.ndarray of shape (n_samples,) with values: -1, 0, 1
-                  
-                - primary_proba: (optional, if return_all=True)
-                  Full probability distribution from primary model
-                  
-                - meta_proba: (optional, if return_all=True)
-                  Full probability distribution from meta model
-        
-        Raises:
-            ValueError: If models are not trained
-            
-        Example:
-            >>> result = meta_model.predict_meta(X_test)
-            >>> 
-            >>> # Access filtered signals
-            >>> final = result['final_signal']  # [-1, 0, 1, 0, 1, ...]
-            >>> conf = result['meta_conf']      # [0.7, 0.4, 0.8, 0.3, 0.9, ...]
-            >>> raw = result['raw_signal']      # [-1, 1, 1, -1, 1, ...]
-            >>> 
-            >>> # Count how many trades passed filter
-            >>> n_trades = (final != 0).sum()
-            >>> print(f"{n_trades} trades passed meta filter")
+                - raw_signal: Original primary model prediction (DECODED {-1, 0, 1})
+                - primary_proba: (optional) Full probability distribution
+                - meta_proba: (optional) Full probability distribution
         """
         if not self.is_trained:
-            raise ValueError(
-                "Model must be trained before making predictions. "
-                "Call .train() first."
-            )
+            raise ValueError("Model must be trained before making predictions.")
         
         try:
             # Step 1: Get primary model predictions
-            raw_signal = self.primary_model.predict(X)
+            raw_signal_encoded = self.primary_model.predict(X)
             primary_proba = self.primary_model.predict_proba(X)
             
             # Step 2: Create augmented features for meta model
@@ -416,44 +391,34 @@ class MetaModel:
             meta_proba_full = self.meta_model.predict_proba(X_meta)
             
             # Extract probability of success (class 1)
-            # meta_proba_full is shape (n_samples, 2) for binary classification
-            # Column 0 = P(fail), Column 1 = P(success)
             if meta_proba_full.shape[1] == 2:
-                meta_conf = meta_proba_full[:, 1]  # Probability of success
+                meta_conf = meta_proba_full[:, 1]
             else:
-                # Fallback for other cases
                 meta_conf = np.max(meta_proba_full, axis=1)
             
             # Step 4: Filter signals based on meta confidence
-            final_signal = np.where(
+            final_signal_encoded = np.where(
                 meta_conf >= self.meta_threshold,
-                raw_signal,  # Keep signal if confident
-                0            # Set to neutral (don't trade) if not confident
+                raw_signal_encoded,
+                0 # Neutral
             )
             
+            # Step 5: DECODE LABELS back to {-1, 0, 1}
+            # We assume the internal model works on {0, 1, 2}
+            raw_signal_decoded = decode_primary(raw_signal_encoded)
+            final_signal_decoded = decode_primary(final_signal_encoded)
+
             # Build result dictionary
             result = {
-                'final_signal': final_signal,
+                'final_signal': final_signal_decoded,
                 'meta_conf': meta_conf,
-                'raw_signal': raw_signal,
+                'raw_signal': raw_signal_decoded,
             }
             
             # Add full probability distributions if requested
             if return_all:
                 result['primary_proba'] = primary_proba
                 result['meta_proba'] = meta_proba_full
-            
-            # Log summary statistics
-            n_samples = len(X)
-            n_trades = (final_signal != 0).sum()
-            n_raw_trades = (raw_signal != 0).sum()
-            filter_rate = (n_raw_trades - n_trades) / max(n_raw_trades, 1) * 100
-            
-            logger.debug(
-                f"Prediction summary: {n_samples} samples, "
-                f"{n_raw_trades} raw signals, {n_trades} final signals "
-                f"({filter_rate:.1f}% filtered)"
-            )
             
             return result
             
@@ -467,24 +432,10 @@ class MetaModel:
     ) -> Tuple[np.ndarray, np.ndarray]:
         """
         Legacy compatibility: returns (direction, success) predictions.
-        
-        This method maintains compatibility with the legacy MetaLabelingPipeline
-        interface. For new code, prefer predict_meta() which provides more
-        information and clearer semantics.
-        
-        Args:
-            X: Features to predict on
-            
-        Returns:
-            Tuple of:
-                - direction: Primary model predictions (-1, 0, 1)
-                - success: Meta model predictions (0, 1)
+        DECODED labels {-1, 0, 1}.
         """
         result = self.predict_meta(X)
-        
-        # Convert meta confidence to binary decision
         success = (result['meta_conf'] >= self.meta_threshold).astype(int)
-        
         return result['raw_signal'], success
     
     def predict_combined(
@@ -492,19 +443,7 @@ class MetaModel:
         X: Union[pd.DataFrame, np.ndarray]
     ) -> np.ndarray:
         """
-        Make combined predictions (direction * success).
-        
-        This is equivalent to final_signal from predict_meta().
-        Maintained for legacy compatibility.
-        
-        Args:
-            X: Features to predict on
-            
-        Returns:
-            Combined predictions:
-                -1: Short position (direction=-1, success=1)
-                 0: No position (direction=0 or success=0)
-                 1: Long position (direction=1, success=1)
+        Make combined predictions. DECODED labels {-1, 0, 1}.
         """
         result = self.predict_meta(X)
         return result['final_signal']
