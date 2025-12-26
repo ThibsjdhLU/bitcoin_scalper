@@ -33,15 +33,8 @@ logs/
 .vscode/
 .idea/
 
-# Fichiers volumineux à ignorer
-*.pkl
 
-# Dossiers de données et modèles
-models/*.cbm
-models/*.pkl
-data/raw/*.csv
-!data/raw/BTCUSD_M1_*.csv
-data/features/
+
 
 # Configuration locale (ne pas commiter)
 config/config.json
