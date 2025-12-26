@@ -34,7 +34,7 @@ from bitcoin_scalper.core.engine import TradingEngine # Pour les utilitaires
 logging.basicConfig(level=logging.INFO, format='[%(asctime)s][%(levelname)s] %(message)s')
 logger = logging.getLogger("train_full")
 
-def fetch_full_history(symbol: str, start_date: str, api_key: str, api_secret: str, cache_file: str = "data/full_history.csv") -> pd.DataFrame:
+def fetch_full_history(symbol: str, start_date: str, api_key: str, api_secret: str, cache_file: str = "data/full_history.csv", testnet: bool = False) -> pd.DataFrame:
     """
     Télécharge l'historique complet depuis Binance ou charge depuis le cache.
     """
@@ -55,7 +55,7 @@ def fetch_full_history(symbol: str, start_date: str, api_key: str, api_secret: s
     logger.info(f"Démarrage du téléchargement complet pour {symbol} depuis {start_date}...")
 
     # Init Connector
-    connector = BinanceConnector(api_key=api_key, api_secret=api_secret, testnet=False) # MAINNET pour l'historique réel
+    connector = BinanceConnector(api_key=api_key, api_secret=api_secret, testnet=testnet)
 
     # Calcul du start timestamp
     since_ts = int(pd.Timestamp(start_date).timestamp() * 1000)
@@ -75,6 +75,17 @@ def fetch_full_history(symbol: str, start_date: str, api_key: str, api_secret: s
             if not ohlcv:
                 logger.info("Plus de données disponibles.")
                 break
+
+            # Check for data gap on first fetch
+            if len(all_candles) == 0:
+                first_candle_ts = ohlcv[0][0]
+                # Compare against the initial requested start timestamp (since_ts)
+                if first_candle_ts > since_ts + 86400000: # > 1 day gap
+                    diff_days = (first_candle_ts - since_ts) / 86400000
+                    logger.warning(f"⚠️ Gap de données détecté : {diff_days:.1f} jours manquants au début.")
+                    logger.warning(f"   Demandé : {pd.to_datetime(since_ts, unit='ms')}")
+                    logger.warning(f"   Disponible : {pd.to_datetime(first_candle_ts, unit='ms')}")
+                    logger.warning("   (Ceci est normal sur le Testnet qui a un historique limité)")
 
             all_candles.extend(ohlcv)
             last_ts = ohlcv[-1][0]
@@ -257,6 +268,7 @@ def main():
     parser.add_argument("--api_secret", type=str, required=False, help="Binance Secret", default=os.environ.get("BINANCE_API_SECRET"))
     parser.add_argument("--start", type=str, default="2020-01-01", help="Date de début (YYYY-MM-DD)")
     parser.add_argument("--out", type=str, default="models/meta_model_full_history.pkl", help="Chemin de sortie du modèle")
+    parser.add_argument("--testnet", action="store_true", help="Utiliser le Testnet Binance au lieu du Mainnet")
 
     args = parser.parse_args()
 
@@ -265,7 +277,7 @@ def main():
         return
 
     # 1. Fetch
-    df = fetch_full_history("BTC/USDT", args.start, args.api_key, args.api_secret)
+    df = fetch_full_history("BTC/USDT", args.start, args.api_key, args.api_secret, testnet=args.testnet)
 
     # 2. Train
     train_pipeline(df, args.out)
